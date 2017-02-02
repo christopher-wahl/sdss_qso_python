@@ -44,8 +44,8 @@ def findNamestring( inputString ):
 
     :param inputString: given string containing a namestring
     :type inputString: str
-    :return: First instance of namestring format
     :rtype: str
+    :return: First instance of namestring format
     :raises: ValueError
     """
     try:
@@ -63,6 +63,23 @@ def fns( inputString ):
     :rtype: str
     """
     return findNamestring( inputString )
+
+def getFiles( path, extention = None ):
+    """
+    Returns a list of all files within the given path.
+
+    If extention is specified, will only return files with said extention
+
+    :param path: /path/to/directory/of/interest
+    :param extention: File extention of interest.  If not specified, all files in directory are returned
+    :type path: str
+    :type extention: str
+    :return: List of str() files in directory.  If extention is specified, only those files with that file extention are returned.
+            Note that this list will NOT include the /path/to/ in the file names - merely the names themselves
+    :rtype: list
+    """
+    extention = extCheck ( extention ) if extention is not None else ''
+    return[ f for f in os.listdir( path ) if ( os.path.isfile( os.path.join( path, f ) ) and (os.path.splitext( f )[ 1 ].endswith( extention ))) ]
 
 def ns2f( namestring, extention ):
     """
@@ -88,4 +105,4 @@ def namestringToFilename( namestring, extention ):
     :return: concatated filename
     :rtype str
     """
-    return join( namestring, extCheck( extention ) )
+    return namestring + extCheck( extention )

@@ -1,3 +1,3 @@
-from spectra import spectrum
+from catalog import shenCat
 
-spec = spectrum( )
+shenCat.load()

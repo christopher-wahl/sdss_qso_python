@@ -2,16 +2,14 @@ from common.constants import DEFAULT_SCALE_WL, DEFUALT_SCALE_RADIUS
 from common.messaging import KeyErrorString
 
 
-class spectrum( dict ):
-    __z = 0
-    __gmag = 0
-    __namestring = ""
+class Spectrum( dict ):
+    __z = float( )
+    __gmag = float( )
+    __namestring = str( )
 
     def __init__( self, *args, **kwargs ):
-        super( spectrum, self ).__init__( )
-        if len( args ) == 1 and isinstance( args[ 0 ], spectrum ):
-            self = args[ 0 ].cpy( )
-        elif len( kwargs ) != 0:
+        super( Spectrum, self ).__init__( )
+        if len( kwargs ) != 0:
             for arg, val in kwargs.items( ):
                 if arg in 'z':
                     self.__z = val
@@ -25,15 +23,19 @@ class spectrum( dict ):
                     raise KeyError( KeyErrorString( "specturm constructor", arg, val ) )
         return
 
+    def __repr__( self ):
+        return '%s  z: %s   gmag: %s\n%s    %s' % (
+            self.getNS( ), self.getRS( ), self.getGmag( ), self.getWavelengths( )[ 0 ], self.getWavelengths( )[ -1 ])
+
     def aveFlux( self, scaleWL=None, radius=None ):
         scaleWL = scaleWL or DEFAULT_SCALE_WL
         radius = radius or DEFUALT_SCALE_RADIUS
 
     def cpy( self ):
         """
-        Returns a deep copy of this spectra
+        Returns a deep copy of this spectrum
 
-        :return: spectra
+        :return: spectrum
         """
         from copy import deepcopy
         return deepcopy( self )
@@ -50,8 +52,38 @@ class spectrum( dict ):
     def getErrList( self ):
         return [ self.getErr( wl ) for wl in self.getWavelengths( ) ]
 
+    def getGmag( self ):
+        """
+        Returns the magnitude in G filter of the Spectrum
+
+        :rtype: float
+        """
+        return self.__gmag
+
+    def getNS( self ):
+        """
+        Returns the namestring of the Spectrum object
+        :rtype: str
+        """
+        return self.__namestring
+
+    def getRS( self ):
+        """
+        Returns the stored redshift of the Spectrum
+
+        :rtype: float
+        """
+        return self.__z
+
     def getWavelengths( self ):
         return sorted( self.keys( ) )
+
+    def lineDict( self, wavelength ):
+        return { 'wavelength': wavelength, 'flux density': self.getFlux( wavelength ),
+                 'error': self.getErr( wavelength ) }
+
+    def lineDictList( self ):
+        return [ self.lineDict( wl ) for wl in self.getWavelengths( ) ]
 
     def setDict( self, wavelengthList, fluxList, errList ):
         """
@@ -69,6 +101,16 @@ class spectrum( dict ):
         self.clear( )
         for i in range( len( wavelengthList ) ):
             self[ wavelengthList[ i ] ] = (fluxList[ i ], errList[ i ])
+
+    def setRS(self, redshift ):
+        """
+        Manually set the redshift of the Spectrum
+
+        :type redshift: float
+        :return: None
+        """
+        assert type( redshift ) == float
+        self.__z = redshift
 
     def shiftToRest( self, z=None ):
         if z is None:
@@ -98,7 +140,7 @@ class spectrum( dict ):
             elif key in [ 'radius', 'r' ]:
                 radius = val
             else:
-                raise KeyError( KeyErrorString( "spectra.scale", key, val ) )
+                raise KeyError( KeyErrorString( "spectrum.scale", key, val ) )
 
         scaleWL = scaleWL or DEFAULT_SCALE_WL
         radius = radius or DEFUALT_SCALE_RADIUS
@@ -106,7 +148,7 @@ class spectrum( dict ):
         if scaleSpec is not None:
             scaleflux = scaleSpec.aveFlux( scaleWL, radius )
         elif scaleflux is None:
-            raise TypeError( "No scaleflux value determined in spectra.scale( **kwargs )" )
+            raise TypeError( "No scaleflux value determined in spectrum.scale( **kwargs )" )
 
         scalar = scaleflux / self.aveFlux( scaleWL, radius )
         if scalar == 1.0: return self
@@ -131,7 +173,7 @@ class spectrum( dict ):
             elif key in [ 'radius', 'r' ]:
                 radius = val
             else:
-                raise KeyError( KeyErrorString( "spectra.scale", key, val ) )
+                raise KeyError( KeyErrorString( "spectrum.scale", key, val ) )
 
         scaleWL = scaleWL or DEFAULT_SCALE_WL
         radius = radius or DEFUALT_SCALE_RADIUS
@@ -139,6 +181,8 @@ class spectrum( dict ):
         if scaleSpec is not None:
             scaleflux = scaleSpec.aveFlux( scaleWL, radius )
         elif scaleflux is None:
-            raise TypeError( "No scaleflux value determined in spectra.scaleFactor( **kwargs )" )
+            raise TypeError( "No scaleflux value determined in spectrum.scaleFactor( **kwargs )" )
 
         return scaleflux
+
+# TODO: Create bin method

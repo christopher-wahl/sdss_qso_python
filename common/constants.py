@@ -9,8 +9,10 @@ from multiprocessing import cpu_count
 MAX_PROC = cpu_count()
 
 """ BASE PATHS """
+BASE_CODE_PATH = abspath( os.getcwd() )
 BASE_PROCESSED_PATH = abspath( "../../Processed" )
-SOURCE_SPEC_PATH = join( BASE_PROCESSED_PATH, "Spec" )
+BASE_SPEC_PATH = join( BASE_PROCESSED_PATH, "Spec" )
+SOURCE_SPEC_PATH = join( BASE_SPEC_PATH, "PSource" )
 REST_SPEC_PATH = join( SOURCE_SPEC_PATH, "Rest" )
 BINED_SPEC_PATH = join( REST_SPEC_PATH, "Binned" )
 
