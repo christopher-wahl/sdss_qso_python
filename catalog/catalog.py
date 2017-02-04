@@ -37,3 +37,6 @@ class catalog( dict ):
         dirCheck( path )
         with open( join( path, filename ), 'w' ) as outfile:
             outfile.write( "%s = %s" % ( self.__THIS_CAT[ 1 ], json.dumps( self, sort_keys=True, indent=4, separators=(',', ': ') ) ) )
+
+    def keys(self):
+        return list( super( catalog, self ).keys() )

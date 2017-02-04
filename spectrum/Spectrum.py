@@ -54,7 +54,7 @@ class Spectrum( dict ):
 
     def getGmag( self ):
         """
-        Returns the magnitude in G filter of the Spectrum
+        Returns the magnitude in G filter of the spectrum
 
         :rtype: float
         """
@@ -62,14 +62,14 @@ class Spectrum( dict ):
 
     def getNS( self ):
         """
-        Returns the namestring of the Spectrum object
+        Returns the namestring of the spectrum object
         :rtype: str
         """
         return self.__namestring
 
     def getRS( self ):
         """
-        Returns the stored redshift of the Spectrum
+        Returns the stored redshift of the spectrum
 
         :rtype: float
         """
@@ -104,7 +104,7 @@ class Spectrum( dict ):
 
     def setRS(self, redshift ):
         """
-        Manually set the redshift of the Spectrum
+        Manually set the redshift of the spectrum
 
         :type redshift: float
         :return: None
@@ -185,4 +185,42 @@ class Spectrum( dict ):
 
         return scaleflux
 
+    def bin(self, step = 1 ):
+        wls = self.getWavelengths()
+        wlslist = []
+        flxlist = []
+        errlist = []
+
+        lowIndex, highIndex = 0, 1
+        while( lowIndex < len( wls ) - 1 ):
+            lowWL = wls[ lowIndex ]
+            highWL = wls[ highIndex ]
+            newWL = int( lowWL )
+            while( highWL - newWL < step ):
+                highIndex += 1
+                if( highIndex == len( wls ) ):
+                    break
+                else:
+                    highWL = wls[ highIndex ]
+        #highIndex -= 1
+        #highWL = wls[ highIndex ]
+            fluxsum, errsum = 0, 0
+            for i in range( lowIndex, highIndex, 1 ):
+                lowWL = wls[ i ]
+                fluxsum += self.getFlux( lowWL )
+                errsum += self.getErr( lowWL )
+            fluxsum /= ( highIndex - lowIndex )
+            errsum /= ( highIndex - lowIndex )
+
+            flxlist.append( fluxsum )
+            errlist.append( errsum )
+            wlslist.append( newWL )
+            lowIndex = highIndex
+            highIndex += 1
+        self.setDict( wlslist, flxlist, errlist )
+        return self
+
 # TODO: Create bin method
+
+    def wl_flux_plotlist(self):
+        return [ ( wl, self[ wl ][ 0 ] ) for wl in self.getWavelengths() ]
