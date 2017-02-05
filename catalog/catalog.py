@@ -1,20 +1,22 @@
 import pickle
 
-from common.constants import BASE_CODE_PATH, join
+from common.constants import BASE_CODE_PATH, BASE_PROCESSED_PATH, join
 
 
 class catalog( dict ):
 
     __THIS_CAT = ( -1, "" )
+    __isLoaded = False
 
     SHEN_CATALOG = ( 0, "shenCat" )
-    DIVIDE_CATALOG = ( 1, "divCat" )
+    DIVIDE_CATALOG = ( 1, "divCat" ) # Format: slope, intercept, average
     CHI_CATALOG = ( 2, "chiCat" )
 
     __BASE_CATALOG_PATH = join( BASE_CODE_PATH, "catalog" )
 
-    __SHEN_PATH = join( __BASE_CATALOG_PATH, "shenCat.bin" )
-    __DIV_PATH = join( __BASE_CATALOG_PATH, "divCat.bin" )
+    __SHEN_PATH = join( BASE_CODE_PATH, "catalog", "shenCat.bin" )
+
+    __DIV_PATH = join( BASE_PROCESSED_PATH, "Catalogs", "DivCat" )
     __CHI_PATH = join( __BASE_CATALOG_PATH, "chiCat.bin" )
 
     __CAT_DICT = { SHEN_CATALOG: __SHEN_PATH, DIVIDE_CATALOG: __DIV_PATH, CHI_CATALOG: __CHI_PATH }
@@ -23,10 +25,33 @@ class catalog( dict ):
         super( self.__class__, self ).__init__()
         self.__THIS_CAT = catalog
 
-    def load( self ):
-        self.update( pickle.load( open( self.__CAT_DICT[ self.__THIS_CAT ], 'rb' ) ) )
+    def __getitem__(self, namestring ):
+        if self.__THIS_CAT == self.SHEN_CATALOG:
+            if not self.__isLoaded:
+                self.load()
+            return self.get( namestring )
+        elif self.__THIS_CAT == self.DIVIDE_CATALOG:
+            if not self.__isLoaded and namestring not in self:
+                self.load( namestring )
+            return self.get( namestring )
+
+    def load( self, namestring = None ):
+        if self.__THIS_CAT == self.SHEN_CATALOG:
+            self.update( pickle.load( open( self.__CAT_DICT[ self.__THIS_CAT ], 'rb' ) ) )
+            self.__isLoaded = True
+        elif self.__THIS_CAT == self.DIVIDE_CATALOG:
+            if namestring is None:
+                import os
+                path = os.path.split( self.__CAT_DICT[ self.__THIS_CAT ] )[ 0 ]
+                path = join( path, "DivDict.bin" )
+                self.update( pickle.load( open( path, "rb" ) ) )
+                self.__isLoaded = True
+            else:
+                self.__setitem__( namestring, pickle.load( open( join( self.__CAT_DICT[ self.__THIS_CAT ], f"{namestring}-div.bin" ), 'rb' ) ) )
 
     def rewrite( self ):
+        if self.__THIS_CAT != self.SHEN_CATALOG:
+            raise TypeError( f"catalog.rewrite(): Catalog type is not SHEN_CATALOG.  Unable to rewrite.\n__THIS_CAT: {self.__THIS_CAT}" )
         d = {}.update( self )
         pickle.dump( d, open( self.__CAT_DICT[ self.__THIS_CAT ], 'wb' ) )
 

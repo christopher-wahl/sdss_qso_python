@@ -66,6 +66,19 @@ def text_write( spec, path, filename ):
         writer.writeheader()
         writer.writerows( spec.lineDictList() )
 
+def load( path, filename ):
+    """
+    Loads the serialized spectrum file at /path/filename
+
+    :param path: /path/to/filename
+    :param filename:  file name of spectrum to load
+    :type path: str
+    :type filename: str
+    :rtype: Spectrum
+    """
+    fileCheck( path, filename )
+    return pickle.load( open( join( path, filename ), 'rb' ) )
+
 def write( spec, path, filename ):
     """
     Writes a serialized spectrum file at /path/filename
@@ -80,19 +93,6 @@ def write( spec, path, filename ):
     dirCheck( path )
     with open( join( path, filename ), 'wb' ) as outfile:
         pickle.dump( spec, outfile, protocol=pickle.HIGHEST_PROTOCOL )
-
-def load( path, filename ):
-    """
-    Loads the serialized spectrum file at /path/filename
-
-    :param path: /path/to/filename
-    :param filename:  file name of spectrum to load
-    :type path: str
-    :type filename: str
-    :rtype: Spectrum
-    """
-    fileCheck( path, filename )
-    return pickle.load( open( join( path, filename ), 'rb' ) )
 
 def rspecLoader( namestring ):
     return load( REST_SPEC_PATH, ns2f( namestring, ".rspec") )

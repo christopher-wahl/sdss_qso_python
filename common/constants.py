@@ -1,11 +1,10 @@
 import os
-from sys import path
-if os.path.abspath( "../" ) not in path:
-    path.insert( 0, os.path.abspath( "../" ) )
+
 join = os.path.join
 abspath = os.path.abspath
 
 from multiprocessing import cpu_count
+
 MAX_PROC = cpu_count()
 
 """ BASE PATHS """

@@ -53,7 +53,6 @@ class Spectrum( dict ):
                 n += 1
         return s / n
 
-
     def bin(self, step = 1 ):
         wls = self.getWavelengths()
         wlslist = []

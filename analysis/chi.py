@@ -29,6 +29,7 @@ def generic_chi( list0, list1 ):
         _chi += pow( list0[ i ] - list1[ i ], 2 ) / list0[ 0 ]
     return _chi
 
+@DeprecationWarning
 def async_chi_analysis( expSpec, speclist ):
     async def __async_chi_wrapper( expSpec, obsSpec ):
         return { obsSpec.getNS() : chi( expSpec, obsSpec ) }
@@ -48,3 +49,35 @@ def async_chi_analysis( expSpec, speclist ):
         resultsDict.update( result )
 
     return resultsDict
+
+def multi_chi_analysis( expSpec, speclist, MAX_PROC = None ):
+    """
+    Multiprocessing module for chi^2 analysis.  Returns a dictionary keyed by namestrings in the speclist with values of chi^2 result
+
+    :param expSpec: Expected Spectrum
+    :param speclist: list of Spectrum to perform analysis with expSpec
+    :return: Dictionary of { namestring : chi^2 value }, namestrings taken from the respective speclist entrys
+    :rtype: dict
+    """
+    from common.async_tools import generic_unordered_multiprocesser as multiproc
+
+    results = []
+    multiproc( [ ( expSpec, spec ) for spec in speclist ], __multi_chi_wrapper, results, MAX_PROC )
+
+    resultsDict = {}
+    for result in results:
+        resultsDict.update( result )
+
+    return resultsDict
+
+def __multi_chi_wrapper( inputV ):
+    """
+    Wrapper for multi_chi_analysis, passed into multiprocessing module
+
+    :param inputV: tuple item from input_values list; unpacked in module to ( expSpec, obsSpec ) to pass into chi()
+    :type inputV: tuple
+    :return: Dictionary of { obsSpec.namestring : chi^2 result }
+    :rtype: dict
+    """
+    expSpec, obsSpec = inputV
+    return { obsSpec.getNS() : chi( expSpec, obsSpec, True ) }
