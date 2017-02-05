@@ -81,6 +81,17 @@ def getFiles( path, extention = None ):
     extention = extCheck ( extention ) if extention is not None else ''
     return[ f for f in os.listdir( path ) if ( os.path.isfile( os.path.join( path, f ) ) and (os.path.splitext( f )[ 1 ].endswith( extention ))) ]
 
+def object_loader( path, filename ):
+    import pickle
+    fileCheck( path, filename )
+    return pickle.load( open( join( path, filename ), 'rb' ) )
+
+def object_writer( object, path, filename ):
+    import pickle
+    dirCheck( path )
+    with open( join( path, filename ), 'wb' ) as outfile:
+        pickle.dump( object, outfile, protocol=pickle.HIGHEST_PROTOCOL )
+
 def ns2f( namestring, extention ):
     """
     Shortcut call for utils.namestringToFilename( namestring, extention )
