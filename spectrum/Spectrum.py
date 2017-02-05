@@ -45,6 +45,14 @@ class Spectrum( dict ):
     def aveFlux( self, scaleWL=None, radius=None ):
         scaleWL = scaleWL or DEFAULT_SCALE_WL
         radius = radius or DEFUALT_SCALE_RADIUS
+        s = 0
+        n = 0
+        for wl in self.getWavelengths():
+            if( scaleWL - radius <= wl <= scaleWL + radius ):
+                s += self.getFlux( wl )
+                n += 1
+        return s / n
+
 
     def bin(self, step = 1 ):
         wls = self.getWavelengths()
@@ -237,6 +245,11 @@ class Spectrum( dict ):
             raise TypeError( "No scaleflux value determined in spectrum.scaleFactor( **kwargs )" )
 
         return scaleflux
+
+    def trim(self, wlLow, wlHigh ):
+        for wl in self.getWavelengths():
+            if( wl < wlLow or wlHigh < wl ):
+                del self[ wl ]
 
     def wl_flux_plotlist(self):
         return [ ( wl, self[ wl ][ 0 ] ) for wl in self.getWavelengths() ]

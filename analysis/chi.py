@@ -1,6 +1,6 @@
 from spectrum import Spectrum
 
-def chi( expSpec, obsSpec ):
+def chi( expSpec, obsSpec, doScale = False ):
     """
     Returns the chi^2 value between the given spectra
 
@@ -13,8 +13,11 @@ def chi( expSpec, obsSpec ):
     """
     a0 = expSpec.cpy( )
     a1 = obsSpec.cpy( )
+    if( doScale ):
+        a1.scale( spec = a0 )
 
-    a0.alignToSpec( a1 )
+    if( not a0.isAligned( a1 ) ):
+        a0.alignToSpec( a1 )
 
     return sum( [ pow( a0.getFlux( wl ) - a1.getFlux( wl ), 2 ) / a0.getFlux( wl ) for wl in a0 ] )
 
