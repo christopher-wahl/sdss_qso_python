@@ -27,9 +27,59 @@ class Spectrum( dict ):
         return '%s  z: %s   gmag: %s\n%s    %s' % (
             self.getNS( ), self.getRS( ), self.getGmag( ), self.getWavelengths( )[ 0 ], self.getWavelengths( )[ -1 ])
 
+    def align(self, wlList ):
+        wls = self.getWavelengths()
+        for wl in wls:
+            if wl not in wlList:
+                del self[ wl ]
+
+    def alignToSpec(self, spec ):
+        self_wls = set( self.getWavelengths() )
+        spec_wls = set( spec.getWavelengths() )
+
+        for wl in ( self_wls - spec_wls ):
+            del self[ wl ]
+        for wl in ( spec_wls - self_wls ):
+            del spec[ wl ]
+
     def aveFlux( self, scaleWL=None, radius=None ):
         scaleWL = scaleWL or DEFAULT_SCALE_WL
         radius = radius or DEFUALT_SCALE_RADIUS
+
+    def bin(self, step = 1 ):
+        wls = self.getWavelengths()
+        wlslist = []
+        flxlist = []
+        errlist = []
+
+        lowIndex, highIndex = 0, 1
+        while( lowIndex < len( wls ) - 1 ):
+            lowWL = wls[ lowIndex ]
+            highWL = wls[ highIndex ]
+            newWL = int( lowWL )
+            while( highWL - newWL < step ):
+                highIndex += 1
+                if( highIndex == len( wls ) ):
+                    break
+                else:
+                    highWL = wls[ highIndex ]
+        #highIndex -= 1
+        #highWL = wls[ highIndex ]
+            fluxsum, errsum = 0, 0
+            for i in range( lowIndex, highIndex, 1 ):
+                lowWL = wls[ i ]
+                fluxsum += self.getFlux( lowWL )
+                errsum += self.getErr( lowWL )
+            fluxsum /= ( highIndex - lowIndex )
+            errsum /= ( highIndex - lowIndex )
+
+            flxlist.append( fluxsum )
+            errlist.append( errsum )
+            wlslist.append( newWL )
+            lowIndex = highIndex
+            highIndex += 1
+        self.setDict( wlslist, flxlist, errlist )
+        return self
 
     def cpy( self ):
         """
@@ -77,6 +127,9 @@ class Spectrum( dict ):
 
     def getWavelengths( self ):
         return sorted( self.keys( ) )
+
+    def isAligned(self, spec ):
+        return spec.keys() == self.keys()
 
     def lineDict( self, wavelength ):
         return { 'wavelength': wavelength, 'flux density': self.getFlux( wavelength ),
@@ -184,43 +237,6 @@ class Spectrum( dict ):
             raise TypeError( "No scaleflux value determined in spectrum.scaleFactor( **kwargs )" )
 
         return scaleflux
-
-    def bin(self, step = 1 ):
-        wls = self.getWavelengths()
-        wlslist = []
-        flxlist = []
-        errlist = []
-
-        lowIndex, highIndex = 0, 1
-        while( lowIndex < len( wls ) - 1 ):
-            lowWL = wls[ lowIndex ]
-            highWL = wls[ highIndex ]
-            newWL = int( lowWL )
-            while( highWL - newWL < step ):
-                highIndex += 1
-                if( highIndex == len( wls ) ):
-                    break
-                else:
-                    highWL = wls[ highIndex ]
-        #highIndex -= 1
-        #highWL = wls[ highIndex ]
-            fluxsum, errsum = 0, 0
-            for i in range( lowIndex, highIndex, 1 ):
-                lowWL = wls[ i ]
-                fluxsum += self.getFlux( lowWL )
-                errsum += self.getErr( lowWL )
-            fluxsum /= ( highIndex - lowIndex )
-            errsum /= ( highIndex - lowIndex )
-
-            flxlist.append( fluxsum )
-            errlist.append( errsum )
-            wlslist.append( newWL )
-            lowIndex = highIndex
-            highIndex += 1
-        self.setDict( wlslist, flxlist, errlist )
-        return self
-
-# TODO: Create bin method
 
     def wl_flux_plotlist(self):
         return [ ( wl, self[ wl ][ 0 ] ) for wl in self.getWavelengths() ]

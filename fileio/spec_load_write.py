@@ -115,6 +115,7 @@ def async_load( path, filelist, extention = None ):
     :return: list of loaded Spectrum type
     :rtype: list
     """
+    from common.async_tools import generic_async_wrapper
     import asyncio
 
     async def __async_load_wrapper( path, filename ):
@@ -127,7 +128,7 @@ def async_load( path, filelist, extention = None ):
         filelist = [ f + extCheck( extention ) for f in filelist ]
 
     try:
-        load_loop.run_until_complete( __async_wrapper( [ ( path, filename ) for filename in filelist ], __async_load_wrapper, output_list  ) )
+        load_loop.run_until_complete( generic_async_wrapper( [ (path, filename) for filename in filelist ], __async_load_wrapper, output_list ) )
     finally:
         load_loop.close()
 
@@ -147,6 +148,7 @@ def async_write( path, speclist, extention = ".spec" ):
     :type extention: str
     :rtype: None
     """
+    from common.async_tools import generic_async_wrapper
     import asyncio
 
     async def __async_write_wrapper( path, spectrum, extention ):
@@ -155,33 +157,6 @@ def async_write( path, speclist, extention = ".spec" ):
     write_loop = asyncio.new_event_loop()
 
     try:
-        write_loop.run_until_complete( __async_wrapper( [ ( path, spec, extention ) for spec in speclist ], __async_write_wrapper ) )
+        write_loop.run_until_complete( generic_async_wrapper( [ (path, spec, extention) for spec in speclist ], __async_write_wrapper ) )
     finally:
         write_loop.close()
-
-async def __async_wrapper( input_values, async_function, output_values = None ):
-    """
-    Basic asyncronous operations wrapper.  Be aware, no order will be maintained in this process.
-    i.e. the results of output_values will very likely NOT correspond to those of input_values.
-
-    input_values is a list of tuples. These values will be unpacked and passed to specified async_function
-
-    Note:  No results are returned directly by this method.  Returned results of async_function are appended to output_values.
-    If output_values is not given, no results will be returned from this method.
-
-    :param input_values: list of tuples [ (val1, val2...), ... ] to be passed to async_function by async_function( *(val1, val2...) )
-    :param async_function: asyncronous method which contains the actual operation to be performed.
-    :param output_values: If passed in, results returned by async_function will be appended to this list.
-    :type input_values: list
-    :type async_function: function
-    :type output_values: list
-    :return: None
-    :rtype: None
-    """
-    import asyncio
-
-    coroutines = [ async_function( *input_value ) for input_value in input_values ]
-    completed, pending = await asyncio.wait( coroutines )
-
-    if output_values is not None:
-        output_values.extend( [ result.result() for result in completed ] )
