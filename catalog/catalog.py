@@ -35,40 +35,6 @@ class catalog( dict ):
                 self.load( namestring )
             return self.get( namestring )
 
-    def load( self, namestring = None ):
-        if self.__THIS_CAT == self.SHEN_CATALOG:
-            self.update( pickle.load( open( self.__CAT_DICT[ self.__THIS_CAT ], 'rb' ) ) )
-            self.__isLoaded = True
-        elif self.__THIS_CAT == self.DIVIDE_CATALOG:
-            if namestring is None:
-                import os
-                path = os.path.split( self.__CAT_DICT[ self.__THIS_CAT ] )[ 0 ]
-                path = join( path, "DivDict.bin" )
-                self.update( pickle.load( open( path, "rb" ) ) )
-                self.__isLoaded = True
-            else:
-                self.__setitem__( namestring, pickle.load( open( join( self.__CAT_DICT[ self.__THIS_CAT ], f"{namestring}-div.bin" ), 'rb' ) ) )
-
-    def subkey(self, namestring, subkey ):
-        """
-        Returns the subkey of a the namestring entry.  If subkey is a string, calls .lower() on it
-
-        Equivalent to:
-        catalog[ namestring ][ subkey ]
-        :param namestring:
-        :param subkey:
-        :return:
-        """
-        if type( subkey ) == str:
-            subkey = subkey.lower()
-        return self[ namestring ][ subkey.lower() ]
-
-    def rewrite( self ):
-        if self.__THIS_CAT != self.SHEN_CATALOG:
-            raise TypeError( f"catalog.rewrite(): Catalog type is not SHEN_CATALOG.  Unable to rewrite.\n__THIS_CAT: {self.__THIS_CAT}" )
-        d = {}.update( self )
-        pickle.dump( d, open( self.__CAT_DICT[ self.__THIS_CAT ], 'wb' ) )
-
     def export_text(self, path = None, filename = None ):
         import json
         from fileio.utils import dirCheck
@@ -84,3 +50,42 @@ class catalog( dict ):
 
     def keys(self):
         return list( super( catalog, self ).keys() )
+
+    def load( self, namestring = None ):
+        if self.__THIS_CAT == self.SHEN_CATALOG:
+            self.update( pickle.load( open( self.__CAT_DICT[ self.__THIS_CAT ], 'rb' ) ) )
+            self.__isLoaded = True
+        elif self.__THIS_CAT == self.DIVIDE_CATALOG:
+            if namestring is None:
+                import os
+                path = os.path.split( self.__CAT_DICT[ self.__THIS_CAT ] )[ 0 ]
+                path = join( path, "DivDict.bin" )
+                self.update( pickle.load( open( path, "rb" ) ) )
+                self.__isLoaded = True
+            else:
+                self.__setitem__( namestring, pickle.load( open( join( self.__CAT_DICT[ self.__THIS_CAT ], f"{namestring}-div.bin" ), 'rb' ) ) )
+
+    def rewrite( self ):
+        if self.__THIS_CAT != self.SHEN_CATALOG:
+            raise TypeError( f"catalog.rewrite(): Catalog type is not SHEN_CATALOG.  Unable to rewrite.\n__THIS_CAT: {self.__THIS_CAT}" )
+        d = {}.update( self )
+        pickle.dump( d, open( self.__CAT_DICT[ self.__THIS_CAT ], 'wb' ) )
+
+    def subkey(self, namestring, *subkeys ):
+        """
+        Returns the subkey entries of a namestring entry.  If a subkey is a string, calls .lower() on it.
+
+        Supports multiple subkeys sent in: subkey( namestring, subkey1, subkey2, subkey3 ... ).  If multiple
+        keys are sent in, a list of the values are returned in the order of the passed subkeys
+
+        Equivalent to:
+        catalog[ namestring ][ subkey ]
+        :param namestring:
+        :param subkey:
+        :return:
+        """
+        if len( subkeys ) == 1:
+            return set[ namestring ][ subkeys.lower() if type( subkeys ) == str else subkeys ]
+
+        subkeys = [ subkey.lower() for subkey in subkeys if type( subkey ) == str ]
+        return [ self[ namestring ][ subkey ] for subkey in subkeys ]
