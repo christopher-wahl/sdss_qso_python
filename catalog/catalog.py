@@ -85,7 +85,10 @@ class catalog( dict ):
         :return:
         """
         if len( subkeys ) == 1:
-            return set[ namestring ][ subkeys.lower() if type( subkeys ) == str else subkeys ]
+            subkeys = subkeys[ 0 ]
+            if type( subkeys ) == str:
+                subkeys = subkeys.lower()
+            return self[ namestring ][ subkeys ]
 
         subkeys = [ subkey.lower() for subkey in subkeys if type( subkey ) == str ]
         return [ self[ namestring ][ subkey ] for subkey in subkeys ]

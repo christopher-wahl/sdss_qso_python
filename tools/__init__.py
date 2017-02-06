@@ -1,4 +1,3 @@
-
 def paired_list_to_dict( paired_list ):
     """
     Converts a list of [ ( a, b ), ( c, d ) ... ] or [ { a : b }, { c : d } ... ]
@@ -11,8 +10,8 @@ def paired_list_to_dict( paired_list ):
     """
     def __err():
         raise TypeError(
-            "paired_list_to_dict: paired_list entries must be either dict or have a length of 2\nFirst entry: %s" %
-            paired_list[ 0 ] )
+                "paired_list_to_dict: paired_list entries must be either dict or have a length of 2\nFirst entry: %s" %
+                paired_list[ 0 ] )
 
     out_dict = {}
     for point in paired_list:
@@ -23,3 +22,7 @@ def paired_list_to_dict( paired_list ):
         else: __err()
 
     return out_dict
+
+def paired_tuple_list_to_two_lists( inlist ):
+    xlist, ylist, zlist = zip( * inlist )
+    return list( xlist ), list( ylist )
