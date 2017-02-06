@@ -49,6 +49,20 @@ class catalog( dict ):
             else:
                 self.__setitem__( namestring, pickle.load( open( join( self.__CAT_DICT[ self.__THIS_CAT ], f"{namestring}-div.bin" ), 'rb' ) ) )
 
+    def subkey(self, namestring, subkey ):
+        """
+        Returns the subkey of a the namestring entry.  If subkey is a string, calls .lower() on it
+
+        Equivalent to:
+        catalog[ namestring ][ subkey ]
+        :param namestring:
+        :param subkey:
+        :return:
+        """
+        if type( subkey ) == str:
+            subkey = subkey.lower()
+        return self[ namestring ][ subkey.lower() ]
+
     def rewrite( self ):
         if self.__THIS_CAT != self.SHEN_CATALOG:
             raise TypeError( f"catalog.rewrite(): Catalog type is not SHEN_CATALOG.  Unable to rewrite.\n__THIS_CAT: {self.__THIS_CAT}" )
@@ -62,7 +76,7 @@ class catalog( dict ):
         if path is None:
             path = join( self.__BASE_CATALOG_PATH, "text_backup" )
         if filename is None:
-            filename = f"{self.__THIS_CAT[ 1 ]}.bin"
+            filename = f"{self.__THIS_CAT[ 1 ]}.json"
 
         dirCheck( path )
         with open( join( path, filename ), 'w' ) as outfile:
