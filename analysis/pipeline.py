@@ -1,35 +1,6 @@
 from tools import paired_list_to_dict
 
 
-class speclist_analysis_pipeline:
-
-    __primeSpec = None
-    __speclist = None
-
-    __analysis_func = None
-
-    __results_pipeline = None
-
-    def __init__(self, primeSpec, speclist, analysis_function, result_range, binWidth = 0.01 ):
-        self.__primeSpec = primeSpec
-        self.__speclist = speclist
-        self.__analysis_func = analysis_function
-        self.__results_pipeline = results_pipeline( *result_range, binWidth = binWidth )
-
-    def do_analysis( self, use_imap = True ):
-        if use_imap:
-            from common.async_tools import generic_unordered_multiprocesser as multi_op
-        else:
-            from common.async_tools import generic_map_multiprocesser as multi_op
-
-        results = []
-        input_values = [ ( self.__primeSpec, spec ) for spec in self.__speclist ]
-        multi_op( input_values, self.__analysis_func, results )
-        self.__results_dict = paired_list_to_dict( results )
-
-    def reduce_results( self ):
-        self.__results_pipeline.reduce_results()
-
 class results_pipeline:
 
     _results_low = None
@@ -72,6 +43,8 @@ class results_pipeline:
         raise TypeError( f'{self.__class__.__name__}.{func_name}: type( results ) must be either dict or list\nType found: {type_found}' )
 
     def set_results(self, results ):
+        if self._results_dict is not None:
+            self._results_dict.clear()
         if type( results ) == dict:
             self._results_dict = results
         elif type( results ) == list:
@@ -82,7 +55,7 @@ class results_pipeline:
     def reduce_results( self ):
         if self._results_dict is None:
             raise TypeError( "results_pipeline.reduce_results(): _results_dict is NoneType.  Have results been set?" )
-        keys = self._results_dict.keys( )
+        keys = list( self._results_dict.keys( ) )
         for key in keys:
             if self._results_dict[ key ] < self._results_low or self._results_high < self._results_dict[ key ]:
                 del self._results_dict[ key ]
@@ -107,9 +80,44 @@ class results_pipeline:
         self._rs_bin_low = rs_low
         self._rs_bin_high = rs_high
 
+class speclist_analysis_pipeline:
+
+    __primeSpec = None
+    __speclist = None
+
+    __analysis_func = None
+
+    __results_pipeline = None
+
+    def __init__(self, primeSpec, speclist, analysis_function, result_range, binWidth = 0.01 ):
+        self.__primeSpec = primeSpec.cpy()
+        self.__speclist = speclist
+        self.__analysis_func = analysis_function
+        self.__results_pipeline = results_pipeline( result_range, binWidth = binWidth )
+
+    def trim_prime( self, wl_low, wl_high ):
+        self.__primeSpec.trim( wlLow = wl_low, wlHigh = wl_high )
+
+    def do_analysis( self, use_imap = True ):
+        if use_imap:
+            from common.async_tools import generic_unordered_multiprocesser as multi_op
+        else:
+            from common.async_tools import generic_map_multiprocesser as multi_op
+
+        results = []
+        input_values = [ ( self.__primeSpec, spec ) for spec in self.__speclist ]
+        multi_op( input_values, self.__analysis_func, results )
+        self.__results_pipeline.set_results( paired_list_to_dict( results ) )
+
+    def reduce_results( self ):
+        self.__results_pipeline.reduce_results()
+
+    def get_results(self):
+        return self.__results_pipeline.get_results()
+
 class redshift_ab_pipeline( results_pipeline ):
 
-    _primary_ns = None
+    _prime_ns = None
     _prime_z = None
     _prime_mag = None
     _prime_mag_err = None
@@ -122,7 +130,7 @@ class redshift_ab_pipeline( results_pipeline ):
 
         super( results_pipeline, self ).__init__()
 
-        self._primary_ns = primary_ns
+        self._prime_ns = primary_ns
         self._prime_z = primary_z
         self._prime_mag = primary_magnitude
         self._prime_mag_err = primary_magnitude_error
@@ -160,12 +168,13 @@ class redshift_ab_pipeline( results_pipeline ):
         evoHigh = magnitude_evolution(  self._prime_mag + self._prime_mag_err, self._prime_z )
         evo = magnitude_evolution( self._prime_mag, self._prime_z )
 
+        prime = make_points_plotitem( [ self._prime_z ], [ self._prime_mag ], error_data=[ self._prime_mag_err ], color = "dark-red", title = self._prime_ns )
         abData = make_points_plotitem( *self.ab_v_z_data( self, True ), color = "royalblue", title = "Catalog Points in Range" )
         evoLow = make_line_plotitem( *paired_tuple_list_to_two_lists( evoLow ), color = "grey", title = "Upper/Lower Expected Bounds" )
         evoHigh = make_line_plotitem( *paired_tuple_list_to_two_lists( evoHigh ), color = "grey" )
         evo = make_line_plotitem( *paired_tuple_list_to_two_lists( evo ), color = "black", title = "Expected Magnitude Evolution" )
 
-        ab_z_plot( abData, evoLow, evoHigh, evo, outpath = path, outfile = filename, plotTitle = f"Catalog Points within Expected Evolution of {self._primary_ns}" )
+        ab_z_plot( prime, abData, evoLow, evoHigh, evo, outpath = path, outfile = filename, plotTitle =f"Catalog Points within Expected Evolution of {self._prime_ns}" )
 
     @staticmethod
     def ab_v_z_data( pipeline, get_error = False ):

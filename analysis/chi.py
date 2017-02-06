@@ -82,5 +82,5 @@ def __multi_chi_wrapper( inputV ):
     expSpec, obsSpec = inputV
     return { obsSpec.getNS() : chi( expSpec, obsSpec, True ) }
 
-def pipeline_chi_wrapper():
-    pass
+def pipeline_chi_wrapper( inputV ):
+    return __multi_chi_wrapper( inputV )
