@@ -79,9 +79,9 @@ class catalog( dict ):
         keys are sent in, a list of the values are returned in the order of the passed subkeys
 
         Equivalent to:
-        catalog[ namestring ][ subkey ]
+        [ catalog[ namestring ][ subkey1 ], catalog[ namestring ][ subkey2 ], ... ]
         :param namestring:
-        :param subkey:
+        :param subkeys:
         :return:
         """
         if len( subkeys ) == 1:
