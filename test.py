@@ -40,6 +40,8 @@ def main():
 
     print( "test")
 
+# TODO: Setup Chi Cat
+
 if __name__ == "__main__":
     freeze_support()
     main()
