@@ -14,7 +14,7 @@ def main():
 
 
     rmp = redshift_ab_pipeline( ns, z, ab, aberr, divCat[ ns ] )
-    rmp.reduce_results()
+    rmp.reduce_results( 2 )
     outd = rmp.bin_results()
     rmp.plot_results( BASE_PLOT_PATH, f"{ns} Catalog Entries in Range.pdf")
 
@@ -25,7 +25,7 @@ def main():
     chi_analysis = speclist_analysis_pipeline( prime, speclist, pipeline_chi_wrapper, ( 0, 1000 ) )
     chi_analysis.trim_prime( STD_MIN_WL, STD_MAX_WL )
     chi_analysis.do_analysis()
-    chi_analysis.reduce_results()
+    chi_analysis.reduce_results( )
     r = chi_analysis.get_results()
     rmp.set_results( r )
     rmp.plot_results( BASE_PLOT_PATH, f"{ns} Chi max 1000.pdf" )

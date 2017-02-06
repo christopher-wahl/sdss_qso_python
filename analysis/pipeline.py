@@ -121,6 +121,7 @@ class redshift_ab_pipeline( results_pipeline ):
     _prime_z = None
     _prime_mag = None
     _prime_mag_err = None
+    _n_sigma = 1 # number of sigma to extend error bars out
     _evofunction = None
 
     def __init__(self, primary_ns, primary_z, primary_magnitude, primary_magnitude_error, results = None ):
@@ -142,15 +143,18 @@ class redshift_ab_pipeline( results_pipeline ):
             except TypeError:
                 self._typeerr( "__init__", results.__class__.__name__ )
 
-    def reduce_results( self ):
+    def reduce_results( self, n_sigma  = None ):
         if self._results_dict is None:
             raise TypeError( "redshift_ab_pipeline.reduce_results(): _results_dict is NoneType.  Have results been set?" )
         keys = list( self._results_dict.keys() )
+        self._n_sigma = n_sigma or self._n_sigma
+        prime_max = self._prime_mag + self._prime_mag_err * self._n_sigma
+        prime_min = self._prime_mag - self._prime_mag_err * self._n_sigma
         for namestring in keys:
             z, mag, mag_err = self._shenCat.subkey( namestring, 'z', 'ab', 'ab_err' )
 
-            mag_low = self._evofunction( self._prime_mag - self._prime_mag_err, self._prime_z, z )
-            mag_high = self._evofunction( self._prime_mag + self._prime_mag_err, self._prime_z, z )
+            mag_low = self._evofunction( prime_min, self._prime_z, z )
+            mag_high = self._evofunction( prime_max, self._prime_z, z )
 
 
             if( mag + mag_err < mag_low or mag_high < mag - mag_err ):
@@ -164,8 +168,8 @@ class redshift_ab_pipeline( results_pipeline ):
 
         dirCheck( path )
 
-        evoLow = magnitude_evolution(  self._prime_mag - self._prime_mag_err, self._prime_z )
-        evoHigh = magnitude_evolution(  self._prime_mag + self._prime_mag_err, self._prime_z )
+        evoLow = magnitude_evolution(  self._prime_mag - self._prime_mag_err * self._n_sigma, self._prime_z )
+        evoHigh = magnitude_evolution(  self._prime_mag + self._prime_mag_err * self._n_sigma, self._prime_z )
         evo = magnitude_evolution( self._prime_mag, self._prime_z )
 
         prime = make_points_plotitem( [ self._prime_z ], [ self._prime_mag ], error_data=[ self._prime_mag_err ], color = "dark-red", title = self._prime_ns )
@@ -174,7 +178,7 @@ class redshift_ab_pipeline( results_pipeline ):
         evoHigh = make_line_plotitem( *paired_tuple_list_to_two_lists( evoHigh ), color = "grey" )
         evo = make_line_plotitem( *paired_tuple_list_to_two_lists( evo ), color = "black", title = "Expected Magnitude Evolution" )
 
-        ab_z_plot( prime, abData, evoLow, evoHigh, evo, outpath = path, outfile = filename, plotTitle =f"Catalog Points within Expected Evolution of {self._prime_ns}" )
+        ab_z_plot( prime, abData, evoLow, evoHigh, evo, outpath = path, outfile = filename, plotTitle =f"Catalog Points within Expected Evolution of {self._prime_ns} within {self._n_sigma} sigma" )
 
     @staticmethod
     def ab_v_z_data( pipeline, get_error = False ):
