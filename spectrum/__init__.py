@@ -39,7 +39,6 @@ def drop_to_em_lines( spec : Spectrum, *speclist : list, mgii = True, hb = True)
         return speclist[ 0 ]
     return speclist
 
-
 def __em_drop_wrapper( inputV ) -> Spectrum:
     from common.constants import MGII_RANGE, HB_RANGE
     spec, mgii, hb = inputV

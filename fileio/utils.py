@@ -1,16 +1,17 @@
 from re import search
+from typing import Union
 
 from common.constants import abspath, join, os
 
 
-def dirCheck( *args ):
+def dirCheck( *args : Union[ list or str ] ) -> None:
     """
     Checks if a given path exists.  If not, creates the folders to it.
 
     join( *args ) will be called on all passed parameters before checking
 
     :param args: string list of /path/to/dir
-    :type args: list
+    :type args: list or str
     :return: None
     :rtype: None
     """

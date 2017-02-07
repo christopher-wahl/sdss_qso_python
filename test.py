@@ -11,7 +11,7 @@ def main():
     ns = "53521-1714-011"
     z, ab, aberr = shenCat.subkey( ns, 'z', 'ab', 'ab_err' )
     divCat.load( namestring=ns )
-
+    exit( 'Manually inserted exitpoint')
 
     rmp = redshift_ab_pipeline( ns, z, ab, aberr, divCat[ ns ] )
     rmp.reduce_results( 2 )
@@ -21,7 +21,7 @@ def main():
     speclist = async_load( BINNED_SPEC_PATH, bspecnames, ".bspec")
     prime = bspecLoader( ns )
     from spectrum import drop_to_em_lines
-    drop_to_em_lines( prime )
+    drop_to_em_lines( prime, *speclist )
 
     chi_analysis = speclist_analysis_pipeline( prime, speclist, pipeline_chi_wrapper, ( 0, 1000 ) )
     chi_analysis.trim_prime( STD_MIN_WL, STD_MAX_WL )
