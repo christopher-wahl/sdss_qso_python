@@ -15,12 +15,13 @@ def main():
 
     rmp = redshift_ab_pipeline( ns, z, ab, aberr, divCat[ ns ] )
     rmp.reduce_results( 2 )
-    outd = rmp.bin_results()
     rmp.plot_results( BASE_PLOT_PATH, f"{ns} Catalog Entries in Range.pdf")
 
     bspecnames = list( rmp.get_results().keys() )
     speclist = async_load( BINNED_SPEC_PATH, bspecnames, ".bspec")
     prime = bspecLoader( ns )
+    from spectrum import drop_to_em_lines
+    drop_to_em_lines( prime )
 
     chi_analysis = speclist_analysis_pipeline( prime, speclist, pipeline_chi_wrapper, ( 0, 1000 ) )
     chi_analysis.trim_prime( STD_MIN_WL, STD_MAX_WL )
@@ -28,7 +29,7 @@ def main():
     chi_analysis.reduce_results( )
     r = chi_analysis.get_results()
     rmp.set_results( r )
-    rmp.plot_results( BASE_PLOT_PATH, f"{ns} Chi max 1000.pdf" )
+    rmp.plot_results( BASE_PLOT_PATH, f"{ns} EM line Chi max 1000.pdf" )
 
     chi_analysis = speclist_analysis_pipeline( prime, speclist, pipeline_chi_wrapper, ( 0, 500 ) )
     chi_analysis.trim_prime( STD_MIN_WL, STD_MAX_WL )
@@ -36,7 +37,7 @@ def main():
     chi_analysis.reduce_results( )
     r = chi_analysis.get_results()
     rmp.set_results( r )
-    rmp.plot_results( BASE_PLOT_PATH, f"{ns} Chi max 500.pdf" )
+    rmp.plot_results( BASE_PLOT_PATH, f"{ns} EM line Chi max 500.pdf" )
 
     print( "test")
 

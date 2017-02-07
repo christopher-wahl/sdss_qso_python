@@ -1,5 +1,6 @@
 from tools import paired_list_to_dict
 
+# TODO: write_results_dict method
 
 class results_pipeline:
 
@@ -102,7 +103,7 @@ class speclist_analysis_pipeline:
         if use_imap:
             from common.async_tools import generic_unordered_multiprocesser as multi_op
         else:
-            from common.async_tools import generic_map_multiprocesser as multi_op
+            from common.async_tools import generic_map_async_multiprocesser as multi_op
 
         results = []
         input_values = [ ( self.__primeSpec, spec ) for spec in self.__speclist ]

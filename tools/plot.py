@@ -1,5 +1,7 @@
 import Gnuplot
 
+# TODO: make 4x4 two spectrum multiplot method
+
 def make_points_plotitem( x_data, y_data, error_data = None, title = "", point_type = 7, point_size = 1, color = None ):
     with_ = ""
     if error_data is not None:
