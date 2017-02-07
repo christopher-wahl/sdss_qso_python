@@ -1,6 +1,4 @@
-from tools import paired_list_to_dict
 
-# TODO: write_results_dict method
 
 class results_pipeline:
 
@@ -44,6 +42,7 @@ class results_pipeline:
         raise TypeError( f'{self.__class__.__name__}.{func_name}: type( results ) must be either dict or list\nType found: {type_found}' )
 
     def set_results(self, results ):
+        from tools import paired_list_to_dict
         if self._results_dict is not None:
             self._results_dict.clear()
         if type( results ) == dict:
@@ -76,12 +75,15 @@ class results_pipeline:
     def get_results( self ):
         return self._results_dict
 
-    def set_rs_bins(self, rs_low, rs_high ):
-        assert ( type( rs_low ) == float or type( rs_low ) == int ) or ( type( rs_high ) == float or type( rs_high ) == int )
+    def write_results_csv(self, path : str, filename : str ) -> None:
+        from fileio import compound_dict_writer
+        compound_dict_writer( inDict = self._results_dict, path = path, filename = filename )
+
+    def set_rs_limits( self, rs_low : float, rs_high : float ) -> None:
         self._rs_bin_low = rs_low
         self._rs_bin_high = rs_high
 
-class speclist_analysis_pipeline:
+class speclist_analysis_pipeline: # TODO: have speclist_analysis_pipeline extend results_pipeline, rather than wrap it.
 
     __primeSpec = None
     __speclist = None
@@ -100,6 +102,7 @@ class speclist_analysis_pipeline:
         self.__primeSpec.trim( wlLow = wl_low, wlHigh = wl_high )
 
     def do_analysis( self, use_imap = True ):
+        from tools import paired_list_to_dict
         if use_imap:
             from common.async_tools import generic_unordered_multiprocesser as multi_op
         else:
@@ -158,7 +161,7 @@ class redshift_ab_pipeline( results_pipeline ):
             mag_high = self._evofunction( prime_max, self._prime_z, z )
 
 
-            if( mag + mag_err < mag_low or mag_high < mag - mag_err ):
+            if mag + mag_err < mag_low or mag_high < mag - mag_err:
                 del self._results_dict[ namestring  ]
 
     def plot_results(self, path, filename ):
@@ -174,23 +177,22 @@ class redshift_ab_pipeline( results_pipeline ):
         evo = magnitude_evolution( self._prime_mag, self._prime_z )
 
         prime = make_points_plotitem( [ self._prime_z ], [ self._prime_mag ], error_data=[ self._prime_mag_err ], color = "dark-red", title = self._prime_ns )
-        abData = make_points_plotitem( *self.ab_v_z_data( self, True ), color = "royalblue", title = "Catalog Points in Range" )
+        abData = make_points_plotitem( *self.ab_v_z_data( True ), color = "royalblue", title = "Catalog Points in Range" )
         evoLow = make_line_plotitem( *paired_tuple_list_to_two_lists( evoLow ), color = "grey", title = "Upper/Lower Expected Bounds" )
         evoHigh = make_line_plotitem( *paired_tuple_list_to_two_lists( evoHigh ), color = "grey" )
         evo = make_line_plotitem( *paired_tuple_list_to_two_lists( evo ), color = "black", title = "Expected Magnitude Evolution" )
 
         ab_z_plot( prime, abData, evoLow, evoHigh, evo, outpath = path, outfile = filename, plotTitle =f"Catalog Points within Expected Evolution of {self._prime_ns} within {self._n_sigma} sigma" )
 
-    @staticmethod
-    def ab_v_z_data( pipeline, get_error = False ):
-        if pipeline._results_dict is None:
+    def ab_v_z_data( self, get_error = False ):
+        if self._results_dict is None:
             raise TypeError( "redshift_ab_pipeline.reduce_results(): _results_dict is NoneType.  Have results been set?" )
 
         xlist, ylist, err_list = [], [], []
-        for ns in pipeline._results_dict:
-            xlist.append( pipeline._shenCat[ ns ][ 'z' ] )
-            ylist.append( pipeline._shenCat[ ns ][ 'ab' ] )
-            err_list.append( pipeline._shenCat[ ns ][ 'ab_err' ] )
+        for ns in self._results_dict:
+            xlist.append( self._shenCat[ ns ][ 'z' ] )
+            ylist.append( self._shenCat[ ns ][ 'ab' ] )
+            err_list.append( self._shenCat[ ns ][ 'ab_err' ] )
 
         if get_error: return xlist, ylist, err_list
 
