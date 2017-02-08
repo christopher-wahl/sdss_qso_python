@@ -1,5 +1,8 @@
+from typing import List, Union
+
 import Gnuplot
 
+from analysis.pipeline import results_pipeline
 from spectrum import Spectrum
 
 def __fix_outpath( path : str, filename : str = None ) -> str:
@@ -86,3 +89,52 @@ def four_by_four_multiplot( prime : Spectrum, *speclist : list, path : str = Non
         return g
     g( 'set output' )
     g.close()
+
+
+def raw_ab_z_plot( primary: Union[ str or Spectrum ],
+                   points: Union[ results_pipeline or dict or List[ str ] or List[ Spectrum ] ], path: str,
+                   filename: str, plotTitle: str = "", debug: bool = False ) -> Union[ Gnuplot.Gnuplot or None ]:
+    from tools.cosmo import magnitude_evolution
+    from catalog import shenCat
+
+    if type( primary ) is Spectrum:
+        primary = primary.getNS( )
+
+    p_z, p_ab, p_ab_err = shenCat.subkey( primary, 'z', 'ab', 'aberr' )
+    prime_upper_plot = make_line_plotitem( *magnitude_evolution( p_ab + p_ab_err, p_z )[ :2 ],
+                                           title="Upper / Lower Bounds of Expected Evolution", color="grey" )
+    prime_lower_plot = make_line_plotitem( *magnitude_evolution( p_ab - p_ab_err, p_z )[ :2 ],
+                                           title="Upper / Lower Bounds of Expected Evolution", color="grey" )
+    prime_plot = make_line_plotitem( *magnitude_evolution( p_ab + p_ab_err, p_z )[ :2 ],
+                                     title="", color="grey" )
+
+    z_data = [ ]
+    ab_data = [ ]
+    ab_err = [ ]
+    if type( points ) is list:
+        if type( points[ 0 ] ) is str:
+            for ns in points:
+                z_data.append( shenCat.subkey( ns, 'z' ) )
+                ab_data.append( shenCat.subkey( ns, 'ab' ) )
+                ab_err.append( shenCat.subkey( ns, 'ab_err' ) )
+        else:
+            for spec in points:
+                z_data.append( shenCat.subkey( spec.getNS( ), 'z' ) )
+                ab_data.append( shenCat.subkey( spec.getNS( ), 'ab' ) )
+                ab_err.append( shenCat.subkey( spec.getNS( ), 'ab_err' ) )
+    elif type( points ) is dict:
+        for ns in points:
+            z_data.append( shenCat.subkey( ns, 'z' ) )
+            ab_data.append( shenCat.subkey( ns, 'ab' ) )
+            ab_err.append( shenCat.subkey( ns, 'ab_err' ) )
+    elif type( points ) is results_pipeline:
+        for ns in points.get_results( ):
+            z_data.append( shenCat.subkey( ns, 'z' ) )
+            ab_data.append( shenCat.subkey( ns, 'ab' ) )
+            ab_err.append( shenCat.subkey( ns, 'ab_err' ) )
+
+    plot_points = make_points_plotitem( z_data, ab_data, ab_err, color="royalblue" )
+
+    # TODO: Combine these two into one method.  ab_z_plot will depreciate
+    return ab_z_plot( prime_plot, prime_lower_plot, prime_upper_plot, plot_points, path=path, filename=filename,
+                      plotTitle=plotTitle, debug=debug )
