@@ -38,32 +38,6 @@ def make_spectrum_plotitem( spec : Spectrum, color : str = None ) -> Gnuplot.Dat
         _with = f'{_with} lc "{color}"'
     return make_line_plotitem( spec.getWavelengths(), spec.getFluxlist(), title = spec.getNS(), with_= _with )
 
-def ab_z_plot( *plotItems, path : str = None, filename : str = None, plotTitle : str = None, debug : bool = False, **kwargs ) -> Gnuplot.Gnuplot:
-    from fileio.utils import dirCheck
-
-    terminal = 'pdf'
-    if "terminal" in kwargs:
-        terminal = kwargs[ 'terminal' ]
-
-
-    g = Gnuplot.Gnuplot()
-    if plotTitle is not None:
-        g.title( plotTitle )
-
-    g.xlabel( "Redshift" )
-    g.ylabel( "AB Magnitude" )
-    g( 'set grid' )
-    g( "set key bottom right opaque box")
-
-    if not debug:
-        dirCheck( path )
-        g( f'set terminal {terminal} enhanced color size 9,6')
-        g( f'set output { __fix_outpath( path, filename ) }')
-
-    g.plot( *plotItems )
-    if debug: return g
-    g.close()
-
 def four_by_four_multiplot( prime : Spectrum, *speclist : list, path : str = None, filename : str = None, plotTitle : str = "", debug : bool = False, **kwargs ) -> Gnuplot.Gnuplot:
     from common.constants import ANGSTROM, FLUX_UNITS
 
@@ -91,23 +65,25 @@ def four_by_four_multiplot( prime : Spectrum, *speclist : list, path : str = Non
     g.close()
 
 
-def raw_ab_z_plot( primary: Union[ str or Spectrum ],
-                   points: Union[ results_pipeline or dict or List[ str ] or List[ Spectrum ] ], path: str,
-                   filename: str, plotTitle: str = "", debug: bool = False ) -> Union[ Gnuplot.Gnuplot or None ]:
+def ab_z_plot( primary: Union[ str or Spectrum ],
+               points: Union[ results_pipeline or dict or List[ str ] or List[ Spectrum ] ], path: str,
+               filename: str, plotTitle: str = "", debug: bool = False ) -> Union[ Gnuplot.Gnuplot or None ]:
     from tools.cosmo import magnitude_evolution
     from catalog import shenCat
 
     if type( primary ) is Spectrum:
         primary = primary.getNS( )
 
-    p_z, p_ab, p_ab_err = shenCat.subkey( primary, 'z', 'ab', 'aberr' )
-    prime_upper_plot = make_line_plotitem( *magnitude_evolution( p_ab + p_ab_err, p_z )[ :2 ],
+    """ Make Magnitude Evolutiion Data """
+    p_z, p_ab, p_ab_err = shenCat.subkey( primary, 'z', 'ab', 'ab_err' )
+    prime_upper_plot = make_line_plotitem( *magnitude_evolution( p_ab + p_ab_err, p_z, splitLists=True )[ :2 ],
                                            title="Upper / Lower Bounds of Expected Evolution", color="grey" )
-    prime_lower_plot = make_line_plotitem( *magnitude_evolution( p_ab - p_ab_err, p_z )[ :2 ],
-                                           title="Upper / Lower Bounds of Expected Evolution", color="grey" )
-    prime_plot = make_line_plotitem( *magnitude_evolution( p_ab + p_ab_err, p_z )[ :2 ],
-                                     title="", color="grey" )
+    prime_lower_plot = make_line_plotitem( *magnitude_evolution( p_ab - p_ab_err, p_z, splitLists=True )[ :2 ],
+                                           title="", color="grey" )
+    prime_plot = make_line_plotitem( *magnitude_evolution( p_ab, p_z, splitLists=True )[ :2 ],
+                                     title="Expected Evolution", color="black" )
 
+    """ Make AB vs Z points data """
     z_data = [ ]
     ab_data = [ ]
     ab_err = [ ]
@@ -127,7 +103,7 @@ def raw_ab_z_plot( primary: Union[ str or Spectrum ],
             z_data.append( shenCat.subkey( ns, 'z' ) )
             ab_data.append( shenCat.subkey( ns, 'ab' ) )
             ab_err.append( shenCat.subkey( ns, 'ab_err' ) )
-    elif type( points ) is results_pipeline:
+    elif isinstance( points, results_pipeline ):
         for ns in points.get_results( ):
             z_data.append( shenCat.subkey( ns, 'z' ) )
             ab_data.append( shenCat.subkey( ns, 'ab' ) )
@@ -135,6 +111,24 @@ def raw_ab_z_plot( primary: Union[ str or Spectrum ],
 
     plot_points = make_points_plotitem( z_data, ab_data, ab_err, color="royalblue" )
 
-    # TODO: Combine these two into one method.  ab_z_plot will depreciate
-    return ab_z_plot( prime_plot, prime_lower_plot, prime_upper_plot, plot_points, path=path, filename=filename,
-                      plotTitle=plotTitle, debug=debug )
+    """ Data has been formed.  Make actual plot """
+    g = Gnuplot.Gnuplot( debug=1 if debug else 0 )
+    g.title( plotTitle )
+    g.xlabel( "Redshift" )
+    g.ylabel( "AB Magnitude" )
+    g( "set key bottom right opaque box" )
+    g( "set grid" )
+
+    if not debug:
+        from fileio.utils import dirCheck, join
+        dirCheck( path )
+        g( 'set terminal pdf enhanced size 9,6' )
+        g( f'set output {__fix_outpath( path, filename ) }' )
+
+    g.plot( prime_plot, prime_upper_plot, prime_lower_plot, plot_points )
+
+    if not debug:
+        g( 'set output' )
+        g.close( )
+        return None
+    return g

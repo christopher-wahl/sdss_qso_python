@@ -81,10 +81,13 @@ class results_pipeline:
         from tools import paired_list_to_dict
         if self._results_dict is not None:
             self._results_dict.clear()
+
         if type( results ) == dict:
             self._results_dict = results
         elif type( results ) == list:
             self._results_dict = paired_list_to_dict( results )
+        elif isinstance( results_pipeline, results ):
+            self._results_dict = results.get_results( )
         else:
             self._typeerr( "set_results", results.__class__.__name__ )
 
@@ -240,25 +243,12 @@ class redshift_ab_pipeline( results_pipeline ):
                 del self._results_dict[ namestring  ]
         return self._results_dict
 
-    def plot_results( self, path, filename ) -> None:
-        from tools.plot import make_line_plotitem, make_points_plotitem, ab_z_plot
-        from tools.cosmo import magnitude_evolution
-        from tools import paired_tuple_list_to_two_lists
-        from fileio.utils import dirCheck
+    def plot_results( self, path, filename, debug=False ) -> None:
+        from tools.plot import ab_z_plot
 
-        dirCheck( path )
-
-        evoLow = magnitude_evolution(  self._prime_mag - self._prime_mag_err * self._n_sigma, self._prime_z )
-        evoHigh = magnitude_evolution(  self._prime_mag + self._prime_mag_err * self._n_sigma, self._prime_z )
-        evo = magnitude_evolution( self._prime_mag, self._prime_z )
-
-        prime = make_points_plotitem( [ self._prime_z ], [ self._prime_mag ], error_data=[ self._prime_mag_err ], color = "dark-red", title = self._prime_ns )
-        abData = make_points_plotitem( *self.ab_v_z_data( True ), color = "royalblue", title = "Catalog Points in Range" )
-        evoLow = make_line_plotitem( *paired_tuple_list_to_two_lists( evoLow ), color = "grey", title = "Upper/Lower Expected Bounds" )
-        evoHigh = make_line_plotitem( *paired_tuple_list_to_two_lists( evoHigh ), color = "grey" )
-        evo = make_line_plotitem( *paired_tuple_list_to_two_lists( evo ), color = "black", title = "Expected Magnitude Evolution" )
-
-        ab_z_plot( prime, abData, evoLow, evoHigh, evo, path= path, filename= filename, plotTitle =f"Catalog Points within Expected Evolution of {self._prime_ns} within {self._n_sigma} sigma" )
+        return ab_z_plot( self._prime_ns, self, path=path, filename=filename,
+                          plotTitle=f"Catalog Points within Expected Evolution of {self._prime_ns} within {self._n_sigma} sigma",
+                          debug=debug )
 
     def set_namelist( self, namelist ) -> None:
         if type( namelist ) == list and len( namelist[ 0 ] ) == 1:
@@ -268,4 +258,4 @@ class redshift_ab_pipeline( results_pipeline ):
         try:
             self.set_results( namelist )
         except TypeError:
-            self._typeerr( "__init__", namelist.__class__.__name__ )
+            self._typeerr( "__init__", namelist.__class__.__name__, namelist.__class__.__name__ )
