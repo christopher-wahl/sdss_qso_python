@@ -12,6 +12,11 @@ def main():
     z, ab, aberr = shenCat.subkey( ns, 'z', 'ab', 'ab_err' )
     divCat.load( namestring=ns )
 
+    from catalog import chiCat
+    chiCat.load()
+
+    print( len( chiCat[ ns ].keys() ) )
+    exit()
 
     rmp = redshift_ab_pipeline( ns, z, ab, aberr, divCat[ ns ] )
     rmp.reduce_results()
@@ -39,8 +44,6 @@ def main():
     rmp.plot_results( BASE_PLOT_PATH, f"{ns} Chi max 500.pdf" )
 
     print( "test")
-
-# TODO: Setup Chi Cat
 
 if __name__ == "__main__":
     freeze_support()
