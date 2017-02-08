@@ -1,6 +1,5 @@
 from typing import List, Tuple, Union
 
-
 class results_pipeline:
 
     _results_low = None
@@ -131,7 +130,6 @@ class results_pipeline:
     def set_bin_limits( self, rs_low: float, rs_high: float ) -> None:
         self._rs_bin_low = rs_low
         self._rs_bin_high = rs_high
-
 
 class speclist_analysis_pipeline( results_pipeline ):
 
