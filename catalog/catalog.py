@@ -12,9 +12,9 @@ class catalog( dict ):
     DIVIDE_CATALOG = ( 1, "divCat" ) # Format: slope, intercept, average
     CHI_CATALOG = ( 2, "chiCat" )
 
-    #__BASE_CATALOG_PATH = join( BASE_CODE_PATH, "catalog" )
+    __BASE_CODE_CAT_PATH = join( BASE_CODE_PATH, "catalog" )
 
-    __SHEN_PATH = join( BASE_CODE_PATH, "catalog", "shenCat.bin" )
+    __SHEN_PATH = join( __BASE_CODE_CAT_PATH, "shenCat.bin" )
 
     __DIV_PATH = join( BASE_PROCESSED_PATH, "Catalogs", "DivCat" )
     __CHI_PATH = join( BASE_PROCESSED_PATH, "Catalogs", "ChiCat" )
@@ -40,7 +40,7 @@ class catalog( dict ):
         from fileio.utils import dirCheck
 
         if path is None:
-            path = join( self.__BASE_CATALOG_PATH, "text_backup" )
+            path = join( self.__BASE_CODE_CAT_PATH, "text_backup" )
         if filename is None:
             filename = f"{self.__THIS_CAT[ 1 ]}.json"
 
@@ -48,7 +48,7 @@ class catalog( dict ):
         with open( join( path, filename ), 'w' ) as outfile:
             outfile.write( "%s = %s" % ( self.__THIS_CAT[ 1 ], json.dumps( self, sort_keys=True, indent=4, separators=(',', ': ') ) ) )
 
-    def keys(self):
+    def keys(self) -> list:
         return list( super( catalog, self ).keys() )
 
     def load( self, namestring = None ):

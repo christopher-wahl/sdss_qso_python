@@ -80,7 +80,7 @@ def __multi_chi_wrapper( inputV ):
     :rtype: dict
     """
     expSpec, obsSpec = inputV
-    return { obsSpec.getNS() : chi( expSpec, obsSpec, True ) }
+    return { obsSpec.getNS() : chi( expSpec, obsSpec ) }
 
 def pipeline_chi_wrapper( inputV ):
     return __multi_chi_wrapper( inputV )

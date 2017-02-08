@@ -1,3 +1,5 @@
+from typing import List, Tuple
+
 from common.constants import DEFAULT_SCALE_WL, DEFUALT_SCALE_RADIUS
 from common.messaging import KeyErrorString
 
@@ -42,13 +44,13 @@ class Spectrum( dict ):
         for wl in ( spec_wls - self_wls ):
             del spec[ wl ]
 
-    def aveFlux( self, scaleWL=None, radius=None ):
-        scaleWL = scaleWL or DEFAULT_SCALE_WL
+    def aveFlux( self, central_wl=None, radius=None ):
+        central_wl = central_wl or DEFAULT_SCALE_WL
         radius = radius or DEFUALT_SCALE_RADIUS
         s = 0
         n = 0
         for wl in self.getWavelengths():
-            if( scaleWL - radius <= wl <= scaleWL + radius ):
+            if(central_wl - radius <= wl <= central_wl + radius):
                 s += self.getFlux( wl )
                 n += 1
         return s / n
@@ -109,7 +111,7 @@ class Spectrum( dict ):
     def getErrList( self ):
         return [ self.getErr( wl ) for wl in self.getWavelengths( ) ]
 
-    def getGmag( self ):
+    def getGmag( self ) -> float:
         """
         Returns the magnitude in G filter of the spectrum
 
@@ -117,14 +119,14 @@ class Spectrum( dict ):
         """
         return self.__gmag
 
-    def getNS( self ):
+    def getNS( self ) -> str:
         """
         Returns the namestring of the spectrum object
         :rtype: str
         """
         return self.__namestring
 
-    def getRS( self ):
+    def getRS( self ) -> float:
         """
         Returns the stored redshift of the spectrum
 
@@ -132,17 +134,17 @@ class Spectrum( dict ):
         """
         return self.__z
 
-    def getWavelengths( self ):
+    def getWavelengths( self ) -> List[ float ]:
         return sorted( self.keys( ) )
 
-    def isAligned(self, spec ):
+    def isAligned(self, spec ) -> bool:
         return spec.keys() == self.keys()
 
-    def lineDict( self, wavelength ):
+    def lineDict( self, wavelength ) -> dict:
         return { 'wavelength': wavelength, 'flux density': self.getFlux( wavelength ),
                  'error': self.getErr( wavelength ) }
 
-    def lineDictList( self ):
+    def lineDictList( self ) -> List[ dict ]:
         return [ self.lineDict( wl ) for wl in self.getWavelengths( ) ]
 
     def setDict( self, wavelengthList, fluxList, errList ):
@@ -172,6 +174,9 @@ class Spectrum( dict ):
         assert type( redshift ) == float
         self.__z = redshift
 
+    def setNS(self, namestring : str ):
+        self.__namestring = namestring
+
     def shiftToRest( self, z=None ):
         if z is None:
             z = self.__z
@@ -184,6 +189,21 @@ class Spectrum( dict ):
             self[ wls[ i ] ] = (fluxlist[ i ], errlist[ i ])
 
     def scale( self, **kwargs ):
+        """
+        Possible kwargs:
+
+        scalewl: central scale wavelength to scale around; defaults to common.constants.DEFAULT_SCALE_WL
+
+        radius: radius to use for average flux determination; defaults to common.constants.DEFAULT_SCALE_RADIUS
+
+        scaleflx: flux of spectrum scaling to
+
+        spectrum: Make use of a spectrum to directly determine scaleflx.
+
+
+        :param kwargs:
+        :return:
+        """
         scaleWL = None
         scaleflux = None
         scaleSpec = None
@@ -216,7 +236,7 @@ class Spectrum( dict ):
             self[ wl ] = (self[ wl ][ 0 ] * scalar, self[ wl ][ 1 ] * scalar)
         return self
 
-    def scaleFactor( self, **kwargs ):
+    def scaleFactor( self, **kwargs ) -> float:
         scaleWL = None
         scaleflux = None
         scaleSpec = None
@@ -250,5 +270,5 @@ class Spectrum( dict ):
             if( wl < wlLow or wlHigh < wl ):
                 del self[ wl ]
 
-    def wl_flux_plotlist(self):
+    def wl_flux_plotlist(self) -> List[ Tuple[ float, float ] ]:
         return [ ( wl, self[ wl ][ 0 ] ) for wl in self.getWavelengths() ]

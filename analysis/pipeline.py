@@ -52,13 +52,14 @@ class results_pipeline:
         else:
             self._typeerr( "set_results", results.__class__.__name__ )
 
-    def reduce_results( self ):
+    def reduce_results( self ) -> dict:
         if self._results_dict is None:
             raise TypeError( "results_pipeline.reduce_results(): _results_dict is NoneType.  Have results been set?" )
         keys = list( self._results_dict.keys( ) )
         for key in keys:
             if self._results_dict[ key ] < self._results_low or self._results_high < self._results_dict[ key ]:
                 del self._results_dict[ key ]
+        return self._results_dict
 
     def bin_results(self, binWidth = None ):
         from zbins.bin_utils import getBinString
@@ -72,7 +73,7 @@ class results_pipeline:
             bin_dict[ binStr ].update( { ns : value } )
         return bin_dict
 
-    def get_results( self ):
+    def get_results( self ) -> dict:
         return self._results_dict
 
     def write_results_csv(self, path : str, filename : str ) -> None:
@@ -113,8 +114,8 @@ class speclist_analysis_pipeline: # TODO: have speclist_analysis_pipeline extend
         multi_op( input_values, self.__analysis_func, results )
         self.__results_pipeline.set_results( paired_list_to_dict( results ) )
 
-    def reduce_results( self ):
-        self.__results_pipeline.reduce_results()
+    def reduce_results( self ) -> dict:
+        return self.__results_pipeline.reduce_results()
 
     def get_results(self):
         return self.__results_pipeline.get_results()
@@ -147,7 +148,7 @@ class redshift_ab_pipeline( results_pipeline ):
             except TypeError:
                 self._typeerr( "__init__", results.__class__.__name__ )
 
-    def reduce_results( self, n_sigma  = None ):
+    def reduce_results( self, n_sigma  = None ) -> dict:
         if self._results_dict is None:
             raise TypeError( "redshift_ab_pipeline.reduce_results(): _results_dict is NoneType.  Have results been set?" )
         keys = list( self._results_dict.keys() )
@@ -163,6 +164,7 @@ class redshift_ab_pipeline( results_pipeline ):
 
             if mag + mag_err < mag_low or mag_high < mag - mag_err:
                 del self._results_dict[ namestring  ]
+        return self._results_dict
 
     def plot_results(self, path, filename ):
         from tools.plot import make_line_plotitem, make_points_plotitem, ab_z_plot
@@ -182,7 +184,7 @@ class redshift_ab_pipeline( results_pipeline ):
         evoHigh = make_line_plotitem( *paired_tuple_list_to_two_lists( evoHigh ), color = "grey" )
         evo = make_line_plotitem( *paired_tuple_list_to_two_lists( evo ), color = "black", title = "Expected Magnitude Evolution" )
 
-        ab_z_plot( prime, abData, evoLow, evoHigh, evo, outpath = path, outfile = filename, plotTitle =f"Catalog Points within Expected Evolution of {self._prime_ns} within {self._n_sigma} sigma" )
+        ab_z_plot( prime, abData, evoLow, evoHigh, evo, path= path, filename= filename, plotTitle =f"Catalog Points within Expected Evolution of {self._prime_ns} within {self._n_sigma} sigma" )
 
     def ab_v_z_data( self, get_error = False ):
         if self._results_dict is None:
