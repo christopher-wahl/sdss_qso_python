@@ -85,4 +85,4 @@ def scale_enmasse( primary_spectrum : Spectrum, *speclist : List[ Spectrum ], sc
 
     if( len( speclist ) ) == 1:
         return speclist[ 0 ]
-    return speclist
+    return list( speclist )

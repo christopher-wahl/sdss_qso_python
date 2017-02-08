@@ -1,11 +1,9 @@
 import os
 import sys
-from multiprocessing import cpu_count, freeze_support
+from multiprocessing import cpu_count
 
 join = os.path.join
 abspath = os.path.abspath
-freeze_support = freeze_support # this just keeps freeze_support import statement from being optimized away
-
 
 MAX_PROC = cpu_count()
 

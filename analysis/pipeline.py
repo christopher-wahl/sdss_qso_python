@@ -29,7 +29,7 @@ class results_pipeline:
         self._binWidth = binWidth or self._binWidth
         self._shenCat = shenCat
 
-        self.set_range_limits( results_range )
+        self.set_range_limits( range=results_range )
 
         if rs_bin_range is not None:
             self._rs_bin_low, self._rs_bin_high = rs_bin_range

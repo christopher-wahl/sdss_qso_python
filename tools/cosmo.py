@@ -1,4 +1,5 @@
 from math import log10
+from typing import List, Tuple
 
 from astropy import units
 from astropy.cosmology import FlatLambdaCDM
@@ -17,29 +18,25 @@ def dl_from_z( z ):
     """
     return cosmo.luminosity_distance( z ).to( units.parsec ).value
 
-def magnitude_evolution( m0, z0, zrange = (0.46, 0.82), step = 0.01 ):
+
+def magnitude_evolution( m0: float, z0: float, zrange: tuple = (0.46, 0.82), step: float = 0.01 ) -> List[
+    Tuple[ float, float, float ] ]:
     """
     Generates the apparent magnitude evolution of a spectrum given its magnitude m0 at redshift z0.  Default zrange = ( 0.46, 0.82 ), step size of 0.01.
 
     Returns a list from lowest to highest redshift of tuples ( z, apparent magnitude at z, luminosity distance )
 
-    Parameters
-    ----------
-    m0: float
-        Initial apparent magnitude
-    z0: float
-        Initial redshift at which apparent magnitude was observed
-    zrange: tuple
-        Range of redshifts to calculate evolution over.  Defaults to ( 0.46, 0.82 ).
+    :param m0: Initial apparent magnitude
+    :param z0: Initial redshift at which apparent magnitude was observed
+    :param zrange: Range of redshifts to calculate evolution over.  Defaults to ( 0.46, 0.82 ).
         Will run loop from low value to high value + step such that the high value is included
-    step: float
-        step size to iterate over zrange.  Defaults to 0.01
-
-    Returns
-    -------
-    maglist: list
-        List of tuples (z, apparent magnitude at z, luminosity distance at z )
-
+    :param step: step size to iterate over zrange.  Defaults to 0.01
+    :type m0: float
+    :type z0: float
+    :type zrange: tuple
+    :type step: float
+    :return: List of tuples [ ( redshift, apparent_magnitude at z, luminosity_distance), ... ]
+    :rtype: list
     """
     from numpy import arange
     zlow, zhigh = zrange
