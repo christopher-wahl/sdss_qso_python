@@ -1,3 +1,4 @@
+from typing import List, Tuple, Union
 
 
 class results_pipeline:
@@ -10,7 +11,8 @@ class results_pipeline:
     _rs_bin_high = 0.82
     _shenCat = None
 
-    def __init__(self, results_range, results = None, binWidth = None, rs_bin_range = None ):
+    def __init__( self, results_range: tuple = None, results: Union[ List or dict ] = None, binWidth: float = None,
+                  rs_bin_range: tuple = None ):
         """
 
         :param results_range:
@@ -25,9 +27,10 @@ class results_pipeline:
         from catalog import shenCat
         shenCat.load()
 
-        self._results_low, self._results_high = results_range
         self._binWidth = binWidth or self._binWidth
         self._shenCat = shenCat
+
+        self.set_range_limits( results_range )
 
         if rs_bin_range is not None:
             self._rs_bin_low, self._rs_bin_high = rs_bin_range
@@ -38,8 +41,42 @@ class results_pipeline:
             except TypeError:
                 self._typeerr( "__init__", results.__class__.__name__ )
 
+    @staticmethod
     def _typeerr( self, func_name, type_found ):
         raise TypeError( f'{self.__class__.__name__}.{func_name}: type( results ) must be either dict or list\nType found: {type_found}' )
+
+    def ab_v_z_data( self, get_error: bool = False ) -> Union[ Tuple[ List, List ] or Tuple[ List, List, List ] ]:
+        """
+        Returns the AB Magnitude vs Redshift data of the namestrings kept in .get_results(), usually intended to be used for plotting.
+        If get_error = True - the only paramenter - is passed, will also return the AB Magnitude Error as a third list.
+
+        Information is gathered by accessing shenCat.  Thus, if a namestring is not found in shenCat a notice will be printed to the terminal
+        and that namestring will be skipped.
+
+        Returns a tuple of either two lists ( redshift_list, ab_list ) or, if get_error = True,
+        a tuple of three lists ( redshift_list, ab_list, ab_error_list )
+
+        :param get_error: Defaults to False.  If True, also returns the ab_magnitude_error
+        :type get_error: bool
+        :rtype: tuple
+        """
+        if self._results_dict is None:
+            raise TypeError(
+                f"{self.__class__.__name__}.ab_v_z_data(): _results_dict is NoneType.  Have values been set/reduce_results run?" )
+
+        xlist, ylist, err_list = [ ], [ ], [ ]
+        for ns in self._results_dict:
+            try:
+                xlist.append( self._shenCat[ ns ][ 'z' ] )
+                ylist.append( self._shenCat[ ns ][ 'ab' ] )
+                err_list.append( self._shenCat[ ns ][ 'ab_err' ] )
+            except KeyError:
+                print(
+                    f'{self.__class__.__name__}.ab_v_z_data: Unable to find namestring in shenCat and thus, cannot determine original redshift - will be skipped in returned dictionary\nnamestring: {ns}' )
+
+        if get_error: return (xlist, ylist, err_list)
+
+        return (xlist, ylist)
 
     def set_results(self, results ):
         from tools import paired_list_to_dict
@@ -51,6 +88,13 @@ class results_pipeline:
             self._results_dict = paired_list_to_dict( results )
         else:
             self._typeerr( "set_results", results.__class__.__name__ )
+
+    def set_range_limits( self, range_low: float = None, range_high: float = None, range: tuple = None ) -> None:
+        if range is not None:
+            self._results_low, self._results_high = range
+        else:
+            self._results_low = range_low or self._results_low
+            self._results_high = range_high or self._results_high
 
     def reduce_results( self ) -> dict:
         if self._results_dict is None:
@@ -67,7 +111,11 @@ class results_pipeline:
         binWidth = binWidth or self._binWidth
         bin_dict = {}
         for ns, value in self._results_dict.items( ):
-            binStr = getBinString( self._shenCat[ ns ][ 'z' ], self._rs_bin_low, self._rs_bin_high, binWidth )
+            try:
+                binStr = getBinString( self._shenCat[ ns ][ 'z' ], self._rs_bin_low, self._rs_bin_high, binWidth )
+            except KeyError:
+                print(
+                    f'{self.__class__.__name__}.bin_results: Unable to find namestring in shenCat and thus, cannot determine original redshift - will be skipped in returned dictionary\nnamestring: {ns}' )
             if binStr not in bin_dict:
                 bin_dict[ binStr ] = {}
             bin_dict[ binStr ].update( { ns : value } )
@@ -80,27 +128,23 @@ class results_pipeline:
         from fileio import compound_dict_writer
         compound_dict_writer( inDict = self._results_dict, path = path, filename = filename )
 
-    def set_rs_limits( self, rs_low : float, rs_high : float ) -> None:
+    def set_bin_limits( self, rs_low: float, rs_high: float ) -> None:
         self._rs_bin_low = rs_low
         self._rs_bin_high = rs_high
 
-class speclist_analysis_pipeline: # TODO: have speclist_analysis_pipeline extend results_pipeline, rather than wrap it.
+
+class speclist_analysis_pipeline( results_pipeline ):
 
     __primeSpec = None
     __speclist = None
 
     __analysis_func = None
 
-    __results_pipeline = None
-
     def __init__(self, primeSpec, speclist, analysis_function, result_range, binWidth = 0.01 ):
+        super( speclist_analysis_pipeline, self ).__init__( results_range=result_range, binWidth=binWidth )
         self.__primeSpec = primeSpec.cpy()
         self.__speclist = speclist
         self.__analysis_func = analysis_function
-        self.__results_pipeline = results_pipeline( result_range, binWidth = binWidth )
-
-    def trim_prime( self, wl_low, wl_high ):
-        self.__primeSpec.trim( wlLow = wl_low, wlHigh = wl_high )
 
     def do_analysis( self, use_imap = True ):
         from tools import paired_list_to_dict
@@ -112,13 +156,7 @@ class speclist_analysis_pipeline: # TODO: have speclist_analysis_pipeline extend
         results = []
         input_values = [ ( self.__primeSpec, spec ) for spec in self.__speclist ]
         multi_op( input_values, self.__analysis_func, results )
-        self.__results_pipeline.set_results( paired_list_to_dict( results ) )
-
-    def reduce_results( self ) -> dict:
-        return self.__results_pipeline.reduce_results()
-
-    def get_results(self):
-        return self.__results_pipeline.get_results()
+        self.set_results( paired_list_to_dict( results ) )
 
 class redshift_ab_pipeline( results_pipeline ):
 
@@ -129,24 +167,62 @@ class redshift_ab_pipeline( results_pipeline ):
     _n_sigma = 1 # number of sigma to extend error bars out
     _evofunction = None
 
-    def __init__(self, primary_ns, primary_z, primary_magnitude, primary_magnitude_error, results = None ):
+    def __init__( self, primary_ns: str = None, primary_z: float = None, primary_magnitude: float = None,
+                  primary_magnitude_error: float = None, ns_of_interest: Union[ list or dict ] = None ):
+        """
+        If primary_ns is passed, constructor will pull remianing information out of shenCat.  If the namestring cannot be found
+        in shenCat, the constructor will continue trying to the remaining kwargs to variables.  Will check for any NoneType variables afterward
+        and if any remain, a TypeError will be raised
+
+        Note that ns_of_interest may be either a results_dict from another results_pipeline, a simple [ ns, ns, ... ] list or a paired tuple list [ ( ns : float ), ( ns : float ), ... ].
+        As this pipeline relies only on namestrings and the data availaible in the shenCatalog
+
+        :param primary_ns: primary namestring
+        :param primary_z:
+        :param primary_magnitude:
+        :param primary_magnitude_error:
+        :param ns_of_interest:
+        :raises TypeError:
+        """
+
         from tools.cosmo import magnitude_at_redshift
-        from catalog import shenCat
-        shenCat.load()
+        super( redshift_ab_pipeline, self ).__init__( results_range=(None, None) )
 
-        super( results_pipeline, self ).__init__()
-
-        self._prime_ns = primary_ns
-        self._prime_z = primary_z
-        self._prime_mag = primary_magnitude
-        self._prime_mag_err = primary_magnitude_error
-        self._evofunction = magnitude_at_redshift
-        self._shenCat = shenCat
-        if results is not None:
+        err = False
+        if primary_ns is not None:
             try:
-                self.set_results( results )
-            except TypeError:
-                self._typeerr( "__init__", results.__class__.__name__ )
+                self._prime_ns = primary_ns
+                self._prime_z, self._prime_mag, self._prime_mag_err = self._shenCat.subkey( primary_ns, 'z', 'ab',
+                                                                                            'ab_err' )
+            except KeyError:
+                err = True
+        else:
+            self._prime_ns = ""
+
+        if err:
+            self._prime_z = primary_z
+            self._prime_mag = primary_magnitude
+            self._prime_mag_err = primary_magnitude_error
+
+        if self._prime_z is None or self._prime_mag is None or self._prime_mag_err is None:
+            self._prime_z = self._prime_z or "NONE"
+            self._prime_mag = self._prime_mag or "NONE"
+            self._prime_mag_err = self._prime_mag_err or "NONE"
+            raise TypeError(
+                f"redshift_ab_pipeline.__init__(): NoneType values in constructor:\nprime_ns:{self._prime_ns}\nprime_z: {self._prime_z}\nprime_mag: {self._prime_mag}\nprime_mag_err: {self._prime_mag_err}" )
+
+        self._evofunction = magnitude_at_redshift
+
+        if ns_of_interest is not None:
+            self.set_namelist( ns_of_interest )
+
+    def get_namestring_list( self ) -> List[ str ]:
+        """
+        Returns the namestrings ONLY, in list form, of the reuslts_dict.
+        The same as calling list( .get_results().keys() )
+        :rtype: list
+        """
+        return list( self.get_results( ).keys( ) )
 
     def reduce_results( self, n_sigma  = None ) -> dict:
         if self._results_dict is None:
@@ -166,7 +242,7 @@ class redshift_ab_pipeline( results_pipeline ):
                 del self._results_dict[ namestring  ]
         return self._results_dict
 
-    def plot_results(self, path, filename ):
+    def plot_results( self, path, filename ) -> None:
         from tools.plot import make_line_plotitem, make_points_plotitem, ab_z_plot
         from tools.cosmo import magnitude_evolution
         from tools import paired_tuple_list_to_two_lists
@@ -186,16 +262,12 @@ class redshift_ab_pipeline( results_pipeline ):
 
         ab_z_plot( prime, abData, evoLow, evoHigh, evo, path= path, filename= filename, plotTitle =f"Catalog Points within Expected Evolution of {self._prime_ns} within {self._n_sigma} sigma" )
 
-    def ab_v_z_data( self, get_error = False ):
-        if self._results_dict is None:
-            raise TypeError( "redshift_ab_pipeline.reduce_results(): _results_dict is NoneType.  Have results been set?" )
-
-        xlist, ylist, err_list = [], [], []
-        for ns in self._results_dict:
-            xlist.append( self._shenCat[ ns ][ 'z' ] )
-            ylist.append( self._shenCat[ ns ][ 'ab' ] )
-            err_list.append( self._shenCat[ ns ][ 'ab_err' ] )
-
-        if get_error: return xlist, ylist, err_list
-
-        return xlist, ylist
+    def set_namelist( self, namelist ) -> None:
+        if type( namelist ) == list and len( namelist[ 0 ] ) == 1:
+            # Need to mutate namelist as the expected values are either { ns : float } or [ ( ns, float ), ... ] pairs
+            # However, this pipe runs entirely off the ShenCatalog and thus only needs namestrings.  Putting in AB mag for good measure
+            namelist = [ (r, self._shenCat[ r ][ 'ab' ]) for r in namelist ]
+        try:
+            self.set_results( namelist )
+        except TypeError:
+            self._typeerr( "__init__", namelist.__class__.__name__ )
