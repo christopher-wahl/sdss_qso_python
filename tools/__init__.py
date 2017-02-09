@@ -1,3 +1,8 @@
+from typing import List, Union
+
+from spectrum import Spectrum
+
+
 def paired_list_to_dict( paired_list ):
     """
     Converts a list of [ ( a, b ), ( c, d ) ... ] or [ { a : b }, { c : d } ... ]
@@ -26,3 +31,13 @@ def paired_list_to_dict( paired_list ):
 def paired_tuple_list_to_two_lists( inlist ):
     xlist, ylist, zlist = zip( * inlist )
     return list( xlist ), list( ylist )
+
+
+def sort_list_by_shen_key( in_list: Union[ List[ Spectrum ], List[ str ] ], sort_key='z' ):
+    from catalog import shenCat
+    def _sort_key( x: Union[ Spectrum, str ] ) -> float:
+        return shenCat.subkey( x.getNS( ) if isinstance( x, Spectrum ) else x, sort_key )
+
+    shenCat.load( )
+    in_list.sort( key=_sort_key )
+    return in_list
