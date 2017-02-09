@@ -1,5 +1,6 @@
 from typing import List, Tuple, Union
 
+
 class results_pipeline:
 
     _results_low = None
@@ -138,25 +139,32 @@ class speclist_analysis_pipeline( results_pipeline ):
 
     __primeSpec = None
     __speclist = None
+    __inputV = None
 
     __analysis_func = None
 
-    def __init__(self, primeSpec, speclist, analysis_function, result_range, binWidth = 0.01 ):
+    def __init__( self, primeSpec, speclist, analysis_function, result_range, input_values: list = None,
+                  binWidth=0.01 ):
         super( speclist_analysis_pipeline, self ).__init__( results_range=result_range, binWidth=binWidth )
         self.__primeSpec = primeSpec.cpy()
         self.__speclist = speclist
         self.__analysis_func = analysis_function
+        self.__inputV = input_values or [ (primeSpec, spec) for spec in speclist ]
 
-    def do_analysis( self, use_imap = True ):
+    def set_input_values( self, input_values: list ) -> None:
+        self.__inputV = input_values
+
+    def do_analysis( self, input_values: list = None, use_imap: bool = True ):
         from tools import paired_list_to_dict
         if use_imap:
             from common.async_tools import generic_unordered_multiprocesser as multi_op
         else:
             from common.async_tools import generic_map_async_multiprocesser as multi_op
 
+        if input_values is not None: self.set_input_values( input_values )
+
         results = []
-        input_values = [ ( self.__primeSpec, spec ) for spec in self.__speclist ]
-        multi_op( input_values, self.__analysis_func, results )
+        multi_op( self.__inputV, self.__analysis_func, results )
         self.set_results( paired_list_to_dict( results ) )
 
 class redshift_ab_pipeline( results_pipeline ):
@@ -251,7 +259,7 @@ class redshift_ab_pipeline( results_pipeline ):
                           debug=debug )
 
     def set_namelist( self, namelist ) -> None:
-        if type( namelist ) == list and len( namelist[ 0 ] ) == 1:
+        if type( namelist ) == list and type( namelist[ 0 ] ) == str:
             # Need to mutate namelist as the expected values are either { ns : float } or [ ( ns, float ), ... ] pairs
             # However, this pipe runs entirely off the ShenCatalog and thus only needs namestrings.  Putting in AB mag for good measure
             namelist = [ (r, self._shenCat[ r ][ 'ab' ]) for r in namelist ]

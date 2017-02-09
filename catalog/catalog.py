@@ -49,6 +49,8 @@ class catalog( dict ):
             outfile.write( "%s = %s" % ( self.__THIS_CAT[ 1 ], json.dumps( self, sort_keys=True, indent=4, separators=(',', ': ') ) ) )
 
     def keys(self) -> list:
+        if self.__THIS_CAT == self.SHEN_CATALOG and not self.__isLoaded:
+            self.load( )
         return list( super( catalog, self ).keys() )
 
     def load( self, namestring = None ):

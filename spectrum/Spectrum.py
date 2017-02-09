@@ -265,9 +265,11 @@ class Spectrum( dict ):
 
         return scaleflux
 
-    def trim(self, wlLow, wlHigh ):
+    def trim( self, wlLow: float = None, wlHigh: float = None ):
         for wl in self.getWavelengths():
-            if( wl < wlLow or wlHigh < wl ):
+            if wlLow is not None and wl < wlLow:
+                del self[ wl ]
+            elif wlHigh is not None and wlHigh < wl:
                 del self[ wl ]
 
     def wl_flux_plotlist(self) -> List[ Tuple[ float, float ] ]:

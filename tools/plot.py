@@ -82,6 +82,8 @@ def ab_z_plot( primary: Union[ str or Spectrum ],
                                            title="", color="grey" )
     prime_plot = make_line_plotitem( *magnitude_evolution( p_ab, p_z, splitLists=True )[ :2 ],
                                      title="Expected Evolution", color="black" )
+    prime_point = make_points_plotitem( [ p_z ], [ p_ab ], error_data=[ p_ab_err ], title=f"{primary}",
+                                        color="dark-red" )
 
     """ Make AB vs Z points data """
     z_data = [ ]
@@ -125,7 +127,7 @@ def ab_z_plot( primary: Union[ str or Spectrum ],
         g( 'set terminal pdf enhanced size 9,6' )
         g( f'set output {__fix_outpath( path, filename ) }' )
 
-    g.plot( prime_plot, prime_upper_plot, prime_lower_plot, plot_points )
+    g.plot( plot_points, prime_plot, prime_upper_plot, prime_lower_plot, prime_point )
 
     if not debug:
         g( 'set output' )

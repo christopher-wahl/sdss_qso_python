@@ -1,27 +1,59 @@
+from typing import Dict, Tuple
+
 from spectrum import Spectrum
 
-def chi( expSpec, obsSpec, doScale = False ):
+
+def chi( expSpec: Spectrum, obsSpec: Spectrum, doScale: bool = False, skipCopy: bool = False,
+         wl_low_limit: float = None, wl_high_limit: float = None ) -> float:
     """
     Returns the chi^2 value between the given spectra
 
     :param expSpec: Expected Spectrum
     :param obsSpec: Observed Spectrum
-     :type expSpec: Spectrum
-     :type obsSpec: Spectrum
+    :param doScale: Scale the two spectra around DEF_SCALE_WL range
+    :param wl_low_limit: Trim spectra to low limit before matching
+    :param wl_high_limit: Trim spectra to high limit before matching
+    :type expSpec: Spectrum
+    :type obsSpec: Spectrum
+    :type doScale: bool
+    :type wl_low_limit: float
+    :type wl_high_limit: float
     :return: chi^2
     :rtype: float
     """
-    a0 = expSpec.cpy( )
-    a1 = obsSpec.cpy( )
+    if not skipCopy:
+        a0 = expSpec.cpy( )
+        a1 = obsSpec.cpy( )
+    else:
+        a0 = expSpec
+        a1 = obsSpec
+
     if( doScale ):
         a1.scale( spec = a0 )
 
-    if( not a0.isAligned( a1 ) ):
-        a0.alignToSpec( a1 )
+    if wl_low_limit is not None:
+        a0.trim( wlLow=wl_low_limit )
+        a1.trim( wlLow=wl_low_limit )
+
+    if wl_high_limit is not None:
+        a0.trim( wlHigh=wl_high_limit )
+        a1.trim( wlHigh=wl_high_limit )
+
+    a0.alignToSpec( a1 )
 
     return sum( [ pow( a0.getFlux( wl ) - a1.getFlux( wl ), 2 ) / a0.getFlux( wl ) for wl in a0 ] )
 
-def generic_chi( list0, list1 ):
+
+def generic_chi( list0: list, list1: list ) -> float:
+    """
+    Returns the Chi^2 value between two lists of equal lengths
+
+    :param list0: Expected
+    :param list1: Observed
+    :return: chi^2
+    :rtype: float
+    :raises: AssertionError
+    """
     if len( list0 ) != len( list1 ):
         raise AssertionError( f"generic_chi: Lists are not of equal dimension\nLength list0: { len( list0 ) }\nLength list1: { len( list1 ) }")
     _chi = 0
@@ -84,3 +116,23 @@ def __multi_chi_wrapper( inputV ):
 
 def pipeline_chi_wrapper( inputV ):
     return __multi_chi_wrapper( inputV )
+
+
+def em_chi_wrapper( inputV: Tuple[ Spectrum, Spectrum ] ) -> Dict[ str, float ]:
+    """
+    Wrapper for running chi^2 over EM lines alone.  Scales obsSpec to expSepc before trimming to EM lines
+
+    :param inputV: Tuple of ( expected_spectrum, observed_spectrum )
+    :type inputV: Tuple( Spectrum, Spectrum )
+    :return: Dictionary of { observed_spectrum.getNS() : chi( expected_spectrum, observed_spectrum )
+    :rtype: Dict[ str : float ]
+    """
+    from spectrum import drop_to_em_lines
+    expSpec, obsSpec = inputV
+    try:
+        obsSpec.scale( spec=expSpec )
+    except ZeroDivisionError:
+        print( "em_chi_wrapper: Unable to scale spectra - Is the default aveFlux range still in the spectrum?" )
+        print( expSpec, '\n', obsSpec )
+    expSpec, obsSpec = drop_to_em_lines( expSpec.cpy( ), obsSpec.cpy( ) )
+    return { obsSpec.getNS( ): chi( expSpec, obsSpec, doScale=False, skipCopy=True ) }
