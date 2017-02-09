@@ -1,6 +1,3 @@
-TODO: Streamlime the evolution plot data creation
-    - give it a primary spectrum
-    - let it form its own evolution info ( high/low range, etc )
-    - give pass it the namestring results and let it pull ab/z out of shenCat
-
 TODO: Create composite generator method
+
+Note: "53770-2376-290" is interesting
