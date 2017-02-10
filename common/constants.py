@@ -28,6 +28,7 @@ HB_RANGE = ( 4785, 4930 )
 """ CHARACTERS """
 ANGSTROM = r"‎Å"
 FLUX_UNITS = r"10^{-17} egs s^{-1} cm^{-2} %s^{-1}" % ANGSTROM
+SQUARE = "²"
 
 if sys.platform == "win32":
     ANGSTROM = ANGSTROM.encode('cp1252', errors='replace').decode('cp1252')

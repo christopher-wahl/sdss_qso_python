@@ -39,5 +39,7 @@ def sort_list_by_shen_key( in_list: Union[ List[ Spectrum ], List[ str ] ], sort
         return shenCat.subkey( x.getNS( ) if isinstance( x, Spectrum ) else x, sort_key )
 
     shenCat.load( )
+    if not isinstance( in_list, list ):
+        in_list = list( in_list )
     in_list.sort( key=_sort_key )
     return in_list
