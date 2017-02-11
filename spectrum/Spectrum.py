@@ -1,6 +1,6 @@
 from typing import List, Tuple
 
-from common.constants import DEFAULT_SCALE_WL, DEFUALT_SCALE_RADIUS
+from common.constants import DEFAULT_SCALE_RADIUS, DEFAULT_SCALE_WL
 from common.messaging import KeyErrorString
 
 
@@ -29,6 +29,25 @@ class Spectrum( dict ):
         return '%s  z: %s   gmag: %s\n%s    %s' % (
             self.getNS( ), self.getRS( ), self.getGmag( ), self.getWavelengths( )[ 0 ], self.getWavelengths( )[ -1 ])
 
+    def abErr( self, wl_range: Tuple[ float, float ] = (None, None) ) -> float:
+        """
+        Determines the AB magnitude at every point within the wl_range individually.
+        Returns the standard deviation of that value.
+
+        :param wl_range: ( low, high ), defaults to DEFAULT_SCALE_WL +/- DEFAULT_SCALE_RADIUS
+        :type wl_range: tuple
+        :return: AB Magnitude error
+        :rtype: float
+        """
+        from numpy import log10, nanstd
+        minwl = wl_range[ 0 ] or DEFAULT_SCALE_WL - DEFAULT_SCALE_RADIUS
+        maxwl = wl_range[ 1 ] or DEFAULT_SCALE_WL + DEFAULT_SCALE_RADIUS
+        err_v = list( )
+        for wl in self.getwls( ):
+            if minwl <= wl <= maxwl:
+                err_v.append( -2.5 * log10( 3.34E4 * pow( wl, 2 ) * 1E-17 * self[ wl ][ 0 ] ) + 8.9 )
+        return nanstd( err_v )
+
     def align(self, wlList ):
         wls = self.getWavelengths()
         for wl in wls:
@@ -46,7 +65,7 @@ class Spectrum( dict ):
 
     def aveFlux( self, central_wl=None, radius=None ):
         central_wl = central_wl or DEFAULT_SCALE_WL
-        radius = radius or DEFUALT_SCALE_RADIUS
+        radius = radius or DEFAULT_SCALE_RADIUS
         s = 0
         n = 0
         for wl in self.getWavelengths():
@@ -99,9 +118,22 @@ class Spectrum( dict ):
         from copy import deepcopy
         return deepcopy( self )
 
-    def dim( self, to_mag_ab: float ):
-        # TODO: WRITE DIM METHOD
-        pass
+    def dim_to_ab( self, to_mag_ab: float, scale_wl=None ) -> None:
+        """
+        Determines the desired flux that would be exhibited at a given AB Magnitude and wavelength,
+        then passes that value to the Spectrum.scale() method, scaling the spectrum to that flux density
+        :param to_mag_ab: AB Magnitude desired to be dimmed to
+        :param scale_wl: Wavelength to scale around.  Defaults to common.constants.DEFAULT_SCALE_WL
+        :type to_mag_ab: float
+        :type scale_wl: float
+        :return: None
+        :rtype: None
+        """
+        scale_wl = scale_wl or DEFAULT_SCALE_WL
+        exponent = (8.9 - to_mag_ab) / 2.5
+        f_v = pow( 10, exponent )
+        f_lambda = f_v / (3.34E4 * 1E-17 * pow( scale_wl, 2 ))
+        self.scale( scaleflx=f_lambda )
 
     def getFlux( self, wavelength ):
         return self[ wavelength ][ 0 ]
@@ -151,9 +183,35 @@ class Spectrum( dict ):
     def lineDictList( self ) -> List[ dict ]:
         return [ self.lineDict( wl ) for wl in self.getWavelengths( ) ]
 
-    def magAB( self, central_wl: float = None, radius: float = None ) -> float:
-        pass
-        # TODO: WRITE MAGab METHOD
+    def magAB( self, wl_range: Tuple[ float, float ] = (None, None) ) -> float:
+        """
+        Determines the average AB Magnitude over the given band of interest.
+
+        If wl_range is not specified, defaults to common.constants DEFAULT_SCALE_WL +/- DEFAULT_SCALE_RADIUS
+
+        :param wl_range: Band range over which to determine AB magntiude
+        :type wl_range: tuple
+        :return: AB Magnitude
+        :rtype: float
+        """
+        from numpy import mean, log10
+
+        minwl = wl_range[ 0 ] or DEFAULT_SCALE_WL - DEFAULT_SCALE_RADIUS
+        maxwl = wl_range[ 1 ] or DEFAULT_SCALE_WL + DEFAULT_SCALE_RADIUS
+
+        f_vlist = list( )
+        f_v = None
+        for wl in self.getWavelengths( ):
+            if minwl <= wl <= maxwl:
+                f_v = 3.34E4 * pow( wl, 2 ) * 1E-17 * self[ wl ][ 0 ]
+                f_vlist.append( f_v )
+        try:
+            f_v = mean( f_vlist )
+        except RuntimeWarning as e:
+            print(
+                f"Spectrum.magAB(): {self.getNS()} got a RuntimeWarning when trying to form flux mean: {f_v} \n fluxlist: {f_vlist}" )
+            raise e
+        return -2.5 * log10( f_v ) + 8.9
 
     def setDict( self, wavelengthList, fluxList, errList ):
         """
@@ -231,7 +289,7 @@ class Spectrum( dict ):
                 raise KeyError( KeyErrorString( "spectrum.scale", key, val ) )
 
         scaleWL = scaleWL or DEFAULT_SCALE_WL
-        radius = radius or DEFUALT_SCALE_RADIUS
+        radius = radius or DEFAULT_SCALE_RADIUS
 
         if scaleSpec is not None:
             scaleflux = scaleSpec.aveFlux( scaleWL, radius )
@@ -264,7 +322,7 @@ class Spectrum( dict ):
                 raise KeyError( KeyErrorString( "spectrum.scale", key, val ) )
 
         scaleWL = scaleWL or DEFAULT_SCALE_WL
-        radius = radius or DEFUALT_SCALE_RADIUS
+        radius = radius or DEFAULT_SCALE_RADIUS
 
         if scaleSpec is not None:
             scaleflux = scaleSpec.aveFlux( scaleWL, radius )

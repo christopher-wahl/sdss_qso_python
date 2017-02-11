@@ -79,7 +79,7 @@ class results_pipeline:
         return (xlist, ylist)
 
     def set_results(self, results ):
-        from tools import paired_list_to_dict
+        from tools.list_dict import paired_list_to_dict
         if self._results_dict is not None:
             self._results_dict.clear()
 
@@ -155,7 +155,7 @@ class speclist_analysis_pipeline( results_pipeline ):
         self.__inputV = input_values
 
     def do_analysis( self, input_values: list = None, use_imap: bool = True ):
-        from tools import paired_list_to_dict
+        from tools.list_dict import paired_list_to_dict
         if use_imap:
             pass
         else:

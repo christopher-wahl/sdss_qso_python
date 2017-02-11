@@ -7,7 +7,7 @@ from common import freeze_support
 from common.constants import BASE_PLOT_PATH, SQUARE, STD_MAX_WL, STD_MIN_WL, join
 from fileio.spec_load_write import async_bspec, bspecLoader
 from spectrum import Spectrum, scale_enmasse
-from tools import sort_list_by_shen_key
+from tools.list_dict import sort_list_by_shen_key
 from tools.plot import ab_z_plot, four_by_four_multiplot
 
 
@@ -41,7 +41,6 @@ def main( primary: Union[ Spectrum or str ] = None, n: float = 1 ) -> None:
     r = em_chi_pipe.reduce_results( )
     print( f"Complete.  {len(r)} results remain." )
 
-    # TODO: Finish Generic Process
     """ Second - Continuum - Pass """
     # Reduce the speclist to those within em_chi results
     for i in range( len( speclist ) - 1, -1, -1 ):
