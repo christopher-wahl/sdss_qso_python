@@ -91,7 +91,6 @@ def multi_chi_analysis( expSpec, speclist, MAX_PROC = None ):
     :return: Dictionary of { namestring : chi^2 value }, namestrings taken from the respective speclist entrys
     :rtype: dict
     """
-    from common.async_tools import generic_unordered_multiprocesser as multiproc
 
     results = []
     multiproc( [ ( expSpec, spec ) for spec in speclist ], __multi_chi_wrapper, results, MAX_PROC )

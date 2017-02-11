@@ -157,9 +157,9 @@ class speclist_analysis_pipeline( results_pipeline ):
     def do_analysis( self, input_values: list = None, use_imap: bool = True ):
         from tools import paired_list_to_dict
         if use_imap:
-            from common.async_tools import generic_unordered_multiprocesser as multi_op
+            pass
         else:
-            from common.async_tools import generic_map_async_multiprocesser as multi_op
+            pass
 
         if input_values is not None: self.set_input_values( input_values )
 
