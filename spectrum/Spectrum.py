@@ -99,6 +99,10 @@ class Spectrum( dict ):
         from copy import deepcopy
         return deepcopy( self )
 
+    def dim( self, to_mag_ab: float ):
+        # TODO: WRITE DIM METHOD
+        pass
+
     def getFlux( self, wavelength ):
         return self[ wavelength ][ 0 ]
 
@@ -146,6 +150,10 @@ class Spectrum( dict ):
 
     def lineDictList( self ) -> List[ dict ]:
         return [ self.lineDict( wl ) for wl in self.getWavelengths( ) ]
+
+    def magAB( self, central_wl: float = None, radius: float = None ) -> float:
+        pass
+        # TODO: WRITE MAGab METHOD
 
     def setDict( self, wavelengthList, fluxList, errList ):
         """
