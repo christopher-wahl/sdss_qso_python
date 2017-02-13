@@ -2,6 +2,26 @@ import pickle
 
 from common.constants import BASE_CODE_PATH, BASE_PROCESSED_PATH, join
 
+"""
+Working notes:
+
+The RAW shencatalog.FITS file pulls the following key indecies
+
+128: -> LOGBH_HB_VP06
+129: -> LOGBH_HB_VP06_ERR
+
+134: -> LOGBH_MGII_S10
+135: -> LOGBH_MGII_S10_ERR
+
+4: -> PLATE
+5: -> FIBER
+6: -> MJD
+
+Namestring format: MJD->PLATE->FIBER: 6-4-5
+
+3: O.G. Redshift
+142: Z_HW
+"""
 
 class catalog( dict ):
 
@@ -64,26 +84,22 @@ class catalog( dict ):
                 path = join( path, "DivDict.bin" )
             elif self.__THIS_CAT == self.CHI_CATALOG:
                 path = join( path, "ChiDict.bin" )
-            self.update( pickle.load( open( path, "rb" ) ) )
+            with open( path, 'rb' ) as infile:
+                self.update( pickle.load( infile ) )
             self.__isLoaded = True
-            """elif self.__THIS_CAT == self.DIVIDE_CATALOG:
-            if namestring is None:
-                import os
-                path = os.path.split( self.__CAT_DICT[ self.__THIS_CAT ] )[ 0 ]
-                path = join( path, "DivDict.bin" )
-                self.update( pickle.load( open( path, "rb" ) ) )
-                self.__isLoaded = True
-            else:"""
         elif self.__THIS_CAT == self.DIVIDE_CATALOG:
-            self.__setitem__( namestring, pickle.load( open( join( self.__CAT_DICT[ self.__THIS_CAT ], f"{namestring}-div.bin" ), 'rb' ) ) )
+            with open( join( self.__CAT_DICT[ self.__THIS_CAT ], f"{namestring}-div.bin" ), 'rb' ) as infile:
+                self.__setitem__( namestring, pickle.load( infile ) )
         elif self.__THIS_CAT == self.CHI_CATALOG:
-            self.__setitem__( namestring, pickle.load( open( join( self.__CAT_DICT[ self.__THIS_CAT ], f"{namestring}-chi.bin" ), 'rb' ) ) )
+            with open( join( self.__CAT_DICT[ self.__THIS_CAT ], f"{namestring}-chi.bin" ), 'rb' ) as infile:
+                self.__setitem__( namestring, pickle.load( infile ) )
 
     def rewrite( self ):
         if self.__THIS_CAT != self.SHEN_CATALOG:
             raise TypeError( f"catalog.rewrite(): Catalog type is not SHEN_CATALOG.  Unable to rewrite.\n__THIS_CAT: {self.__THIS_CAT}" )
         d = {}.update( self )
-        pickle.dump( d, open( self.__CAT_DICT[ self.__THIS_CAT ], 'wb' ) )
+        with open( self.__CAT_DICT[ self.__THIS_CAT ], 'wb' ) as outfile:
+            pickle.dump( d, outfile )
 
     def subkey(self, namestring, *subkeys ):
         """

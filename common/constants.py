@@ -8,7 +8,16 @@ abspath = os.path.abspath
 MAX_PROC = cpu_count()
 
 """ BASE PATHS """
-BASE_CODE_PATH = abspath( os.getcwd() )
+
+
+def get_base_code_path( ) -> str:
+    path = os.getcwd( )
+    while (os.path.split( path )[ 1 ] != "pythonqso"):
+        path = os.path.split( path )[ 0 ]
+    return os.path.abspath( path )
+
+
+BASE_CODE_PATH = get_base_code_path( )
 BASE_PROCESSED_PATH = abspath( "../../Processed" )
 BASE_SPEC_PATH = join( BASE_PROCESSED_PATH, "Spec" )
 SOURCE_SPEC_PATH = join( BASE_SPEC_PATH, "PSource" )

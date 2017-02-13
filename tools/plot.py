@@ -64,7 +64,6 @@ def four_by_four_multiplot( prime : Spectrum, *speclist : list, path : str = Non
     g( 'set output' )
     g.close()
 
-
 def ab_z_plot( primary: Union[ str or Spectrum ],
                points: Union[ results_pipeline or dict or List[ str ] or List[ Spectrum ] ], path: str,
                filename: str, plotTitle: str = "", debug: bool = False ) -> Union[ Gnuplot.Gnuplot or None ]:
