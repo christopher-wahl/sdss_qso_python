@@ -10,13 +10,14 @@ from analysis.chi import pipeline_chi_wrapper
 from analysis.pipeline import redshift_ab_pipeline, speclist_analysis_pipeline
 from catalog import shenCat
 from common import freeze_support
-from common.constants import BASE_PLOT_PATH, HB_RANGE, HG_RANGE, MGII_RANGE, OIII_RANGE, SQUARE, join
+from common.constants import BASE_PLOT_PATH, HB_RANGE, HG_RANGE, MGII_RANGE, OIII_RANGE, SQUARE, STD_MAX_WL, STD_MIN_WL, \
+    join
 from fileio.spec_load_write import async_bspec, bspecLoader
 from spectrum import Spectrum, scale_enmasse
 from tools.list_dict import sort_list_by_shen_key
 from tools.plot import ab_z_plot, four_by_four_multiplot
 
-EM_MAX = 0.3
+EM_MAX = 0.9
 
 
 def get_and_scale_speclsit( primary: Spectrum, names_list: list ) -> List[ Spectrum ]:
@@ -25,7 +26,7 @@ def get_and_scale_speclsit( primary: Spectrum, names_list: list ) -> List[ Spect
     print( f"Loading spectra in evolution range of {primary.getNS()} from disk" )
     names_list = sort_list_by_shen_key( names_list )
     speclist = async_bspec( names_list )
-    # speclist = scale_enmasse( primary, *speclist )
+    speclist = scale_enmasse( primary, *speclist )
     print( "Done." )
     return speclist
 
@@ -116,6 +117,18 @@ def hg_pass( primary: Spectrum, speclist: List[ Spectrum ] ) -> dict:
     print( f"Complete.  {len(r)} results remain." )
     return r
 
+
+def big_pass( primary: Spectrum, speclist: List[ Spectrum ] ) -> dict:
+    print( f"Beginning Big X{SQUARE} analysis" )
+    # No need to trim or scale, as the em_chi_wrapper does this via multiprocessing
+    primary.trim( STD_MIN_WL, STD_MAX_WL )
+    em_chi_pipe = speclist_analysis_pipeline( primary, speclist, pipeline_chi_wrapper, (0, EM_MAX) )
+    em_chi_pipe.do_analysis( )
+    r = em_chi_pipe.reduce_results( )
+    print( f"Complete.  {len(r)} results remain." )
+    return r
+
+
 def main( primary: Union[ Spectrum or str ] = None, n: float = 1 ) -> None:
     if primary is None:
         exit( "Primary is NoneType; cannot process without a spectrum" )
@@ -130,9 +143,15 @@ def main( primary: Union[ Spectrum or str ] = None, n: float = 1 ) -> None:
     r = shenCat
     r = do_z_pipe( primary, catalog_names, n )
 
-    """ First Pass - MGII and HB """
+    r = big_pass( primary, get_and_scale_speclsit( primary, list( r.keys( ) ) ) )
+
+    for k, v in r.items( ):
+        print( k, v )
+    """ First Pass - MGII and HB
     speclist = get_and_scale_speclsit( primary, list( r.keys( ) ) )
     r = mg_pass( primary, speclist )
+    for k,v in r.items():
+        print( k, v )
     primary = bspecLoader( primary.getNS( ) )
     speclist = sort_list_by_shen_key( async_bspec( list( r.keys( ) ) ) )
     r = hb_pass( primary, speclist )
@@ -140,8 +159,8 @@ def main( primary: Union[ Spectrum or str ] = None, n: float = 1 ) -> None:
     speclist = sort_list_by_shen_key( async_bspec( list( r.keys( ) ) ) )
     r = hg_pass( primary, speclist )
 
-    """ Second - OIII - Pass
-    This process is manual, since I haven't written anything to deal with OIII lines
+    """  # Second - OIII - Pass
+    # This process is manual, since I haven't written anything to deal with OIII lines
     """
     # Reduce the speclist to those within em_chi results
     primary = bspecLoader( primary.getNS( ) )
@@ -149,7 +168,7 @@ def main( primary: Union[ Spectrum or str ] = None, n: float = 1 ) -> None:
     r = o3_pass( primary, speclist )
     del speclist
     primary = bspecLoader( primary.getNS( ) )
-    speclist = sort_list_by_shen_key( async_bspec( list( r.keys( ) ) ) )
+    speclist = sort_list_by_shen_key( async_bspec( list( r.keys( ) ) ) )"""
 
     """ Third Pass - Continuum """
     """print( f"Beginning continuum analysis." )
