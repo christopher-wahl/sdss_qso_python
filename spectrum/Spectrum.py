@@ -331,7 +331,9 @@ class Spectrum( dict ):
 
         return scaleflux
 
-    def trim( self, wlLow: float = None, wlHigh: float = None ):
+    def trim( self, wlLow: float = None, wlHigh: float = None, wl_range=None ):
+        if wl_range is not None:
+            wlLow, wlHigh = wl_range
         for wl in self.getWavelengths():
             if wlLow is not None and wl < wlLow:
                 del self[ wl ]

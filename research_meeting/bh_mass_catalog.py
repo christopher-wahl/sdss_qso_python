@@ -65,4 +65,4 @@ def propersearch( bh_key: str, all_cat: bool ) -> None:
     g.plot( *plotlist )
 
 
-propersearch( "mgii", False )
+propersearch( "hb", False )
