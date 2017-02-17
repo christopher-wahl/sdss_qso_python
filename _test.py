@@ -19,7 +19,7 @@ from tools.plot import ab_z_plot, four_by_four_multiplot
 
 def dim_primary( primary: Spectrum, target: Spectrum ) -> Spectrum:
     primary = primary.cpy( )
-    primary.dim_to_ab( shenCat.subkey( target.getNS( ), 'ab' ) )
+    primary.dim_to_ab( target.magAB( ) )
     return primary
 
 
@@ -28,10 +28,16 @@ def dim_chi_wrapper( inputV ):
     p = dim_primary( p, t )
     return pipeline_chi_wrapper( (p, t) )
 
+
+def o3_wrapper( inputV ):
+    p, t = inputV
+    p = dim_primary( p, t )
+    p.trim( wl_range=OIII_RANGE )
+    return pipeline_chi_wrapper( (p, t) )
+
 def o3_pass( primary: Spectrum, speclist: List[ Spectrum ] ) -> dict:
     print( f"Beginning OIII analysis." )
-    primary.trim( wl_range=OIII_RANGE )
-    o3_chi = speclist_analysis_pipeline( primary, speclist, pipeline_chi_wrapper, (0, 30) )
+    o3_chi = speclist_analysis_pipeline( primary, speclist, o3_wrapper, (0, 30) )
     o3_chi.do_analysis( )
     r = o3_chi.reduce_results( )
     print( f"Complete.  {len(r)} results remain." )
@@ -44,7 +50,7 @@ def first_pass( primary: Spectrum, speclist: List[ Spectrum ] ) -> dict:
     from spectrum import drop_to_em_lines
 
     primary = drop_to_em_lines( primary )
-    em_chi_pipe = speclist_analysis_pipeline( primary, speclist, dim_chi_wrapper, (0, 100) )
+    em_chi_pipe = speclist_analysis_pipeline( primary, speclist, dim_chi_wrapper, (0, 50) )
     em_chi_pipe.do_analysis( )
     r = em_chi_pipe.reduce_results( )
     print( f"Complete.  {len(r)} results remain." )
@@ -82,7 +88,7 @@ def main( primary: Union[ Spectrum or str ] = None, n: float = 1 ) -> None:
     catalog_names.remove( primary.getNS( ) )
 
     r = shenCat
-    # r = do_z_pipe( primary, catalog_names, n )
+    r = do_z_pipe( primary, catalog_names, n )
 
     """ First Pass - MGII and HB """
     speclist = get_and_scale_speclsit( primary, list( r.keys( ) ) )
@@ -92,19 +98,17 @@ def main( primary: Union[ Spectrum or str ] = None, n: float = 1 ) -> None:
     This process is manual, since I haven't written anything to deal with OIII lines
     """
     # Reduce the speclist to those within em_chi results
-    for i in range( len( speclist ) - 1, -1, -1 ):
-        if speclist[ i ].getNS( ) not in r:
-            del speclist[ i ]
-
+    primary = bspecLoader( primary.getNS( ) )
+    speclist = sort_list_by_shen_key( async_bspec( list( r.keys( ) ) ) )
     r = o3_pass( primary, speclist )
     del speclist
     primary = bspecLoader( primary.getNS( ) )
-    speclist = scale_enmasse( primary, *sort_list_by_shen_key( async_bspec( list( r.keys( ) ) ) ) )
+    speclist = sort_list_by_shen_key( async_bspec( list( r.keys( ) ) ) )
 
     """ Third Pass - Continuum """
     print( f"Beginning continuum analysis." )
     primary.trim( STD_MIN_WL, STD_MAX_WL )
-    continuum_chi_pipe = speclist_analysis_pipeline( primary, speclist, pipeline_chi_wrapper, (0, 300) )
+    continuum_chi_pipe = speclist_analysis_pipeline( primary, speclist, dim_chi_wrapper, (0, 300) )
     continuum_chi_pipe.do_analysis( )
     r = continuum_chi_pipe.reduce_results( )
     print( f"Done. {len( r )} results remain." )
