@@ -41,7 +41,7 @@ def chi( expSpec: Spectrum, obsSpec: Spectrum, doScale: bool = False, skipCopy: 
 
     a0.alignToSpec( a1 )
 
-    return sum( [ pow( a0.getFlux( wl ) - a1.getFlux( wl ), 2 ) / a0.getFlux( wl ) for wl in a0 ] )
+    return sum( [ pow( a0.getFlux( wl ) - a1.getFlux( wl ), 2 ) / a0.getFlux( wl ) for wl in a0 ] ) / len( a0 )
 
 
 def generic_chi( list0: list, list1: list ) -> float:
