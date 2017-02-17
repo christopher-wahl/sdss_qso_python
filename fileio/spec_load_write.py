@@ -8,8 +8,7 @@ from spectrum import Spectrum
 
 
 def text_load( path: str, filename: str ) -> Spectrum:
-    if not fileCheck( path, filename ):
-        raise IOError( f"text_load: File not found{os.linesep}path: {path + os.linesep}filename: {filename}" )
+    fileCheck( path, filename )
 
     with open( join( path, filename ), 'r' ) as infile:
         """ Read header.

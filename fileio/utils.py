@@ -1,5 +1,5 @@
 from re import search
-from typing import Union
+from typing import List, Union
 
 from common.constants import abspath, join, os
 
@@ -19,7 +19,8 @@ def dirCheck( *args : Union[ list or str ] ) -> None:
     if not os.path.isdir( path ):
         os.makedirs( path )
 
-def extCheck( extention ):
+
+def extCheck( extention: str ) -> str:
     """
     Ensures a file extention includes the leading '.'
 
@@ -32,12 +33,26 @@ def extCheck( extention ):
         extention = '.' + extention
     return extention
 
-def fileCheck( path, filename ):
-    if os.path.isfile( abspath( join( path, filename ) ) ):
-        return True
-    return False
 
-def findNamestring( inputString ):
+def fileCheck( path: str, filename: str = "" ) -> None:
+    """
+    Checks if a file exists.  If not, raises FileNotFound error
+
+    Note, if filename is not passed, it will default to "" and only the
+    value of path is checked.  Thus, if path does not hold a file, the exception will be raised.
+    This is NOT a folder check.  Use dirCheck() for checking/creating a folder.
+
+    :param path: /path/to/file
+    :param filename: file.name
+    :type path: str
+    :type filename: str
+    :rtype: None
+    """
+    if not os.path.isfile( abspath( join( path, filename ) ) ):
+        raise FileNotFoundError( f"{join( path, filename )}" )
+
+
+def findNamestring( inputString: str ) -> str:
     """
     Uses regular expressions to find MJD-Plate-Fiber string.
 
@@ -54,7 +69,8 @@ def findNamestring( inputString ):
     except:
         raise ValueError( "Unable to find namestring in the given inputString.\ninputString: %s" % inputString )
 
-def fns( inputString ):
+
+def fns( inputString: str ) -> str:
     """
     Shortcut call to utils.findNamestring( inputString )
 
@@ -65,7 +81,8 @@ def fns( inputString ):
     """
     return findNamestring( inputString )
 
-def getFiles( path, extention = None ):
+
+def getFiles( path: str, extention: str = None ) -> List[ str ]:
     """
     Returns a list of all files within the given path.
 
@@ -82,18 +99,21 @@ def getFiles( path, extention = None ):
     extention = extCheck ( extention ) if extention is not None else ''
     return[ f for f in os.listdir( path ) if ( os.path.isfile( os.path.join( path, f ) ) and (os.path.splitext( f )[ 1 ].endswith( extention ))) ]
 
-def object_loader( path, filename ):
+
+def object_loader( path: str, filename: str ) -> object:
     import pickle
     fileCheck( path, filename )
     return pickle.load( open( join( path, filename ), 'rb' ) )
 
-def object_writer( object, path, filename ):
+
+def object_writer( object: object, path: str, filename: str ) -> None:
     import pickle
     dirCheck( path )
     with open( join( path, filename ), 'wb' ) as outfile:
         pickle.dump( object, outfile, protocol=pickle.HIGHEST_PROTOCOL )
 
-def ns2f( namestring, extention ):
+
+def ns2f( namestring: str, extention: str ) -> str:
     """
     Shortcut call for utils.namestringToFilename( namestring, extention )
 
@@ -106,7 +126,8 @@ def ns2f( namestring, extention ):
     """
     return namestringToFilename( namestring, extention )
 
-def namestringToFilename( namestring, extention ):
+
+def namestringToFilename( namestring: str, extention: str ) -> str:
     """
     Concatates namestring & extention, passing extention through extCheck first
 

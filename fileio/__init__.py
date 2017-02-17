@@ -1,4 +1,5 @@
 from . import spec_load_write
+from .fit_loader import fit_spec_loader
 
 def compound_dict_writer( inDict : dict, path : str, filename : str, top_key : str = "namestring", sub_keys : list = None ) -> None:
     from fileio.utils import dirCheck, join
