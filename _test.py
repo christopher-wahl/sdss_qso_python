@@ -6,7 +6,7 @@
 
 from typing import List, Union
 
-from analysis.chi import em_chi_wrapper, pipeline_chi_wrapper
+from analysis.chi import pipeline_chi_wrapper
 from analysis.pipeline import redshift_ab_pipeline, speclist_analysis_pipeline
 from catalog import shenCat
 from common import freeze_support
@@ -17,10 +17,21 @@ from tools.list_dict import sort_list_by_shen_key
 from tools.plot import ab_z_plot, four_by_four_multiplot
 
 
+def dim_primary( primary: Spectrum, target: Spectrum ) -> Spectrum:
+    primary = primary.cpy( )
+    primary.dim_to_ab( shenCat.subkey( target.getNS( ), 'ab' ) )
+    return primary
+
+
+def dim_chi_wrapper( inputV ):
+    p, t = inputV
+    p = dim_primary( p, t )
+    return pipeline_chi_wrapper( (p, t) )
+
 def o3_pass( primary: Spectrum, speclist: List[ Spectrum ] ) -> dict:
     print( f"Beginning OIII analysis." )
     primary.trim( wl_range=OIII_RANGE )
-    o3_chi = speclist_analysis_pipeline( primary, speclist, pipeline_chi_wrapper, (0, 20) )
+    o3_chi = speclist_analysis_pipeline( primary, speclist, pipeline_chi_wrapper, (0, 30) )
     o3_chi.do_analysis( )
     r = o3_chi.reduce_results( )
     print( f"Complete.  {len(r)} results remain." )
@@ -30,7 +41,10 @@ def o3_pass( primary: Spectrum, speclist: List[ Spectrum ] ) -> dict:
 def first_pass( primary: Spectrum, speclist: List[ Spectrum ] ) -> dict:
     print( f"Beginning EM Line X{SQUARE} analysis" )
     # No need to trim or scale, as the em_chi_wrapper does this via multiprocessing
-    em_chi_pipe = speclist_analysis_pipeline( primary, speclist, em_chi_wrapper, (0, 100) )
+    from spectrum import drop_to_em_lines
+
+    primary = drop_to_em_lines( primary )
+    em_chi_pipe = speclist_analysis_pipeline( primary, speclist, dim_chi_wrapper, (0, 100) )
     em_chi_pipe.do_analysis( )
     r = em_chi_pipe.reduce_results( )
     print( f"Complete.  {len(r)} results remain." )
@@ -67,8 +81,8 @@ def main( primary: Union[ Spectrum or str ] = None, n: float = 1 ) -> None:
     catalog_names = shenCat.keys( )
     catalog_names.remove( primary.getNS( ) )
 
-    # r = do_z_pipe( primary, catalog_names, n )
     r = shenCat
+    # r = do_z_pipe( primary, catalog_names, n )
 
     """ First Pass - MGII and HB """
     speclist = get_and_scale_speclsit( primary, list( r.keys( ) ) )
@@ -96,7 +110,7 @@ def main( primary: Union[ Spectrum or str ] = None, n: float = 1 ) -> None:
     print( f"Done. {len( r )} results remain." )
 
     print( "Plotting AB v Z and scaled spectra" )
-    OUTPATH = join( BASE_PLOT_PATH, primary.getNS( ), "Generic", "Full Catalog" )
+    OUTPATH = join( BASE_PLOT_PATH, primary.getNS( ), "Generic", "Dim Process" )
     primary = bspecLoader( primary.getNS( ) )
     speclist = scale_enmasse( primary, *sort_list_by_shen_key( async_bspec( list( r.keys( ) ) ) ) )
     ab_z_plot( primary, speclist, OUTPATH, "AB_Z Generic.pdf", plotTitle=f"Generic process {primary.getNS()}" )

@@ -116,7 +116,6 @@ def __multi_chi_wrapper( inputV ):
 def pipeline_chi_wrapper( inputV ):
     return __multi_chi_wrapper( inputV )
 
-
 def em_chi_wrapper( inputV: Tuple[ Spectrum, Spectrum ] ) -> Dict[ str, float ]:
     """
     Wrapper for running chi^2 over EM lines alone.  Scales obsSpec to expSepc before trimming to EM lines

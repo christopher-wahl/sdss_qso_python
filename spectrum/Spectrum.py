@@ -72,7 +72,14 @@ class Spectrum( dict ):
             if(central_wl - radius <= wl <= central_wl + radius):
                 s += self.getFlux( wl )
                 n += 1
-        return s / n
+        try:
+            return s / n
+        except ZeroDivisionError as e:
+            print(
+                f"Spectrum.aveFlux: ZeroDivisionError - unable to determine average flux for spectrum {self.getNS() }.  Is the region of interest loaded?" )
+            print( f"central_wl{central_wl}     radius: {radius}" )
+            print( self )
+            exit( 1 )
 
     def bin(self, step = 1 ):
         wls = self.getWavelengths()
