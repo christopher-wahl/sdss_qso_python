@@ -4,6 +4,7 @@ from analysis.chi import pipeline_chi_wrapper
 from analysis.pipeline import redshift_ab_pipeline, speclist_analysis_pipeline
 from catalog import get_shen_header, get_shen_string, shenCat
 from common.constants import BASE_PROCESSED_PATH, HB_RANGE, HG_RANGE, MGII_RANGE, OIII_RANGE, join
+from common.messaging import tab_print
 from fileio.spec_load_write import async_bspec, bspecLoader
 from fileio.utils import dirCheck
 from spectrum import Spectrum
@@ -11,18 +12,10 @@ from spectrum.tools import scale_enmasse
 
 EM_MAX = 20
 
-
-def __tabprint( s: str, new_line: bool = True ) -> None:
-    if new_line:
-        print( f"       {s}" )
-    else:
-        print( f"       {s}", end='' )
-
-
 def loader( nameslist: Union[ List[ str ], Iterable ] ) -> List[ Spectrum ]:
-    __tabprint( f"Loading { len( nameslist ) } spectra..." )
+    tab_print( f"Loading { len( nameslist ) } spectra..." )
     speclist = async_bspec( nameslist )
-    __tabprint( "Complete" )
+    tab_print( "Complete" )
     return speclist
 
 
@@ -35,40 +28,40 @@ def range_pass( primary: Spectrum, speclist, wl_range: Tuple[ float, float ] ):
 
 def analyze( primary: str, nameslist: List[ str ], n_sigma: int, OUT_PATH: str ):
     # Run Each EM line & reduce
-    __tabprint( f"{primary }" )
+    tab_print( f"{primary }" )
     speclist = loader( nameslist )
     speclist = scale_enmasse( bspecLoader( primary ), *speclist )
 
-    __tabprint( "MGII Analysis...", False )
+    tab_print( "MGII Analysis...", False )
     results = range_pass( bspecLoader( primary ), speclist, MGII_RANGE )
-    __tabprint( len( results ) )
+    tab_print( len( results ) )
     if len( results ) == 0:
         return 0
     for i in range( len( speclist ) - 1, -1, -1 ):
         if speclist[ i ].getNS() not in results:
             del speclist[ i ]
 
-    __tabprint( "HB Analysis...", False )
+    tab_print( "HB Analysis...", False )
     results = range_pass( bspecLoader( primary ), speclist, HB_RANGE )
-    __tabprint( len( results ) )
+    tab_print( len( results ) )
     if len( results ) == 0:
         return 0
     for i in range( len( speclist ) - 1, -1, -1 ):
         if speclist[ i ].getNS() not in results:
             del speclist[ i ]
 
-    __tabprint( "OIII Analysis...", False )
+    tab_print( "OIII Analysis...", False )
     results = range_pass( bspecLoader( primary ), speclist, OIII_RANGE )
-    __tabprint( len( results ) )
+    tab_print( len( results ) )
     if len( results ) == 0:
         return 0
     for i in range( len( speclist ) - 1, -1, -1 ):
         if speclist[ i ].getNS() not in results:
             del speclist[ i ]
 
-    __tabprint( "HG Analysis...", False )
+    tab_print( "HG Analysis...", False )
     results = range_pass( bspecLoader( primary ), speclist, HG_RANGE )
-    __tabprint( len( results ) )
+    tab_print( len( results ) )
     if len( results ) == 0:
         return 0
     for i in range( len( speclist ) - 1, -1, -1 ):
@@ -76,10 +69,10 @@ def analyze( primary: str, nameslist: List[ str ], n_sigma: int, OUT_PATH: str )
             del speclist[ i ]
 
     # Redshift reduction
-    __tabprint( "Redshift Reduction...", False )
+    tab_print( "Redshift Reduction...", False )
     z_pipe = redshift_ab_pipeline( primary_ns=primary, ns_of_interest=list( results ) )
     results = z_pipe.reduce_results( n_sigma )
-    __tabprint( len( results ) )
+    tab_print( len( results ) )
 
     # Write results
     with open( join( OUT_PATH, f"{primary}.csv" ), 'w' ) as outfile:
