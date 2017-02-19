@@ -12,8 +12,11 @@ from spectrum.tools import scale_enmasse
 EM_MAX = 20
 
 
-def __tabprint( s: str ) -> None:
-    print( f"       {s}" )
+def __tabprint( s: str, new_line: bool = True ) -> None:
+    if new_line:
+        print( f"       {s}" )
+    else:
+        print( f"       {s}", end='' )
 
 
 def loader( nameslist: Union[ List[ str ], Iterable ] ) -> List[ Spectrum ]:
@@ -36,32 +39,36 @@ def analyze( primary: str, nameslist: List[ str ], n_sigma: int, OUT_PATH: str )
     speclist = loader( nameslist )
     speclist = scale_enmasse( bspecLoader( primary ), *speclist )
 
-    __tabprint( "MGII Analysis..." )
+    __tabprint( "MGII Analysis...", False )
     results = range_pass( bspecLoader( primary ), speclist, MGII_RANGE )
+    __tabprint( len( results ) )
     if len( results ) == 0:
         return 0
     for i in range( len( speclist ) - 1, -1, -1 ):
         if speclist[ i ].getNS() not in results:
             del speclist[ i ]
 
-    __tabprint( "HB Analysis..." )
+    __tabprint( "HB Analysis...", False )
     results = range_pass( bspecLoader( primary ), speclist, HB_RANGE )
+    __tabprint( len( results ) )
     if len( results ) == 0:
         return 0
     for i in range( len( speclist ) - 1, -1, -1 ):
         if speclist[ i ].getNS() not in results:
             del speclist[ i ]
 
-    __tabprint( "OIII Analysis..." )
+    __tabprint( "OIII Analysis...", False )
     results = range_pass( bspecLoader( primary ), speclist, OIII_RANGE )
+    __tabprint( len( results ) )
     if len( results ) == 0:
         return 0
     for i in range( len( speclist ) - 1, -1, -1 ):
         if speclist[ i ].getNS() not in results:
             del speclist[ i ]
 
-    __tabprint( "HG Analysis..." )
+    __tabprint( "HG Analysis...", False )
     results = range_pass( bspecLoader( primary ), speclist, HG_RANGE )
+    __tabprint( len( results ) )
     if len( results ) == 0:
         return 0
     for i in range( len( speclist ) - 1, -1, -1 ):
@@ -69,9 +76,10 @@ def analyze( primary: str, nameslist: List[ str ], n_sigma: int, OUT_PATH: str )
             del speclist[ i ]
 
     # Redshift reduction
-    __tabprint( "Redshift Reduction..." )
+    __tabprint( "Redshift Reduction...", False )
     z_pipe = redshift_ab_pipeline( primary_ns=primary, ns_of_interest=list( results ) )
     results = z_pipe.reduce_results( n_sigma )
+    __tabprint( len( results ) )
 
     # Write results
     with open( join( OUT_PATH, f"{primary}.csv" ), 'w' ) as outfile:
