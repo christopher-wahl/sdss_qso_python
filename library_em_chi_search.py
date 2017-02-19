@@ -9,7 +9,7 @@ from fileio.utils import dirCheck
 from spectrum import Spectrum
 from spectrum.tools import scale_enmasse
 
-EM_MAX = 10
+EM_MAX = 20
 
 
 def __tabprint( s: str ) -> None:
@@ -39,6 +39,7 @@ def analyze( primary: str, nameslist: List[ str ], n_sigma: int, OUT_PATH: str )
     __tabprint( "MGII Analysis..." )
     results = range_pass( bspecLoader( primary ), speclist, MGII_RANGE )
     if len( results ) == 0:
+        return 0
     for i in range( len( speclist ) - 1, -1, -1 ):
         if speclist[ i ].getNS() not in results:
             del speclist[ i ]
