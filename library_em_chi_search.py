@@ -70,7 +70,7 @@ def analyze( primary: str, nameslist: List[ str ], n_sigma: int, OUT_PATH: str )
 
     # Redshift reduction
     __tabprint( "Redshift Reduction..." )
-    z_pipe = redshift_ab_pipeline( primary_ns=primary, ns_of_interest=list( speclist ) )
+    z_pipe = redshift_ab_pipeline( primary_ns=primary, ns_of_interest=list( results ) )
     results = z_pipe.reduce_results( n_sigma )
 
     # Write results
