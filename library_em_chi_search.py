@@ -7,8 +7,9 @@ from common.constants import BASE_PROCESSED_PATH, HB_RANGE, HG_RANGE, MGII_RANGE
 from fileio.spec_load_write import async_bspec, bspecLoader
 from fileio.utils import dirCheck
 from spectrum import Spectrum
+from spectrum.tools import scale_enmasse
 
-EM_MAX = 300
+EM_MAX = 10
 
 
 def __tabprint( s: str ) -> None:
@@ -22,8 +23,7 @@ def loader( nameslist: Union[ List[ str ], Iterable ] ) -> List[ Spectrum ]:
     return speclist
 
 
-def range_pass( primary: Spectrum, nameslist: Union[ List[ str ], Iterable ], wl_range: Tuple[ float, float ] ):
-    speclist = loader( nameslist )
+def range_pass( primary: Spectrum, speclist, wl_range: Tuple[ float, float ] ):
     primary.trim( wl_range=wl_range )
     em_pipe = speclist_analysis_pipeline( primary, speclist, pipeline_chi_wrapper, (0, EM_MAX) )
     em_pipe.do_analysis( )
@@ -32,14 +32,41 @@ def range_pass( primary: Spectrum, nameslist: Union[ List[ str ], Iterable ], wl
 
 def analyze( primary: str, nameslist: List[ str ], n_sigma: int, OUT_PATH: str ):
     # Run Each EM line & reduce
-    print( f"{primary } - MGII Analysis..." )
-    nameslist = range_pass( bspecLoader( primary ), nameslist, MGII_RANGE )
+    __tabprint( f"{primary }" )
+    speclist = loader( nameslist )
+    speclist = scale_enmasse( bspecLoader( primary ), *speclist )
+
+    __tabprint( "MGII Analysis..." )
+    results = range_pass( bspecLoader( primary ), speclist, MGII_RANGE )
+    if len( results ) == 0:
+        return 0
+    for i in range( len( speclist ) - 1, -1, -1 ):
+        if speclist[ i ].getNS() not in results:
+            del speclist[ i ]
+
     __tabprint( "HB Analysis..." )
-    nameslist = range_pass( bspecLoader( primary ), nameslist, HB_RANGE )
+    results = range_pass( bspecLoader( primary ), speclist, HB_RANGE )
+    if len( results ) == 0:
+        return 0
+    for i in range( len( speclist ) - 1, -1, -1 ):
+        if speclist[ i ].getNS() not in results:
+            del speclist[ i ]
+
     __tabprint( "OIII Analysis..." )
-    nameslist = range_pass( bspecLoader( primary ), nameslist, OIII_RANGE )
+    results = range_pass( bspecLoader( primary ), speclist, OIII_RANGE )
+    if len( results ) == 0:
+        return 0
+    for i in range( len( speclist ) - 1, -1, -1 ):
+        if speclist[ i ].getNS() not in results:
+            del speclist[ i ]
+
     __tabprint( "HG Analysis..." )
-    nameslist = range_pass( bspecLoader( primary ), nameslist, HG_RANGE )
+    results = range_pass( bspecLoader( primary ), speclist, HG_RANGE )
+    if len( results ) == 0:
+        return 0
+    for i in range( len( speclist ) - 1, -1, -1 ):
+        if speclist[ i ].getNS() not in results:
+            del speclist[ i ]
 
     # Redshift reduction
     __tabprint( "Redshift Reduction..." )
@@ -55,7 +82,7 @@ def analyze( primary: str, nameslist: List[ str ], n_sigma: int, OUT_PATH: str )
 
 
 def main( n_sigma: int ):
-    BASE_OUTPATH = join( BASE_PROCESSED_PATH, "Chi Matching", "EM Lines", f"Sigma {n_sigma}" )
+    BASE_OUTPATH = join( BASE_PROCESSED_PATH, "Chi Matching", "EM Lines", f"Sigma {n_sigma} - Max {EM_MAX}" )
     CAT_WRITE_PATH = join( BASE_OUTPATH, "Individual Matches" )
 
     shenCat.load( )
@@ -65,7 +92,10 @@ def main( n_sigma: int ):
     n = len( names )
     for i in range( n ):
         primary = names.pop( i )
-        count_dict[ primary ] = analyze( primary, names, n_sigma, CAT_WRITE_PATH )
+        count_dict[ primary ] = count = analyze( primary, names, n_sigma, CAT_WRITE_PATH )
+
+        with open( join( BASE_OUTPATH, 'running_count.csv' ), 'a' ) as outfile:
+            outfile.write( f"{primary},{count}\n" )
 
         names.insert( i, primary )
 

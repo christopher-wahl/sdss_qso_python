@@ -31,7 +31,7 @@ def generic_unordered_multiprocesser( input_values, multi_function, output_value
     MAX_PROC = MAX_PROC or cpu_count()
     pool = Pool( processes = MAX_PROC )
 
-    results = pool.imap_unordered( multi_function, input_values, chunksize= min( 1, len( input_values ) / MAX_PROC ) )
+    results = pool.imap_unordered( multi_function, input_values ) #, chunksize= min( 2, len( input_values ) / MAX_PROC ) )
     pool.close()
     pool.join()
 
@@ -44,7 +44,7 @@ def generic_ordered_multiprocesser( input_values, multi_function, output_values 
     MAX_PROC = MAX_PROC or cpu_count()
     pool = Pool( processes = MAX_PROC )
 
-    results = pool.imap( multi_function, input_values, chunksize= min( 1, len( input_values ) / MAX_PROC ) )
+    results = pool.imap( multi_function, input_values ) #, chunksize= min( 2, len( input_values ) / MAX_PROC ) )
     pool.close()
     pool.join()
 
