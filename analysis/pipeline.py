@@ -1,4 +1,4 @@
-from typing import List, Tuple, Union
+from typing import Iterable, List, Tuple, Union
 
 
 class results_pipeline:
@@ -78,15 +78,15 @@ class results_pipeline:
 
         return (xlist, ylist)
 
-    def set_results(self, results ):
+    def set_results( self, results: Union[ dict, list, Iterable ] ):
         from tools.list_dict import paired_list_to_dict
         if self._results_dict is not None:
             self._results_dict.clear()
 
         if type( results ) == dict:
             self._results_dict = results
-        elif type( results ) == list:
-            self._results_dict = paired_list_to_dict( results )
+        elif type( results ) == list or type( results ) == Iterable:
+            self._results_dict = paired_list_to_dict( list( results ) )
         elif isinstance( results_pipeline, results ):
             self._results_dict = results.get_results( )
         else:

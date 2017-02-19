@@ -4,6 +4,7 @@ from multiprocessing import cpu_count
 
 join = os.path.join
 abspath = os.path.abspath
+linesep = os.linesep
 
 MAX_PROC = cpu_count()
 

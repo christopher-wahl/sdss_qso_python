@@ -1,9 +1,9 @@
-from typing import List, Union
+from typing import Dict, List, Tuple, Union
 
 from spectrum import Spectrum
 
 
-def paired_list_to_dict( paired_list ):
+def paired_list_to_dict( paired_list: List[ Tuple ] ) -> Dict:
     """
     Converts a list of [ ( a, b ), ( c, d ) ... ] or [ { a : b }, { c : d } ... ]
     to a dictionary: {  a : b, c : d ... }
@@ -31,12 +31,23 @@ def paired_list_to_dict( paired_list ):
     return out_dict
 
 
-def paired_tuple_list_to_two_lists( inlist ):
+def paired_tuple_list_to_two_lists( inlist ) -> Tuple[ List, List ]:
     xlist, ylist, zlist = zip( *inlist )
     return list( xlist ), list( ylist )
 
 
-def sort_list_by_shen_key( in_list: Union[ List[ Spectrum ], List[ str ] ], sort_key='z' ):
+def sort_list_by_shen_key( in_list: Union[ List[ Spectrum ], List[ str ] ], sort_key='z' ) -> List:
+    """
+    Takes in a list of either Spectrum or namestrings and sorts them by a key used in shenCat, ascending values.
+    If sort_key is not specified, defaults to redshift key 'z'
+
+    :param in_list:
+    :param sort_key:
+    :type in_list: list
+    :type sort_key: str
+    :return:
+    :rtype: list
+    """
     from catalog import shenCat
     def _sort_key( x: Union[ Spectrum, str ] ) -> float:
         return shenCat.subkey( x.getNS( ) if isinstance( x, Spectrum ) else x, sort_key )
@@ -46,3 +57,16 @@ def sort_list_by_shen_key( in_list: Union[ List[ Spectrum ], List[ str ] ], sort
         in_list = list( in_list )
     in_list.sort( key=_sort_key )
     return in_list
+
+
+def key_value_dict_to_paired_list( in_dict: dict, sort: bool = False ) -> List[ Tuple ]:
+    klist = list( in_dict.keys( ) )
+    vlist = [ in_dict[ k ] for k in klist ]
+
+    outlist = list( zip( klist, vlist ) )
+
+    if sort:
+        outlist.sort( key=lambda x: x[ 1 ] )
+
+    return outlist
+    pass

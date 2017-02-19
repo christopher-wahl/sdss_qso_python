@@ -17,7 +17,7 @@ from spectrum import Spectrum, scale_enmasse
 from tools.list_dict import sort_list_by_shen_key
 from tools.plot import ab_z_plot, four_by_four_multiplot
 
-EM_MAX = 0.9
+EM_MAX = 30
 
 
 def get_and_scale_speclsit( primary: Spectrum, names_list: list ) -> List[ Spectrum ]:
@@ -34,7 +34,7 @@ def get_and_scale_speclsit( primary: Spectrum, names_list: list ) -> List[ Spect
 def do_z_pipe( primary: Spectrum, catalog_names: list, n: float ) -> dict:
     print( f"Catalog loaded.  Reducing to all points within {n}-sigma of the expected evolution of {primary.getNS()}" )
     z_mag_pipe = redshift_ab_pipeline( primary_ns=primary.getNS( ), ns_of_interest=catalog_names )
-    r = z_mag_pipe.reduce_results( )
+    r = z_mag_pipe.reduce_results( n )
     print( f"Done.  {len( r )} points remain." )
     return r
 
@@ -143,15 +143,12 @@ def main( primary: Union[ Spectrum or str ] = None, n: float = 1 ) -> None:
     r = shenCat
     r = do_z_pipe( primary, catalog_names, n )
 
-    r = big_pass( primary, get_and_scale_speclsit( primary, list( r.keys( ) ) ) )
+    # r = big_pass( primary, get_and_scale_speclsit( primary, list( r.keys( ) ) ) )
 
-    for k, v in r.items( ):
-        print( k, v )
-    """ First Pass - MGII and HB
+    """ First Pass - MGII and HB """
     speclist = get_and_scale_speclsit( primary, list( r.keys( ) ) )
     r = mg_pass( primary, speclist )
-    for k,v in r.items():
-        print( k, v )
+
     primary = bspecLoader( primary.getNS( ) )
     speclist = sort_list_by_shen_key( async_bspec( list( r.keys( ) ) ) )
     r = hb_pass( primary, speclist )
@@ -161,22 +158,22 @@ def main( primary: Union[ Spectrum or str ] = None, n: float = 1 ) -> None:
 
     """  # Second - OIII - Pass
     # This process is manual, since I haven't written anything to deal with OIII lines
-    """
     # Reduce the speclist to those within em_chi results
+    """
     primary = bspecLoader( primary.getNS( ) )
     speclist = sort_list_by_shen_key( async_bspec( list( r.keys( ) ) ) )
     r = o3_pass( primary, speclist )
     del speclist
     primary = bspecLoader( primary.getNS( ) )
-    speclist = sort_list_by_shen_key( async_bspec( list( r.keys( ) ) ) )"""
+    speclist = sort_list_by_shen_key( async_bspec( list( r.keys( ) ) ) )
 
     """ Third Pass - Continuum """
-    """print( f"Beginning continuum analysis." )
+    print( f"Beginning continuum analysis." )
     primary.trim( STD_MIN_WL, STD_MAX_WL )
     continuum_chi_pipe = speclist_analysis_pipeline( primary, speclist, dim_chi_wrapper, (0, 300) )
     continuum_chi_pipe.do_analysis( )
     r = continuum_chi_pipe.reduce_results( )
-    print( f"Done. {len( r )} results remain." )"""
+    print( f"Done. {len( r )} results remain." )
 
     print( "Plotting AB v Z and scaled spectra" )
     OUTPATH = join( BASE_PLOT_PATH, primary.getNS( ), "Generic", "Dim Process" )
@@ -191,4 +188,4 @@ def main( primary: Union[ Spectrum or str ] = None, n: float = 1 ) -> None:
 
 if __name__ == '__main__':
     freeze_support( )
-    main( "53770-2376-290" )
+    main( "53770-2376-290", 3 )
