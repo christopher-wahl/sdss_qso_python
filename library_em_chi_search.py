@@ -39,7 +39,6 @@ def analyze( primary: str, nameslist: List[ str ], n_sigma: int, OUT_PATH: str )
     __tabprint( "MGII Analysis..." )
     results = range_pass( bspecLoader( primary ), speclist, MGII_RANGE )
     if len( results ) == 0:
-        return 0
     for i in range( len( speclist ) - 1, -1, -1 ):
         if speclist[ i ].getNS() not in results:
             del speclist[ i ]
@@ -70,7 +69,7 @@ def analyze( primary: str, nameslist: List[ str ], n_sigma: int, OUT_PATH: str )
 
     # Redshift reduction
     __tabprint( "Redshift Reduction..." )
-    z_pipe = redshift_ab_pipeline( primary_ns=primary, ns_of_interest=list( nameslist ) )
+    z_pipe = redshift_ab_pipeline( primary_ns=primary, ns_of_interest=list( speclist ) )
     results = z_pipe.reduce_results( n_sigma )
 
     # Write results
