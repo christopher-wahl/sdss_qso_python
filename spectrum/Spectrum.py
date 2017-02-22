@@ -95,7 +95,6 @@ class Spectrum( dict ):
                 n += 1
         return err / n if n != 0 else -1
 
-
     def bin(self, step = 1 ):
         wls = self.getWavelengths()
         wlslist = []
@@ -234,6 +233,19 @@ class Spectrum( dict ):
                 f"Spectrum.magAB(): {self.getNS()} got a RuntimeWarning when trying to form flux mean: {f_v} \n fluxlist: {f_vlist}" )
             raise e
         return -2.5 * log10( f_v ) + 8.9
+
+    def nearest( self, wavelength: float ) -> float:
+        """
+        Simple wrapper for tools.find_nearest_wavelength.  Passes this Spectrum's sorted wavelength list (via
+        Spectrum.getWavelengths()) and wavelength to find_nearest_wavelength, and returns that value.
+
+        :param wavelength: Wavelength of interest
+        :type wavelength: float
+        :return: Value of the nearest wavelength
+        :rtype: float
+        """
+        from spectrum.tools import find_nearest_wavelength
+        return find_nearest_wavelength( self.getWavelengths( ), wavelength )
 
     def setDict( self, wavelengthList, fluxList, errList ):
         """

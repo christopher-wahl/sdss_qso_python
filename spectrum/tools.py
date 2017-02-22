@@ -128,3 +128,29 @@ def scale_enmasse( primary_spectrum: Spectrum, *speclist: List[ Spectrum ], scal
     if (len( speclist )) == 1:
         return speclist[ 0 ]
     return list( speclist )
+
+
+def find_nearest_wavelength( sorted_wavelengths: List[ float ], wavelength: float ) -> float:
+    """
+    Finds the value of the nearest wavelength in the sorted list sorted_wavelengths.
+
+    :param sorted_wavelengths: List of wavelengths to parse
+    :param wavelength: Value of interest
+    :type sorted_wavelengths: list
+    :type wavelength: float
+    :return: Nearest value to wavelength contained withiin sorted_wavelengths
+    :rtype: float
+    """
+    from bisect import bisect_left
+
+    pos = bisect_left( sorted_wavelengths, wavelength )
+    if pos == 0:
+        return sorted_wavelengths[ 0 ]
+    if pos == len( sorted_wavelengths ):
+        return sorted_wavelengths[ -1 ]
+    before = sorted_wavelengths[ pos - 1 ]
+    after = sorted_wavelengths[ pos ]
+    if after - wavelength < wavelength - before:
+        return after
+    else:
+        return before
