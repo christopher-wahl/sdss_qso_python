@@ -1,8 +1,10 @@
 from analysis.pipeline import speclist_analysis_pipeline
 from catalog import shenCat
-from common.constants import BASE_PLOT_PATH, HB_RANGE, HG_RANGE, MGII_RANGE, OIII_RANGE, linesep
+from common.constants import BASE_PLOT_PATH, CONT_RANGE, HB_RANGE, HG_RANGE, MGII_RANGE, OIII_RANGE, join, linesep
+from fileio.list_dict_utils import namestring_dict_writer
 from fileio.spec_load_write import async_bspec, bspecLoader
 from spectrum import List, Spectrum, scale_enmasse
+from tools.list_dict import sort_list_by_shen_key
 from tools.plot import ab_z_plot, four_by_four_multiplot
 
 
@@ -40,11 +42,9 @@ def cut_speclist( speclist: List[ Spectrum ], results_dict: dict ):
             del speclist[ i ]
 
 
-def main( ):
+def single( pns: str, names: List[ str ] ) -> dict:
+    outpath = join( BASE_PLOT_PATH, 'Ave Error Search', pns )
     shenCat.load( )
-    pns = "53770-2376-290"
-    names = shenCat.keys( )
-    names.remove( pns )
 
     pspec = bspecLoader( pns )
     print( "Loading speclist...", end="" )
@@ -59,12 +59,15 @@ def main( ):
 
     print( "Running MGII pipeline.... ", end="" )
     chi_pipe.do_analysis( )
-    print( "Reducing results...." )
+    print( "Reducing results.... ", end="" )
     r = chi_pipe.reduce_results( )
     cut_speclist( speclist, r )
     print( f"{len( r )} remain.", end=linesep )
 
-    ab_z_plot( path=BASE_PLOT_PATH, filename="MGII.pdf", primary=pns, points=r )
+    if len( speclist ) == 0:
+        return { pns: 0 }
+
+    ab_z_plot( path=outpath, filename="MGII.pdf", primary=pns, points=r, plotTitle=f"{pns}" )
 
     err = pspec.aveErr( wl_range=HB_RANGE ) / 2
     print( f"Building the HB anaylsis pipeline with maximum value {err}...", end="" )
@@ -75,13 +78,15 @@ def main( ):
 
     print( "Running HB pipeline.... ", end="" )
     chi_pipe.do_analysis( )
-    print( "Reducing results...." )
+    print( "Reducing results.... ", end="" )
     r = chi_pipe.reduce_results( )
     cut_speclist( speclist, r )
-    print( len( speclist ) )
     print( f"{len( r )} remain.", end=linesep )
 
-    ab_z_plot( path=BASE_PLOT_PATH, filename="MGII and HB.pdf", primary=pns, points=r )
+    if len( speclist ) == 0:
+        return { pns: 0 }
+
+    ab_z_plot( path=outpath, filename="MGII and HB.pdf", primary=pns, points=r, plotTitle=f"{pns}" )
 
     err = pspec.aveErr( wl_range=OIII_RANGE ) / 2
     print( f"Building the OIII anaylsis pipeline with maximum value {err}...", end="" )
@@ -92,12 +97,15 @@ def main( ):
 
     print( "Running OIII pipeline.... ", end="" )
     chi_pipe.do_analysis( )
-    print( "Reducing results...." )
+    print( "Reducing results.... ", end="" )
     r = chi_pipe.reduce_results( )
     cut_speclist( speclist, r )
     print( f"{len( r )} remain.", end=linesep )
 
-    ab_z_plot( path=BASE_PLOT_PATH, filename="MGII, HB and OIII.pdf", primary=pns, points=r )
+    if len( speclist ) == 0:
+        return { pns: 0 }
+
+    ab_z_plot( path=outpath, filename="MGII, HB and OIII.pdf", primary=pns, points=r, plotTitle=f"{pns}" )
 
     err = pspec.aveErr( wl_range=HG_RANGE ) / 2
     print( f"Building the HG anaylsis pipeline with maximum value {err}...", end="" )
@@ -108,18 +116,52 @@ def main( ):
 
     print( "Running HG pipeline.... ", end="" )
     chi_pipe.do_analysis( )
-    print( "Reducing results...." )
+    print( "Reducing results.... ", end="" )
     r = chi_pipe.reduce_results( )
     cut_speclist( speclist, r )
     print( f"{len( r )} remain.", end=linesep )
 
+    if len( speclist ) == 0:
+        return { pns: 0 }
+
+    ab_z_plot( path=outpath, filename="MGII, HB and OIII and HG.pdf", primary=pns, points=r, plotTitle=f"{pns}" )
+
+    err = pspec.aveErr( wl_range=CONT_RANGE ) / 2
+    print( f"Building the Continuum anaylsis pipeline with maximum value {err}...", end="" )
+    input_values = [ (pspec, spec, CONT_RANGE) for spec in speclist ]
+    chi_pipe = speclist_analysis_pipeline( pspec, speclist, reduced_chi_wrapper,
+                                           (0, err), input_values )
+    print( "Done", end=linesep )
+
+    print( "Running Continuum pipeline.... ", end="" )
+    chi_pipe.do_analysis( )
+    print( "Reducing results.... ", end="" )
+    r = chi_pipe.reduce_results( )
+    cut_speclist( speclist, r )
+    print( f"{len( r )} remain.", end=linesep )
+
+    if len( speclist ) == 0:
+        return { pns: 0 }
+
+    ab_z_plot( path=outpath, filename="MGII, HB and OIII and HG and Continuum.pdf", primary=pns, points=r,
+               plotTitle=f"{pns}" )
+
     print( "Scaling speclist...", end="" )
     speclist = scale_enmasse( pspec, *speclist )
+    speclist = sort_list_by_shen_key( speclist )
     print( "Done." )
-    ab_z_plot( path=BASE_PLOT_PATH, filename="MGII, HB and OIII and HG.pdf", primary=pns, points=r )
+
     print( "Writing multiplot... ", end="" )
-    four_by_four_multiplot( pspec, *speclist, path=BASE_PLOT_PATH, filename="Multi.pdf" )
+    four_by_four_multiplot( pspec, *speclist, path=outpath, filename="Multi.pdf", plotTitle=f"{pns}: 1 sigma" )
     print( "Done." )
+
+    print( "Writing results...", end="" )
+    shen_dict = { }
+    for k in r:
+        shen_dict[ k ] = shenCat[ k ]
+    namestring_dict_writer( shen_dict, outpath, f"{pns}.csv" )
+    print( "Done." )
+    return { pns: len( r ) }
 
 
 def test( ):
@@ -129,4 +171,19 @@ if __name__ == '__main__':
     from multiprocessing import freeze_support
 
     freeze_support( )
-    main( )
+
+    shenCat.load( )
+    names = shenCat.keys( )
+    n = len( names )
+    final = { }
+    running_count = join( BASE_PLOT_PATH, 'Ave Error Search', "running_count.csv" )
+    for i in range( n ):
+        pns = names.pop( i )
+        print( f"--------------------    { pns }: {i + 1} / {n}" )
+        final.update( single( pns, names ) )
+        names.insert( i, pns )
+        with open( running_count, 'a' ) as outfile:
+            outfile.write( f"{pns},{final[pns]}{linesep}" )
+
+    namestring_dict_writer( final, join( BASE_PLOT_PATH, 'Ave Error Search' ), "results-count.csv" )
+    print( "Complete." )
