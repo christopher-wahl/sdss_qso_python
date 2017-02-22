@@ -134,3 +134,25 @@ def em_chi_wrapper( inputV: Tuple[ Spectrum, Spectrum ] ) -> Dict[ str, float ]:
         print( expSpec, '\n', obsSpec )
     expSpec, obsSpec = drop_to_em_lines( expSpec.cpy( ), obsSpec.cpy( ) )
     return { obsSpec.getNS( ): chi( expSpec, obsSpec, doScale=False, skipCopy=True ) }
+
+
+def fwhm( spec: Spectrum, wl_range: Tuple[ float, float ] ) -> float:
+    spec = spec.cpy( )
+    spec.trim( wl_range=wl_range )
+
+    wls = spec.getWavelengths( )
+
+    max_wl = min_wl = wls[ 0 ]
+    min_flux = spec.getFlux( min_wl )
+    max_flux = spec.getFlux( max_wl )
+    for wl in wls:
+        if min_flux > spec.getFlux( wl ):
+            min_flux = spec.getFlux( wl )
+            min_wl = wl
+        elif max_flux < spec.getFlux( wl ):
+            max_flux = spec.getFlux( wl )
+            max_wl = wl
+
+    half_max_position = spec.nearest( (min_wl - max_wl) / 2 )
+
+    return 2 * (max_wl - half_max_position)
