@@ -149,7 +149,10 @@ def single( pns: str, names: List[ str ] ) -> dict:
     print( "Scaling speclist...", end="" )
     speclist = scale_enmasse( pspec, *speclist )
     if len( speclist ) > 1:
+        speclist = scale_enmasse( pspec, *speclist )
         speclist = sort_list_by_shen_key( speclist )
+    else:
+        speclist[ 0 ].scale( spec = pspec )
     print( "Done." )
 
     print( "Writing multiplot... ", end="" )
@@ -178,6 +181,8 @@ if __name__ == '__main__':
     n = len( names )
     final = { }
     running_count = join( BASE_PLOT_PATH, 'Ave Error Search', "running_count.csv" )
+    names.remove( "53679-2266-070")
+    single( "53679-2266-070", names )
     for i in range( n ):
         pns = names.pop( i )
         print( f"--------------------    { pns }: {i + 1} / {n}" )
