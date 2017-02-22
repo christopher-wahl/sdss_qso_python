@@ -148,7 +148,8 @@ def single( pns: str, names: List[ str ] ) -> dict:
 
     print( "Scaling speclist...", end="" )
     speclist = scale_enmasse( pspec, *speclist )
-    speclist = sort_list_by_shen_key( speclist )
+    if len( speclist ) > 1:
+        speclist = sort_list_by_shen_key( speclist )
     print( "Done." )
 
     print( "Writing multiplot... ", end="" )
