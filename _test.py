@@ -67,7 +67,7 @@ def single( pns: str, names: List[ str ] ) -> dict:
     if len( speclist ) == 0:
         return { pns: 0 }
 
-    ab_z_plot( path=outpath, filename="MGII.pdf", primary=pns, points=r, plotTitle=f"{pns}" )
+    ab_z_plot( path=outpath, filename="MGII.pdf", primary=pns, points=r, plotTitle=f"{pns}: 1 sigma" )
 
     err = pspec.aveErr( wl_range=HB_RANGE ) / 2
     print( f"Building the HB anaylsis pipeline with maximum value {err}...", end="" )
@@ -86,7 +86,7 @@ def single( pns: str, names: List[ str ] ) -> dict:
     if len( speclist ) == 0:
         return { pns: 0 }
 
-    ab_z_plot( path=outpath, filename="MGII and HB.pdf", primary=pns, points=r, plotTitle=f"{pns}" )
+    ab_z_plot( path=outpath, filename="MGII and HB.pdf", primary=pns, points=r, plotTitle=f"{pns}: 1 sigma" )
 
     err = pspec.aveErr( wl_range=OIII_RANGE ) / 2
     print( f"Building the OIII anaylsis pipeline with maximum value {err}...", end="" )
@@ -105,7 +105,7 @@ def single( pns: str, names: List[ str ] ) -> dict:
     if len( speclist ) == 0:
         return { pns: 0 }
 
-    ab_z_plot( path=outpath, filename="MGII, HB and OIII.pdf", primary=pns, points=r, plotTitle=f"{pns}" )
+    ab_z_plot( path=outpath, filename="MGII, HB and OIII.pdf", primary=pns, points=r, plotTitle=f"{pns}: 1 sigma" )
 
     err = pspec.aveErr( wl_range=HG_RANGE ) / 2
     print( f"Building the HG anaylsis pipeline with maximum value {err}...", end="" )
@@ -124,7 +124,7 @@ def single( pns: str, names: List[ str ] ) -> dict:
     if len( speclist ) == 0:
         return { pns: 0 }
 
-    ab_z_plot( path=outpath, filename="MGII, HB and OIII and HG.pdf", primary=pns, points=r, plotTitle=f"{pns}" )
+    ab_z_plot( path=outpath, filename="MGII, HB and OIII and HG.pdf", primary=pns, points=r, plotTitle=f"{pns}: 1 sigma" )
 
     err = pspec.aveErr( wl_range=CONT_RANGE ) / 2
     print( f"Building the Continuum anaylsis pipeline with maximum value {err}...", end="" )
@@ -144,11 +144,14 @@ def single( pns: str, names: List[ str ] ) -> dict:
         return { pns: 0 }
 
     ab_z_plot( path=outpath, filename="MGII, HB and OIII and HG and Continuum.pdf", primary=pns, points=r,
-               plotTitle=f"{pns}" )
+               plotTitle=f"{pns}: 1 sigma" )
 
     print( "Scaling speclist...", end="" )
-    speclist = scale_enmasse( pspec, *speclist )
-    speclist = sort_list_by_shen_key( speclist )
+    if len( speclist ) > 1:
+        speclist = scale_enmasse( pspec, *speclist )
+        speclist = sort_list_by_shen_key( speclist )
+    else:
+        speclist[ 0 ].scale( spec = pspec )
     print( "Done." )
 
     print( "Writing multiplot... ", end="" )
