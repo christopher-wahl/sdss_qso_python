@@ -1,191 +1,132 @@
-#
-# Doing usual EM line search, then doing OIII line search
-#
-#
-
-
-from typing import List, Union
-
-from analysis.chi import pipeline_chi_wrapper
-from analysis.pipeline import redshift_ab_pipeline, speclist_analysis_pipeline
+from analysis.pipeline import speclist_analysis_pipeline
 from catalog import shenCat
-from common import freeze_support
-from common.constants import BASE_PLOT_PATH, HB_RANGE, HG_RANGE, MGII_RANGE, OIII_RANGE, SQUARE, STD_MAX_WL, STD_MIN_WL, \
-    join
+from common.constants import BASE_PLOT_PATH, HB_RANGE, HG_RANGE, MGII_RANGE, OIII_RANGE, linesep
 from fileio.spec_load_write import async_bspec, bspecLoader
-from spectrum import Spectrum, scale_enmasse
-from tools.list_dict import sort_list_by_shen_key
+from spectrum import List, Spectrum, scale_enmasse
 from tools.plot import ab_z_plot, four_by_four_multiplot
 
-EM_MAX = 30
+
+def reduced_chi( primary: Spectrum, secondary: Spectrum, doScale: bool = False, skipCopy: bool = False,
+                 wl_low: float = None, wl_high: float = None ) -> float:
+    if not skipCopy:
+        primary = primary.cpy( )
+        secondary = secondary.cpy( )
+
+    if doScale:
+        secondary.scale( spec=primary )
+    if wl_low:
+        primary.trim( wlLow=wl_low )
+        secondary.trim( wlLow=wl_low )
+    if wl_high:
+        primary.trim( wlHigh=wl_high )
+        secondary.trim( wlHigh=wl_high )
+
+    secondary.alignToSpec( primary )
+    n = len( secondary )
+    if n == 0:
+        return -1
+    return sum( [ pow( primary.getFlux( wl ) - secondary.getFlux( wl ), 2 ) / primary.getFlux( wl ) for wl in
+                  primary ] ) / n
 
 
-def get_and_scale_speclsit( primary: Spectrum, names_list: list ) -> List[ Spectrum ]:
-    # Do EM line matching
-    # Load the spec files
-    print( f"Loading spectra in evolution range of {primary.getNS()} from disk" )
-    names_list = sort_list_by_shen_key( names_list )
-    speclist = async_bspec( names_list )
-    speclist = scale_enmasse( primary, *speclist )
+def reduced_chi_wrapper( input_value: tuple ) -> dict:
+    primary, seconday, wl_range = input_value
+    return { seconday.getNS( ): reduced_chi( primary, seconday, True, False, wl_range[ 0 ], wl_range[ 1 ] ) }
+
+
+def cut_speclist( speclist: List[ Spectrum ], results_dict: dict ):
+    for i in range( len( speclist ) - 1, -1, -1 ):
+        if speclist[ i ].getNS( ) not in results_dict:
+            del speclist[ i ]
+
+
+def main( ):
+    shenCat.load( )
+    pns = "53770-2376-290"
+    names = shenCat.keys( )
+    names.remove( pns )
+
+    pspec = bspecLoader( pns )
+    print( "Loading speclist...", end="" )
+    speclist = async_bspec( names )
+    print( "Done", end=linesep )
+
+    err = pspec.aveErr( wl_range=MGII_RANGE ) / 2
+    print( f"Building the MGII anaylsis pipeline with maximum value {err}...", end="" )
+    input_values = [ (pspec, spec, MGII_RANGE) for spec in speclist ]
+    chi_pipe = speclist_analysis_pipeline( pspec, speclist, reduced_chi_wrapper, (0, err), input_values )
+    print( "Done", end=linesep )
+
+    print( "Running MGII pipeline.... ", end="" )
+    chi_pipe.do_analysis( )
+    print( "Reducing results...." )
+    r = chi_pipe.reduce_results( )
+    cut_speclist( speclist, r )
+    print( f"{len( r )} remain.", end=linesep )
+
+    ab_z_plot( path=BASE_PLOT_PATH, filename="MGII.pdf", primary=pns, points=r )
+
+    err = pspec.aveErr( wl_range=HB_RANGE ) / 2
+    print( f"Building the HB anaylsis pipeline with maximum value {err}...", end="" )
+    input_values = [ (pspec, spec, HB_RANGE) for spec in speclist ]
+    chi_pipe = speclist_analysis_pipeline( pspec, speclist, reduced_chi_wrapper,
+                                           (0, err), input_values )
+    print( "Done", end=linesep )
+
+    print( "Running HB pipeline.... ", end="" )
+    chi_pipe.do_analysis( )
+    print( "Reducing results...." )
+    r = chi_pipe.reduce_results( )
+    cut_speclist( speclist, r )
+    print( len( speclist ) )
+    print( f"{len( r )} remain.", end=linesep )
+
+    ab_z_plot( path=BASE_PLOT_PATH, filename="MGII and HB.pdf", primary=pns, points=r )
+
+    err = pspec.aveErr( wl_range=OIII_RANGE ) / 2
+    print( f"Building the OIII anaylsis pipeline with maximum value {err}...", end="" )
+    input_values = [ (pspec, spec, OIII_RANGE) for spec in speclist ]
+    chi_pipe = speclist_analysis_pipeline( pspec, speclist, reduced_chi_wrapper,
+                                           (0, err), input_values )
+    print( "Done", end=linesep )
+
+    print( "Running OIII pipeline.... ", end="" )
+    chi_pipe.do_analysis( )
+    print( "Reducing results...." )
+    r = chi_pipe.reduce_results( )
+    cut_speclist( speclist, r )
+    print( f"{len( r )} remain.", end=linesep )
+
+    ab_z_plot( path=BASE_PLOT_PATH, filename="MGII, HB and OIII.pdf", primary=pns, points=r )
+
+    err = pspec.aveErr( wl_range=HG_RANGE ) / 2
+    print( f"Building the HG anaylsis pipeline with maximum value {err}...", end="" )
+    input_values = [ (pspec, spec, HG_RANGE) for spec in speclist ]
+    chi_pipe = speclist_analysis_pipeline( pspec, speclist, reduced_chi_wrapper,
+                                           (0, err), input_values )
+    print( "Done", end=linesep )
+
+    print( "Running HG pipeline.... ", end="" )
+    chi_pipe.do_analysis( )
+    print( "Reducing results...." )
+    r = chi_pipe.reduce_results( )
+    cut_speclist( speclist, r )
+    print( f"{len( r )} remain.", end=linesep )
+
+    print( "Scaling speclist...", end="" )
+    speclist = scale_enmasse( pspec, *speclist )
     print( "Done." )
-    return speclist
+    ab_z_plot( path=BASE_PLOT_PATH, filename="MGII, HB and OIII and HG.pdf", primary=pns, points=r )
+    print( "Writing multiplot... ", end="" )
+    four_by_four_multiplot( pspec, *speclist, path=BASE_PLOT_PATH, filename="Multi.pdf" )
+    print( "Done." )
 
 
-def do_z_pipe( primary: Spectrum, catalog_names: list, n: float ) -> dict:
-    print( f"Catalog loaded.  Reducing to all points within {n}-sigma of the expected evolution of {primary.getNS()}" )
-    z_mag_pipe = redshift_ab_pipeline( primary_ns=primary.getNS( ), ns_of_interest=catalog_names )
-    r = z_mag_pipe.reduce_results( n )
-    print( f"Done.  {len( r )} points remain." )
-    return r
-
-def dim_primary( primary: Spectrum, target: Spectrum ) -> Spectrum:
-    primary = primary.cpy( )
-    primary.dim_to_ab( target.magAB( ) )
-    return primary
-
-
-def dim_chi_wrapper( inputV ):
-    p, t = inputV
-    p = dim_primary( p, t )
-    return pipeline_chi_wrapper( (p, t) )
-
-
-def o3_wrapper( inputV ):
-    p, t = inputV
-    p = dim_primary( p, t )
-    p.trim( wl_range=OIII_RANGE )
-    return pipeline_chi_wrapper( (p, t) )
-
-
-def mg_wrapper( inputV ):
-    p, t = inputV
-    p = dim_primary( p, t )
-    p.trim( wl_range=MGII_RANGE )
-    return pipeline_chi_wrapper( (p, t) )
-
-
-def hb_wrapper( inputV ):
-    p, t = inputV
-    p = dim_primary( p, t )
-    p.trim( wl_range=HB_RANGE )
-    return pipeline_chi_wrapper( (p, t) )
-
-
-def hg_wrapper( inputV ):
-    p, t = inputV
-    p = dim_primary( p, t )
-    p.trim( wl_range=HG_RANGE )
-    return pipeline_chi_wrapper( (p, t) )
-
-def o3_pass( primary: Spectrum, speclist: List[ Spectrum ] ) -> dict:
-    print( f"Beginning OIII analysis." )
-    o3_chi = speclist_analysis_pipeline( primary, speclist, o3_wrapper, (0, EM_MAX) )
-    o3_chi.do_analysis( )
-    r = o3_chi.reduce_results( )
-    print( f"Complete.  {len(r)} results remain." )
-    return r
-
-
-def mg_pass( primary: Spectrum, speclist: List[ Spectrum ] ) -> dict:
-    print( f"Beginning MGII X{SQUARE} analysis" )
-    # No need to trim or scale, as the em_chi_wrapper does this via multiprocessing
-    em_chi_pipe = speclist_analysis_pipeline( primary, speclist, mg_wrapper, (0, EM_MAX) )
-    em_chi_pipe.do_analysis( )
-    r = em_chi_pipe.reduce_results( )
-    print( f"Complete.  {len(r)} results remain." )
-    return r
-
-
-def hb_pass( primary: Spectrum, speclist: List[ Spectrum ] ) -> dict:
-    print( f"Beginning HB X{SQUARE} analysis" )
-    # No need to trim or scale, as the em_chi_wrapper does this via multiprocessing
-
-    em_chi_pipe = speclist_analysis_pipeline( primary, speclist, hb_wrapper, (0, EM_MAX) )
-    em_chi_pipe.do_analysis( )
-    r = em_chi_pipe.reduce_results( )
-    print( f"Complete.  {len(r)} results remain." )
-    return r
-
-
-def hg_pass( primary: Spectrum, speclist: List[ Spectrum ] ) -> dict:
-    print( f"Beginning HG X{SQUARE} analysis" )
-    # No need to trim or scale, as the em_chi_wrapper does this via multiprocessing
-
-    em_chi_pipe = speclist_analysis_pipeline( primary, speclist, hg_wrapper, (0, EM_MAX) )
-    em_chi_pipe.do_analysis( )
-    r = em_chi_pipe.reduce_results( )
-    print( f"Complete.  {len(r)} results remain." )
-    return r
-
-
-def big_pass( primary: Spectrum, speclist: List[ Spectrum ] ) -> dict:
-    print( f"Beginning Big X{SQUARE} analysis" )
-    # No need to trim or scale, as the em_chi_wrapper does this via multiprocessing
-    primary.trim( STD_MIN_WL, STD_MAX_WL )
-    em_chi_pipe = speclist_analysis_pipeline( primary, speclist, pipeline_chi_wrapper, (0, EM_MAX) )
-    em_chi_pipe.do_analysis( )
-    r = em_chi_pipe.reduce_results( )
-    print( f"Complete.  {len(r)} results remain." )
-    return r
-
-
-def main( primary: Union[ Spectrum or str ] = None, n: float = 1 ) -> None:
-    if primary is None:
-        exit( "Primary is NoneType; cannot process without a spectrum" )
-    elif isinstance( primary, str ):
-        primary = bspecLoader( primary )
-
-    # Get all the namestrings in shenCat
-    # Then remove those which are not within n-sigma of the expected evolution
-    catalog_names = shenCat.keys( )
-    catalog_names.remove( primary.getNS( ) )
-
-    r = shenCat
-    r = do_z_pipe( primary, catalog_names, n )
-
-    # r = big_pass( primary, get_and_scale_speclsit( primary, list( r.keys( ) ) ) )
-
-    """ First Pass - MGII and HB """
-    speclist = get_and_scale_speclsit( primary, list( r.keys( ) ) )
-    r = mg_pass( primary, speclist )
-
-    primary = bspecLoader( primary.getNS( ) )
-    speclist = sort_list_by_shen_key( async_bspec( list( r.keys( ) ) ) )
-    r = hb_pass( primary, speclist )
-    primary = bspecLoader( primary.getNS( ) )
-    speclist = sort_list_by_shen_key( async_bspec( list( r.keys( ) ) ) )
-    r = hg_pass( primary, speclist )
-
-    """  # Second - OIII - Pass
-    # This process is manual, since I haven't written anything to deal with OIII lines
-    # Reduce the speclist to those within em_chi results
-    """
-    primary = bspecLoader( primary.getNS( ) )
-    speclist = sort_list_by_shen_key( async_bspec( list( r.keys( ) ) ) )
-    r = o3_pass( primary, speclist )
-    del speclist
-    primary = bspecLoader( primary.getNS( ) )
-    speclist = sort_list_by_shen_key( async_bspec( list( r.keys( ) ) ) )
-
-    """ Third Pass - Continuum """
-    print( f"Beginning continuum analysis." )
-    primary.trim( STD_MIN_WL, STD_MAX_WL )
-    continuum_chi_pipe = speclist_analysis_pipeline( primary, speclist, dim_chi_wrapper, (0, 300) )
-    continuum_chi_pipe.do_analysis( )
-    r = continuum_chi_pipe.reduce_results( )
-    print( f"Done. {len( r )} results remain." )
-
-    print( "Plotting AB v Z and scaled spectra" )
-    OUTPATH = join( BASE_PLOT_PATH, primary.getNS( ), "Generic", "Dim Process" )
-    primary = bspecLoader( primary.getNS( ) )
-    speclist = scale_enmasse( primary, *sort_list_by_shen_key( async_bspec( list( r.keys( ) ) ) ) )
-    ab_z_plot( primary, speclist, OUTPATH, "AB_Z Generic.pdf", plotTitle=f"Generic process {primary.getNS()}" )
-    for spec in speclist:
-        spec.setNS( f"{spec.getNS()} : z = {shenCat.subkey( spec.getNS(), 'z' )} : chi = {r[spec.getNS()]}" )
-    four_by_four_multiplot( primary, *speclist, path=OUTPATH, filename="Multispec Generic.pdf" )
-    print( "Plots complete." )
-
+def test( ):
+    pass
 
 if __name__ == '__main__':
+    from multiprocessing import freeze_support
+
     freeze_support( )
-    main( "53770-2376-290", 3 )
+    main( )

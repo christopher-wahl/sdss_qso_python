@@ -57,7 +57,7 @@ def main( primary: Union[ Spectrum or str ] = None, n: float = 1 ) -> None:
     OUTPATH = join( BASE_PLOT_PATH, primary.getNS( ), "Generic" )
     primary = bspecLoader( primary.getNS( ) )
     speclist = scale_enmasse( primary, *sort_list_by_shen_key( async_bspec( list( r.keys( ) ) ) ) )
-    ab_z_plot( primary, speclist, OUTPATH, "AB_Z Generic.pdf", plotTitle=f"Generic process {primary.getNS()}" )
+    ab_z_plot( OUTPATH, "AB_Z Generic.pdf", primary, speclist, plotTitle=f"Generic process {primary.getNS()}" )
     for spec in speclist:
         spec.setNS( f"{spec.getNS()} : z = {shenCat.subkey( spec.getNS(), 'z' )} : chi = {r[spec.getNS()]}" )
     four_by_four_multiplot( primary, *speclist, path=OUTPATH, filename="Multispec Generic.pdf" )

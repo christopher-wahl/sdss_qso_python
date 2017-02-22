@@ -128,8 +128,8 @@ class results_pipeline:
         return self._results_dict
 
     def write_results_csv(self, path : str, filename : str ) -> None:
-        from fileio import compound_dict_writer
-        compound_dict_writer( inDict = self._results_dict, path = path, filename = filename )
+        from fileio.list_dict_utils import namestring_dict_writer
+        namestring_dict_writer( output_dict=self._results_dict, path=path, filename=filename )
 
     def set_bin_limits( self, rs_low: float, rs_high: float ) -> None:
         self._rs_bin_low = rs_low
@@ -143,7 +143,7 @@ class speclist_analysis_pipeline( results_pipeline ):
 
     __analysis_func = None
 
-    def __init__( self, primeSpec, speclist, analysis_function, result_range, input_values: list = None,
+    def __init__( self, primeSpec, speclist, analysis_function, result_range: tuple = None, input_values: list = None,
                   binWidth=0.01 ):
         super( speclist_analysis_pipeline, self ).__init__( results_range=result_range, binWidth=binWidth )
         self.__primeSpec = primeSpec.cpy()
@@ -156,6 +156,7 @@ class speclist_analysis_pipeline( results_pipeline ):
 
     def do_analysis( self, input_values: list = None, use_imap: bool = True ):
         from tools.list_dict import paired_list_to_dict
+        multi_op = None
         if use_imap:
             from common.async_tools import generic_unordered_multiprocesser as multi_op
         else:
@@ -254,7 +255,7 @@ class redshift_ab_pipeline( results_pipeline ):
     def plot_results( self, path, filename, debug=False ) -> None:
         from tools.plot import ab_z_plot
 
-        return ab_z_plot( self._prime_ns, self, path=path, filename=filename,
+        return ab_z_plot( path=path, filename=filename, primary=self._prime_ns, points=self,
                           plotTitle=f"Catalog Points within Expected Evolution of {self._prime_ns} within {self._n_sigma} sigma",
                           debug=debug )
 

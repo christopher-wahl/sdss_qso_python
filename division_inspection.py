@@ -27,7 +27,7 @@ def main( ):
 
     from tools.plot import ab_z_plot
 
-    ab_z_plot( namestring, div_pipe, BASE_PLOT_PATH, "test.pdf", "test" )
+    ab_z_plot( BASE_PLOT_PATH, "test.pdf", namestring, div_pipe, "test" )
 
 
 if __name__ == "__main__":

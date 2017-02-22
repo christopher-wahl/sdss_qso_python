@@ -1,6 +1,6 @@
 from typing import List, Tuple
 
-from common.constants import DEFAULT_SCALE_RADIUS, DEFAULT_SCALE_WL
+from common.constants import DEFAULT_SCALE_RADIUS, DEFAULT_SCALE_WL, linesep
 from common.messaging import KeyErrorString
 
 
@@ -43,10 +43,10 @@ class Spectrum( dict ):
         minwl = wl_range[ 0 ] or DEFAULT_SCALE_WL - DEFAULT_SCALE_RADIUS
         maxwl = wl_range[ 1 ] or DEFAULT_SCALE_WL + DEFAULT_SCALE_RADIUS
         err_v = list( )
-        for wl in self.getwls( ):
+        for wl in self.getWavelengths( ):
             if minwl <= wl <= maxwl:
                 err_v.append( -2.5 * log10( 3.34E4 * pow( wl, 2 ) * 1E-17 * self[ wl ][ 0 ] ) + 8.9 )
-        return nanstd( err_v )
+        return float( nanstd( err_v ) )
 
     def align(self, wlList ):
         wls = self.getWavelengths()
@@ -80,6 +80,21 @@ class Spectrum( dict ):
             print( f"central_wl{central_wl}     radius: {radius}" )
             print( self )
             exit( 1 )
+
+    def aveErr( self, wl_low: float = None, wl_high: float = None, wl_range: Tuple[ float, float ] = None ) -> float:
+        if wl_range is not None:
+            wl_low, wl_high = wl_range
+        elif wl_low is None or wl_high is None:
+            raise ValueError(
+                f"Spectrum.aveErr: Need low and high wl values, or need a wl_range{linesep}wl_low: {wl_low} - wl_high:{wl_high}{linesep}{self}" )
+        n = 0
+        err = 0
+        for wl in self:
+            if wl_low <= wl <= wl_high:
+                err += self.getErr( wl )
+                n += 1
+        return err / n if n != 0 else -1
+
 
     def bin(self, step = 1 ):
         wls = self.getWavelengths()
