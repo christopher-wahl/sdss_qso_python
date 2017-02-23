@@ -2,7 +2,7 @@ import pickle
 from csv import DictReader, DictWriter
 from typing import List
 
-from common.constants import BINNED_SPEC_PATH, REST_SPEC_PATH, os
+from common.constants import BINNED_SPEC_PATH, REST_SPEC_PATH, SOURCE_SPEC_PATH, os
 from fileio.utils import dirCheck, extCheck, fileCheck, fns, join, ns2f
 from spectrum import Spectrum
 
@@ -60,7 +60,7 @@ def text_write( spec: Spectrum, path: str, filename: str ) -> None:
 
     with open( join( path, filename ), 'w' ) as outfile:
         header = "namestring=%s,z=%f,gmag=%f%s" % (spec.getNS( ), spec.getRS( ), spec.getGmag( ), os.linesep)
-        outfile.writelines( [ header, "wavelength,flux density,error%s" % os.linesep ] )
+        outfile.writelines( header )
 
         fieldnames = [ "wavelength", "flux density", "error" ]
         writer = DictWriter( outfile, fieldnames=fieldnames )
@@ -98,13 +98,16 @@ def write( spec: Spectrum, path: str, filename: str ) -> None:
         pickle.dump( spec, outfile, protocol=pickle.HIGHEST_PROTOCOL )
 
 
+def bspecLoader( namestring: str ) -> Spectrum:
+    return load( BINNED_SPEC_PATH, ns2f( namestring, ".bspec" ) )
+
+
 def rspecLoader( namestring: str ) -> Spectrum:
     return load( REST_SPEC_PATH, ns2f( namestring, ".rspec" ) )
 
 
-def bspecLoader( namestring: str ) -> Spectrum:
-    return load( BINNED_SPEC_PATH, ns2f( namestring, ".bspec" ) )
-
+def sspecLoader( namestring: str ) -> Spectrum:
+    return load( SOURCE_SPEC_PATH, ns2f( namestring, ".spec" ) )
 
 def async_bspec( namelist: List[ str ] ) -> List[ Spectrum ]:
     return async_load( BINNED_SPEC_PATH, namelist, ".bspec" )

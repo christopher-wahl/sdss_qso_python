@@ -95,17 +95,18 @@ class Spectrum( dict ):
                 n += 1
         return err / n if n != 0 else -1
 
-    def bin(self, step = 1 ):
+    def bin( self, step: float = 1, init_wl: float = None ) -> None:
         wls = self.getWavelengths()
         wlslist = []
         flxlist = []
         errlist = []
 
         lowIndex, highIndex = 0, 1
+
         while( lowIndex < len( wls ) - 1 ):
             lowWL = wls[ lowIndex ]
             highWL = wls[ highIndex ]
-            newWL = int( lowWL )
+            newWL = init_wl if init_wl is not None else int( lowWL )
             while( highWL - newWL < step ):
                 highIndex += 1
                 if( highIndex == len( wls ) ):
@@ -138,6 +139,15 @@ class Spectrum( dict ):
         """
         from copy import deepcopy
         return deepcopy( self )
+
+    def cpy_info( self ):
+        """
+        Resturns a spectrum devoid of wl/flux data, but with the same namestring, redshift and gmag as this one.
+
+        :rtype: Spectrum
+        """
+        spec = Spectrum( ns=self.getNS( ), z=self.getRS( ), gmag=self.getGmag( ) )
+        return spec
 
     def dim_to_ab( self, to_mag_ab: float, scale_wl=None ) -> None:
         """
@@ -277,7 +287,7 @@ class Spectrum( dict ):
     def setNS(self, namestring : str ):
         self.__namestring = namestring
 
-    def shiftToRest( self, z=None ):
+    def shiftToRest( self, z: float = None ) -> None:
         if z is None:
             z = self.__z
 
