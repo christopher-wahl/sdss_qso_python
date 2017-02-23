@@ -39,6 +39,8 @@ def generic_unordered_multiprocesser( input_values, multi_function, output_value
         for r in results:
             output_values.append( r )
 
+    del pool
+
 def generic_ordered_multiprocesser( input_values, multi_function, output_values = None, MAX_PROC = None ):
     from multiprocessing import Pool, cpu_count
     MAX_PROC = MAX_PROC or cpu_count()
@@ -52,6 +54,8 @@ def generic_ordered_multiprocesser( input_values, multi_function, output_values 
         for r in results:
             output_values.append( r )
 
+    del pool
+
 def generic_map_async_multiprocesser( input_values, multi_function, output_values = None, MAX_PROC = None ):
     from multiprocessing import Pool
 
@@ -63,4 +67,6 @@ def generic_map_async_multiprocesser( input_values, multi_function, output_value
 
     if output_values is not None:
         output_values.extend( results.get() )
+
+    del pool
 
