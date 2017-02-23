@@ -1,11 +1,11 @@
 from spectrum import Spectrum
 
-DEF_ERR_DICT = { 0x40000: 'SP_MASK_FULLREJECT',  # Pixel fully rejected in extraction                   18      2.621e5
+DEF_MASK_DICT = { 0x40000: 'SP_MASK_FULLREJECT',  # Pixel fully rejected in extraction                   18      2.621e5
                  0x800000: 'SP_MASK_BRIGHTSKY',  # Sky level > flux + 10*(flux error)                   23      8.389e6
                  0x1000000: 'SP_MASK_NODATA' }  # No data available in combine B-spline                24      1.678e7
 
 
-def fit_spec_loader( path: str, filename: str, error_dict: dict = DEF_ERR_DICT ) -> Spectrum:
+def fit_spec_loader( path: str, filename: str, mask_dict: dict = DEF_MASK_DICT ) -> Spectrum:
     """
     Loads a FIT spectrum file from SDSS DR 7 or lower.  Converts it into Spectrum type.
 
@@ -15,10 +15,10 @@ def fit_spec_loader( path: str, filename: str, error_dict: dict = DEF_ERR_DICT )
 
     :param path: /path/to/file
     :param filename: filename.fits
-    :param error_dict: Defaults to DEF_ERR_DICT defined in this file if not passed
+    :param mask_dict: Defaults to DEF_ERR_DICT defined in this file if not passed
     :type path: str
     :type filename: str
-    :type error_dict: dict
+    :type mask_dict: dict
     :rtype: Spectrum
     """
     from astropy.io.fits import getheader, getdata
@@ -59,7 +59,7 @@ def fit_spec_loader( path: str, filename: str, error_dict: dict = DEF_ERR_DICT )
 
     # Mask out the errors
     for i in range( len( err_data ) ):
-        if __bit_mask( err_data[ i ], error_dict ):
+        if __bit_mask( mask_data[ i ], mask_dict ):
             del out_spec[ wavelengths[ i ] ]
     return out_spec
 
