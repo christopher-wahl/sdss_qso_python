@@ -24,9 +24,6 @@ def range_pass( primary: Spectrum, speclist, wl_range: Tuple[ float, float ] ):
     em_pipe = speclist_analysis_pipeline( primary, speclist, pipeline_chi_wrapper, (0, EM_MAX) )
     em_pipe.do_analysis( )
     r = em_pipe.reduce_results()
-    for k,v in r.items():
-        print( k,v )
-    return r
     return em_pipe.reduce_results( ).keys( )
 
 
