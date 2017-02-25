@@ -1,11 +1,11 @@
 from typing import Iterable, List, Tuple, Union
 
 from analysis.chi import pipeline_chi_wrapper
-from analysis.pipeline import redshift_ab_pipeline, speclist_analysis_pipeline
+from analysis.pipeline import speclist_analysis_pipeline
 from catalog import get_shen_header, get_shen_string, shenCat
 from common.constants import BASE_PROCESSED_PATH, HB_RANGE, HG_RANGE, MGII_RANGE, OIII_RANGE, join
 from common.messaging import tab_print
-from fileio.spec_load_write import async_bspec, bspecLoader
+from fileio.spec_load_write import async_rspec, rspecLoader
 from fileio.utils import dirCheck
 from spectrum import Spectrum
 from spectrum.tools import scale_enmasse
@@ -14,7 +14,7 @@ EM_MAX = 20
 
 def loader( nameslist: Union[ List[ str ], Iterable ] ) -> List[ Spectrum ]:
     tab_print( f"Loading { len( nameslist ) } spectra..." )
-    speclist = async_bspec( nameslist )
+    speclist = async_rspec( nameslist )
     tab_print( "Complete" )
     return speclist
 
@@ -30,10 +30,10 @@ def analyze( primary: str, nameslist: List[ str ], n_sigma: int, OUT_PATH: str )
     # Run Each EM line & reduce
     tab_print( f"{primary }" )
     speclist = loader( nameslist )
-    speclist = scale_enmasse( bspecLoader( primary ), *speclist )
+    speclist = scale_enmasse( rspecLoader( primary ), *speclist )
 
     tab_print( "MGII Analysis...", False )
-    results = range_pass( bspecLoader( primary ), speclist, MGII_RANGE )
+    results = range_pass( rspecLoader( primary ), speclist, MGII_RANGE )
     tab_print( len( results ) )
     if len( results ) == 0:
         return 0
@@ -42,7 +42,7 @@ def analyze( primary: str, nameslist: List[ str ], n_sigma: int, OUT_PATH: str )
             del speclist[ i ]
 
     tab_print( "HB Analysis...", False )
-    results = range_pass( bspecLoader( primary ), speclist, HB_RANGE )
+    results = range_pass( rspecLoader( primary ), speclist, HB_RANGE )
     tab_print( len( results ) )
     if len( results ) == 0:
         return 0
@@ -51,7 +51,7 @@ def analyze( primary: str, nameslist: List[ str ], n_sigma: int, OUT_PATH: str )
             del speclist[ i ]
 
     tab_print( "OIII Analysis...", False )
-    results = range_pass( bspecLoader( primary ), speclist, OIII_RANGE )
+    results = range_pass( rspecLoader( primary ), speclist, OIII_RANGE )
     tab_print( len( results ) )
     if len( results ) == 0:
         return 0
@@ -60,7 +60,7 @@ def analyze( primary: str, nameslist: List[ str ], n_sigma: int, OUT_PATH: str )
             del speclist[ i ]
 
     tab_print( "HG Analysis...", False )
-    results = range_pass( bspecLoader( primary ), speclist, HG_RANGE )
+    results = range_pass( rspecLoader( primary ), speclist, HG_RANGE )
     tab_print( len( results ) )
     if len( results ) == 0:
         return 0
@@ -69,10 +69,10 @@ def analyze( primary: str, nameslist: List[ str ], n_sigma: int, OUT_PATH: str )
             del speclist[ i ]
 
     # Redshift reduction
-    tab_print( "Redshift Reduction...", False )
-    z_pipe = redshift_ab_pipeline( primary_ns=primary, ns_of_interest=list( results ) )
-    results = z_pipe.reduce_results( n_sigma )
-    tab_print( len( results ) )
+    #tab_print( "Redshift Reduction...", False )
+    #z_pipe = redshift_ab_pipeline( primary_ns=primary, ns_of_interest=list( results ) )
+    #results = z_pipe.reduce_results( n_sigma )
+    #tab_print( len( results ) )
 
     # Write results
     with open( join( OUT_PATH, f"{primary}.csv" ), 'w' ) as outfile:
