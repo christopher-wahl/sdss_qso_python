@@ -386,3 +386,9 @@ class Spectrum( dict ):
 
     def wl_flux_plotlist(self) -> List[ Tuple[ float, float ] ]:
         return [ ( wl, self[ wl ][ 0 ] ) for wl in self.getWavelengths() ]
+
+    def plot( self, path : str, color : str = "royalblue", debug : bool = False ) -> None:
+        from tools.plot import spectrum_plot
+        from fileio.utils import dirCheck
+        dirCheck( path )
+        spectrum_plot( spec = self, path = path, filename = self.getNS( ), color = color, debug = debug )

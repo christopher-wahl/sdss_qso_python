@@ -23,6 +23,10 @@ def range_pass( primary: Spectrum, speclist, wl_range: Tuple[ float, float ] ):
     primary.trim( wl_range=wl_range )
     em_pipe = speclist_analysis_pipeline( primary, speclist, pipeline_chi_wrapper, (0, EM_MAX) )
     em_pipe.do_analysis( )
+    r = em_pipe.reduce_results()
+    for k,v in r.items():
+        print( k,v )
+    return r
     return em_pipe.reduce_results( ).keys( )
 
 
@@ -37,6 +41,7 @@ def analyze( primary: str, nameslist: List[ str ], n_sigma: int, OUT_PATH: str )
     tab_print( len( results ) )
     if len( results ) == 0:
         return 0
+
     for i in range( len( speclist ) - 1, -1, -1 ):
         if speclist[ i ].getNS() not in results:
             del speclist[ i ]

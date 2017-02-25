@@ -127,6 +127,7 @@ def binned_source_to_rest( spec: Spectrum, z: float = None ) -> Spectrum:
     :return: Rest frame spectrum
     :rtype: Spectrum
     """
+    spec = spec.cpy()
     z = z or spec.getRS( )
     wls = spec.getWavelengths( )
     n = len( wls )

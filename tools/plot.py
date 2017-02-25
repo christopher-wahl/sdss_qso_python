@@ -134,3 +134,21 @@ def ab_z_plot( path: str, filename: str, primary: Union[ str or Spectrum ],
         g.close( )
         return None
     return g
+
+def spectrum_plot( spec: Spectrum, path: str, filename: str, color: str = "royalblue", debug: bool = False ) -> None:
+    from common.constants import ANGSTROM, FLUX_UNITS
+
+    g = Gnuplot.Gnuplot()
+    g.title( spec.getNS() )
+    g.xlabel( f"Wavelength ({ANGSTROM})" )
+    g.ylabel( f"Flux Density ({FLUX_UNITS})" )
+    g( 'set key top right' )
+    g( 'set grid' )
+    if not debug:
+        g( 'set terminal pdf color enhanced size 9,6' )
+        g( f'set output {__fix_outpath( path, f"{filename}.pdf" )}')
+
+    g.plot( make_spectrum_plotitem( spec, color = color ) )
+
+    if not debug:
+        g( 'set output' )
