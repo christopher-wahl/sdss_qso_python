@@ -254,7 +254,7 @@ class Spectrum( dict ):
         :return: Value of the nearest wavelength
         :rtype: float
         """
-        from spectrum.tools import find_nearest_wavelength
+        from spectrum.utils import find_nearest_wavelength
         return find_nearest_wavelength( self.getWavelengths( ), wavelength )
 
     def setDict( self, wavelengthList, fluxList, errList ):

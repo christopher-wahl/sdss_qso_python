@@ -8,7 +8,7 @@ from common.messaging import tab_print
 from fileio.spec_load_write import async_rspec, rspecLoader
 from fileio.utils import dirCheck
 from spectrum import Spectrum
-from spectrum.tools import scale_enmasse
+from spectrum.utils import scale_enmasse
 
 EM_MAX = 20
 

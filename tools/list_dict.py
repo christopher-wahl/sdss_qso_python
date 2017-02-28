@@ -59,14 +59,25 @@ def sort_list_by_shen_key( in_list: Union[ List[ Spectrum ], List[ str ] ], sort
     return in_list
 
 
-def key_value_dict_to_paired_list( in_dict: dict, sort: bool = False ) -> List[ Tuple ]:
+def key_value_dict_to_paired_list( in_dict: dict, sort: bool = False, reverse: bool = False ) -> List[ Tuple ]:
+    """
+
+    :param in_dict:
+    :param sort: If True, will sort by the value of the dictionary
+    :param reverse: Used in conjunction with sort, if True, sorts the value in descending order.
+    :type in_dict: dict
+    :type sort: bool
+    :type reverse: bool
+    :return: List of ( key, value ) tuple pairs
+    :rtype: list
+    """
     klist = list( in_dict.keys( ) )
     vlist = [ in_dict[ k ] for k in klist ]
 
     outlist = list( zip( klist, vlist ) )
 
     if sort:
-        outlist.sort( key=lambda x: x[ 1 ] )
+        outlist.sort( key=lambda x: x[ 1 ], reverse=reverse )
 
     return outlist
     pass

@@ -38,7 +38,9 @@ def make_spectrum_plotitem( spec : Spectrum, color : str = None ) -> Gnuplot.Dat
         _with = f'{_with} lc "{color}"'
     return make_line_plotitem( spec.getWavelengths(), spec.getFluxlist(), title = spec.getNS(), with_= _with )
 
-def four_by_four_multiplot( prime : Spectrum, *speclist : list, path : str = None, filename : str = None, plotTitle : str = "", debug : bool = False, **kwargs ) -> Gnuplot.Gnuplot:
+
+def four_by_four_multiplot( prime: Spectrum, *speclist: list, path: str = None, filename: str = None,
+                            plotTitle: str = "", debug: bool = False ) -> Union[ Gnuplot.Gnuplot, None ]:
     from common.constants import ANGSTROM, FLUX_UNITS
 
     primeData = make_spectrum_plotitem( prime, color = "royalblue" )
@@ -67,6 +69,7 @@ def four_by_four_multiplot( prime : Spectrum, *speclist : list, path : str = Non
 
 def ab_z_plot( path: str, filename: str, primary: Union[ str or Spectrum ],
                points: Union[ results_pipeline or dict or List[ str ] or List[ Spectrum ] ], plotTitle: str = "",
+               n_sigma: float = 1,
                debug: bool = False ) -> Union[ Gnuplot.Gnuplot or None ]:
     from tools.cosmo import magnitude_evolution
     from catalog import shenCat
@@ -76,6 +79,7 @@ def ab_z_plot( path: str, filename: str, primary: Union[ str or Spectrum ],
 
     """ Make Magnitude Evolutiion Data """
     p_z, p_ab, p_ab_err = shenCat.subkey( primary, 'z', 'ab', 'ab_err' )
+    p_ab_err *= n_sigma
     prime_upper_plot = make_line_plotitem( *magnitude_evolution( p_ab + p_ab_err, p_z, splitLists=True )[ :2 ],
                                            title="Upper / Lower Bounds of Expected Evolution", color="grey" )
     prime_lower_plot = make_line_plotitem( *magnitude_evolution( p_ab - p_ab_err, p_z, splitLists=True )[ :2 ],
@@ -114,8 +118,8 @@ def ab_z_plot( path: str, filename: str, primary: Union[ str or Spectrum ],
     plot_points = make_points_plotitem( z_data, ab_data, ab_err, color="royalblue" )
 
     """ Data has been formed.  Make actual plot """
-    g = Gnuplot.Gnuplot( debug=1 if debug else 0 )
-    g.title( plotTitle )
+    g = Gnuplot.Gnuplot( persist=debug )  # 1 if debug else 0 )
+    g.title( r"%s" % plotTitle )
     g.xlabel( "Redshift" )
     g.ylabel( "AB Magnitude" )
     g( "set key bottom right opaque box" )
