@@ -60,7 +60,7 @@ def main( primary: Union[ Spectrum or str ] = None, n: float = 1 ) -> None:
     ab_z_plot( OUTPATH, "AB_Z Generic.pdf", primary, speclist, plotTitle=f"Generic process {primary.getNS()}" )
     for spec in speclist:
         spec.setNS( f"{spec.getNS()} : z = {shenCat.subkey( spec.getNS(), 'z' )} : chi = {r[spec.getNS()]}" )
-    four_by_four_multiplot( primary, *speclist, path=OUTPATH, filename="Multispec Generic.pdf" )
+    four_by_four_multiplot( primary, speclist, path=OUTPATH, filename="Multispec Generic.pdf" )
     print( "Plots complete." )
 
 

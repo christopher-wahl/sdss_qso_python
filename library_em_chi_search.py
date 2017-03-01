@@ -27,14 +27,18 @@ def range_pass( primary: Spectrum, speclist, wl_range: Tuple[ float, float ] ):
     return em_pipe.reduce_results( ).keys( )
 
 
-def analyze( primary: str, nameslist: List[ str ], n_sigma: int, OUT_PATH: str ):
+def analyze( primary: str or Spectrum, nameslist: List[ str ], n_sigma: int, OUT_PATH: str, MAX: float = EM_MAX,
+             getDict: bool = False ) -> float or dict:
+    global EM_MAX
+    EM_MAX = MAX
     # Run Each EM line & reduce
-    tab_print( f"{primary }" )
+    tab_print( f"{primary if type( primary ) == str else primary.getNS() }" )
     speclist = loader( nameslist )
-    speclist = scale_enmasse( rspecLoader( primary ), *speclist )
+    speclist = scale_enmasse( rspecLoader( primary ) if type( primary ) == str else primary, speclist )
+
 
     tab_print( "MGII Analysis...", False )
-    results = range_pass( rspecLoader( primary ), speclist, MGII_RANGE )
+    results = range_pass( rspecLoader( primary ) if type( primary ) == str else primary, speclist, MGII_RANGE )
     tab_print( len( results ) )
     if len( results ) == 0:
         return 0
@@ -44,7 +48,7 @@ def analyze( primary: str, nameslist: List[ str ], n_sigma: int, OUT_PATH: str )
             del speclist[ i ]
 
     tab_print( "HB Analysis...", False )
-    results = range_pass( rspecLoader( primary ), speclist, HB_RANGE )
+    results = range_pass( rspecLoader( primary ) if type( primary ) == str else primary, speclist, HB_RANGE )
     tab_print( len( results ) )
     if len( results ) == 0:
         return 0
@@ -53,7 +57,7 @@ def analyze( primary: str, nameslist: List[ str ], n_sigma: int, OUT_PATH: str )
             del speclist[ i ]
 
     tab_print( "OIII Analysis...", False )
-    results = range_pass( rspecLoader( primary ), speclist, OIII_RANGE )
+    results = range_pass( rspecLoader( primary ) if type( primary ) == str else primary, speclist, OIII_RANGE )
     tab_print( len( results ) )
     if len( results ) == 0:
         return 0
@@ -62,7 +66,7 @@ def analyze( primary: str, nameslist: List[ str ], n_sigma: int, OUT_PATH: str )
             del speclist[ i ]
 
     tab_print( "HG Analysis...", False )
-    results = range_pass( rspecLoader( primary ), speclist, HG_RANGE )
+    results = range_pass( rspecLoader( primary ) if type( primary ) == str else primary, speclist, HG_RANGE )
     tab_print( len( results ) )
     if len( results ) == 0:
         return 0
@@ -77,9 +81,11 @@ def analyze( primary: str, nameslist: List[ str ], n_sigma: int, OUT_PATH: str )
     #tab_print( len( results ) )
 
     # Write results
-    with open( join( OUT_PATH, f"{primary}.csv" ), 'w' ) as outfile:
+    with open( join( OUT_PATH, f"{primary if type( primary ) == str else primary.getNS() }.csv" ), 'w' ) as outfile:
         outfile.write( get_shen_header( CR=True ) )
         outfile.writelines( [ get_shen_string( k, CR=True ) for k in results ] )
+    if getDict:
+        return results
     # Return count
     return len( results )
 

@@ -39,7 +39,7 @@ def make_spectrum_plotitem( spec : Spectrum, color : str = None ) -> Gnuplot.Dat
     return make_line_plotitem( spec.getWavelengths(), spec.getFluxlist(), title = spec.getNS(), with_= _with )
 
 
-def four_by_four_multiplot( prime: Spectrum, *speclist: list, path: str = None, filename: str = None,
+def four_by_four_multiplot( prime: Spectrum, speclist: list, path: str = None, filename: str = None,
                             plotTitle: str = "", debug: bool = False ) -> Union[ Gnuplot.Gnuplot, None ]:
     from common.constants import ANGSTROM, FLUX_UNITS
 
@@ -75,10 +75,15 @@ def ab_z_plot( path: str, filename: str, primary: Union[ str or Spectrum ],
     from catalog import shenCat
 
     if type( primary ) is Spectrum:
+        if primary.getNS( ) in shenCat:
+            p_z, p_ab, p_ab_err = shenCat.subkey( primary.getNS( ), 'z', 'ab', 'ab_err' )
+        else:
+            p_z, p_ab, p_ab_err = primary.getRS( ), primary.magAB( ), primary.abErr( )
         primary = primary.getNS( )
+    else:
+        p_z, p_ab, p_ab_err = shenCat.subkey( primary, 'z', 'ab', 'ab_err' )
 
     """ Make Magnitude Evolutiion Data """
-    p_z, p_ab, p_ab_err = shenCat.subkey( primary, 'z', 'ab', 'ab_err' )
     p_ab_err *= n_sigma
     prime_upper_plot = make_line_plotitem( *magnitude_evolution( p_ab + p_ab_err, p_z, splitLists=True )[ :2 ],
                                            title="Upper / Lower Bounds of Expected Evolution", color="grey" )
@@ -141,8 +146,10 @@ def ab_z_plot( path: str, filename: str, primary: Union[ str or Spectrum ],
 
 def spectrum_plot( spec: Spectrum, path: str, filename: str, color: str = "royalblue", debug: bool = False ) -> None:
     from common.constants import ANGSTROM, FLUX_UNITS
+    from fileio.utils import dirCheck
 
-    g = Gnuplot.Gnuplot()
+    dirCheck( path )
+    g = Gnuplot.Gnuplot( persist=debug )
     g.title( spec.getNS() )
     g.xlabel( f"Wavelength ({ANGSTROM})" )
     g.ylabel( f"Flux Density ({FLUX_UNITS})" )
@@ -150,7 +157,7 @@ def spectrum_plot( spec: Spectrum, path: str, filename: str, color: str = "royal
     g( 'set grid' )
     if not debug:
         g( 'set terminal pdf color enhanced size 9,6' )
-        g( f'set output {__fix_outpath( path, f"{filename}.pdf" )}')
+        g( f'set output {__fix_outpath( path, "%s.pdf" % filename )}' )
 
     g.plot( make_spectrum_plotitem( spec, color = color ) )
 

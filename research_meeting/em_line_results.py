@@ -33,7 +33,7 @@ def main( n: int, chi: int, min_count: float ):
         primary = rspecLoader( result[ 0 ] )
         speclist = scale_enmasse( primary, *async_rspec( r_dict.keys( ) ) )
         sort_list_by_shen_key( speclist )
-        four_by_four_multiplot( rspecLoader( result[ 0 ] ), *speclist, path=PLOT_PATH,
+        four_by_four_multiplot( rspecLoader( result[ 0 ] ), speclist, path=PLOT_PATH,
                                 filename=f"{result[ 0 ]} - {result[ 1 ]} MULTI.pdf", plotTitle=titlestr )
         print( f"{i}/{n}" )
         i += 1

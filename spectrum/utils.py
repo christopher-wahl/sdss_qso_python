@@ -1,4 +1,3 @@
-from collections import defaultdict
 from typing import List, Union
 
 from spectrum import Spectrum
@@ -17,24 +16,26 @@ def compose_speclist( speclist: List[ Spectrum ], namestring: str = "" ) -> Spec
     """
     from numpy import std, mean
 
-    def __join( spec: Spectrum ):
+    joined = { }
+    composite = Spectrum( ns=namestring )
+    for spec in speclist:
         for wl in spec:
+            if wl not in joined:
+                joined[ wl ] = list( )
             joined[ wl ].append( spec.get( wl ) )
 
-    joined = defaultdict( default_factory=list )
-    composite = Spectrum( ns=namestring )
-    joined.update( map( __join, speclist ) )
-
-    wavelength_list = sorted( list( joined.keys( ) ) )
+    wavelength_list = [ ]
     fluxlist = [ ]
     errlist = [ ]
 
-    for wl in wavelength_list:
-        fluxlist.append( mean( j[ 0 ] for j in joined[ wl ] ) )
-        if (len( joined[ wl ] ) > 1):
-            errlist.append( std( j[ 1 ] for j in joined[ wl ] ) )
+    for wl, v in joined.items( ):
+        wavelength_list.append( wl )
+        if len( v ) > 1:
+            fluxlist.append( mean( [ f[ 0 ] for f in v ] ) )
+            errlist.append( std( [ e[ 1 ] for e in v ] ) )
         else:
-            errlist.append( joined[ wl ][ 1 ] )
+            fluxlist.append( v[ 0 ][ 0 ] )
+            errlist.append( v[ 0 ][ 1 ] )
 
     composite.setDict( wavelength_list, fluxlist, errlist )
 
@@ -96,7 +97,7 @@ def __em_drop_wrapper( inputV ) -> Spectrum:
     return spec
 
 
-def scale_enmasse( primary_spectrum: Spectrum, *speclist: List[ Spectrum ], scale_wl: float = None,
+def scale_enmasse( primary_spectrum: Spectrum, speclist: List[ Spectrum ], scale_wl: float = None,
                    scale_radius: float = None ) -> Union[ List[ Spectrum ] or Spectrum ]:
     """
     Directly modifies the spectrum arguments when are passed as *speclist to scale them to primary_spectrum

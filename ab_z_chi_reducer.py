@@ -56,7 +56,9 @@ def main():
             del dupelist[ i ]
         else:
             dupelist[ i ].setNS( f"{dupelist[ i ].getNS()} : {r[ speclist[ i ].getNS() ]}")
-    four_by_four_multiplot( dupe_primary, *dupelist, path = outpath, filename = f"{ns} EM Line Matches - Upper Limit {n}.pdf", plotTitle = f"{ns} EM Line Matches - Upper Limit {n}" )
+    four_by_four_multiplot( dupe_primary, dupelist, path=outpath,
+                            filename=f"{ns} EM Line Matches - Upper Limit {n}.pdf",
+                            plotTitle=f"{ns} EM Line Matches - Upper Limit {n}" )
     rmp.set_results( r )
     rmp.plot_results( outpath, f"{ns} AB v Z EM Line Chi Matching - Upper Limit {n}.pdf")
 
@@ -67,7 +69,7 @@ def main():
         if speclist[ i ].getNS( ) not in r:
             del speclist[ i ]
             del dupelist[ i ]
-    four_by_four_multiplot( dupe_primary, *dupelist, path=outpath,
+    four_by_four_multiplot( dupe_primary, dupelist, path=outpath,
                             filename=f"{ns} EM Line Matches - Upper Limit {n}.pdf",
                             plotTitle=f"{ns} EM Line Matches - Upper Limit {n}" )
     rmp.set_results( r )

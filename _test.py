@@ -1,194 +1,47 @@
-from analysis.pipeline import speclist_analysis_pipeline
+import logging
+
 from catalog import shenCat
-from common.constants import BASE_PLOT_PATH, CONT_RANGE, HB_RANGE, HG_RANGE, MGII_RANGE, OIII_RANGE, join, linesep
-from fileio.list_dict_utils import namestring_dict_writer
-from fileio.spec_load_write import async_bspec, bspecLoader
-from spectrum import List, Spectrum, scale_enmasse
-from tools.list_dict import sort_list_by_shen_key
+from common.constants import BASE_PLOT_PATH, BASE_PROCESSED_PATH
+from fileio.list_dict_utils import namestring_dict_reader
+from fileio.spec_load_write import async_rspec, join, rspecLoader
+from library_em_chi_search import analyze
+from spectrum.utils import compose_speclist, scale_enmasse
 from tools.plot import ab_z_plot, four_by_four_multiplot
 
 
-def reduced_chi( primary: Spectrum, secondary: Spectrum, doScale: bool = False, skipCopy: bool = False,
-                 wl_low: float = None, wl_high: float = None ) -> float:
-    if not skipCopy:
-        primary = primary.cpy( )
-        secondary = secondary.cpy( )
+def main( ns: str = "54115-2493-610", n: float = 3, chi: float = 20, mchi=20 ) -> None:
+    FOLDER_STR = f"Sigma {n} - Max {chi}"
+    BASE_INTEREST = join( BASE_PROCESSED_PATH, "Chi Matching", "EM Lines" )
+    PROGRAM_PATH = join( BASE_INTEREST, FOLDER_STR )
+    INDI_PATH = join( PROGRAM_PATH, "Individual Matches" )
+    PLOT_PATH = join( BASE_PLOT_PATH, "EM Line Matching", "Composites" )
 
-    if doScale:
-        secondary.scale( spec=primary )
-    if wl_low:
-        primary.trim( wlLow=wl_low )
-        secondary.trim( wlLow=wl_low )
-    if wl_high:
-        primary.trim( wlHigh=wl_high )
-        secondary.trim( wlHigh=wl_high )
-
-    secondary.alignToSpec( primary )
-    n = len( secondary )
-    if n == 0:
-        return -1
-    return sum( [ pow( primary.getFlux( wl ) - secondary.getFlux( wl ), 2 ) / primary.getFlux( wl ) for wl in
-                  primary ] ) / n
-
-
-def reduced_chi_wrapper( input_value: tuple ) -> dict:
-    primary, seconday, wl_range = input_value
-    return { seconday.getNS( ): reduced_chi( primary, seconday, True, False, wl_range[ 0 ], wl_range[ 1 ] ) }
-
-
-def cut_speclist( speclist: List[ Spectrum ], results_dict: dict ):
-    for i in range( len( speclist ) - 1, -1, -1 ):
-        if speclist[ i ].getNS( ) not in results_dict:
-            del speclist[ i ]
-
-
-def single( pns: str, names: List[ str ] ) -> dict:
-    outpath = join( BASE_PLOT_PATH, 'Ave Error Search', pns )
     shenCat.load( )
+    rdict = namestring_dict_reader( INDI_PATH, f'{ns}.csv', has_header=True )
+    logging.info( "Results loaded" )
 
-    pspec = bspecLoader( pns )
-    print( "Loading speclist...", end="" )
-    speclist = async_bspec( names )
-    print( "Done", end=linesep )
+    primary = rspecLoader( ns )
+    speclist = async_rspec( rdict.keys( ) )
+    speclist = scale_enmasse( primary, speclist )
 
-    err = pspec.aveErr( wl_range=MGII_RANGE ) / 2
-    print( f"Building the MGII anaylsis pipeline with maximum value {err}...", end="" )
-    input_values = [ (pspec, spec, MGII_RANGE) for spec in speclist ]
-    chi_pipe = speclist_analysis_pipeline( pspec, speclist, reduced_chi_wrapper, (0, err), input_values )
-    print( "Done", end=linesep )
+    logging.info( "Speclist loaded" )
 
-    print( "Running MGII pipeline.... ", end="" )
-    chi_pipe.do_analysis( )
-    print( "Reducing results.... ", end="" )
-    r = chi_pipe.reduce_results( )
-    cut_speclist( speclist, r )
-    print( f"{len( r )} remain.", end=linesep )
+    cspec = compose_speclist( speclist, f"{ns} Chi 20 Results" )
+    logging.info( "CSpec generated" )
 
-    if len( speclist ) == 0:
-        return { pns: 0 }
+    newd = namestring_dict_reader( PLOT_PATH, f"{cspec.getNS()}.csv" )
+    cspec.setNS( f"{ns} Chi {mchi} Results" )
 
-    ab_z_plot( path=outpath, filename="MGII.pdf", primary=pns, points=r, plotTitle=f"{pns}: 1 sigma" )
-
-    err = pspec.aveErr( wl_range=HB_RANGE ) / 2
-    print( f"Building the HB anaylsis pipeline with maximum value {err}...", end="" )
-    input_values = [ (pspec, spec, HB_RANGE) for spec in speclist ]
-    chi_pipe = speclist_analysis_pipeline( pspec, speclist, reduced_chi_wrapper,
-                                           (0, err), input_values )
-    print( "Done", end=linesep )
-
-    print( "Running HB pipeline.... ", end="" )
-    chi_pipe.do_analysis( )
-    print( "Reducing results.... ", end="" )
-    r = chi_pipe.reduce_results( )
-    cut_speclist( speclist, r )
-    print( f"{len( r )} remain.", end=linesep )
-
-    if len( speclist ) == 0:
-        return { pns: 0 }
-
-    ab_z_plot( path=outpath, filename="MGII and HB.pdf", primary=pns, points=r, plotTitle=f"{pns}: 1 sigma" )
-
-    err = pspec.aveErr( wl_range=OIII_RANGE ) / 2
-    print( f"Building the OIII anaylsis pipeline with maximum value {err}...", end="" )
-    input_values = [ (pspec, spec, OIII_RANGE) for spec in speclist ]
-    chi_pipe = speclist_analysis_pipeline( pspec, speclist, reduced_chi_wrapper,
-                                           (0, err), input_values )
-    print( "Done", end=linesep )
-
-    print( "Running OIII pipeline.... ", end="" )
-    chi_pipe.do_analysis( )
-    print( "Reducing results.... ", end="" )
-    r = chi_pipe.reduce_results( )
-    cut_speclist( speclist, r )
-    print( f"{len( r )} remain.", end=linesep )
-
-    if len( speclist ) == 0:
-        return { pns: 0 }
-
-    ab_z_plot( path=outpath, filename="MGII, HB and OIII.pdf", primary=pns, points=r, plotTitle=f"{pns}: 1 sigma" )
-
-    err = pspec.aveErr( wl_range=HG_RANGE ) / 2
-    print( f"Building the HG anaylsis pipeline with maximum value {err}...", end="" )
-    input_values = [ (pspec, spec, HG_RANGE) for spec in speclist ]
-    chi_pipe = speclist_analysis_pipeline( pspec, speclist, reduced_chi_wrapper,
-                                           (0, err), input_values )
-    print( "Done", end=linesep )
-
-    print( "Running HG pipeline.... ", end="" )
-    chi_pipe.do_analysis( )
-    print( "Reducing results.... ", end="" )
-    r = chi_pipe.reduce_results( )
-    cut_speclist( speclist, r )
-    print( f"{len( r )} remain.", end=linesep )
-
-    if len( speclist ) == 0:
-        return { pns: 0 }
-
-    ab_z_plot( path=outpath, filename="MGII, HB and OIII and HG.pdf", primary=pns, points=r, plotTitle=f"{pns}: 1 sigma" )
-
-    err = pspec.aveErr( wl_range=CONT_RANGE ) / 2
-    print( f"Building the Continuum anaylsis pipeline with maximum value {err}...", end="" )
-    input_values = [ (pspec, spec, CONT_RANGE) for spec in speclist ]
-    chi_pipe = speclist_analysis_pipeline( pspec, speclist, reduced_chi_wrapper,
-                                           (0, err), input_values )
-    print( "Done", end=linesep )
-
-    print( "Running Continuum pipeline.... ", end="" )
-    chi_pipe.do_analysis( )
-    print( "Reducing results.... ", end="" )
-    r = chi_pipe.reduce_results( )
-    cut_speclist( speclist, r )
-    print( f"{len( r )} remain.", end=linesep )
-
-    if len( speclist ) == 0:
-        return { pns: 0 }
-
-    ab_z_plot( path=outpath, filename="MGII, HB and OIII and HG and Continuum.pdf", primary=pns, points=r,
-               plotTitle=f"{pns}: 1 sigma" )
-
-    print( "Scaling speclist...", end="" )
-    if len( speclist ) > 1:
-        speclist = scale_enmasse( pspec, *speclist )
-        speclist = sort_list_by_shen_key( speclist )
-    else:
-        speclist[ 0 ].scale( spec = pspec )
-    print( "Done." )
-
-    print( "Writing multiplot... ", end="" )
-    four_by_four_multiplot( pspec, *speclist, path=outpath, filename="Multi.pdf", plotTitle=f"{pns}: 1 sigma" )
-    print( "Done." )
-
-    print( "Writing results...", end="" )
-    shen_dict = { }
-    for k in r:
-        shen_dict[ k ] = shenCat[ k ]
-    namestring_dict_writer( shen_dict, outpath, f"{pns}.csv" )
-    print( "Done." )
-    return { pns: len( r ) }
+    r = analyze( cspec.cpy( ), newd.keys( ), 1, PLOT_PATH, MAX=mchi, getDict=True )
+    ab_z_plot( PLOT_PATH, f"{cspec.getNS()} {mchi}.pdf", rspecLoader( ns ), list( r ) )
+    logging.info( "ab plot" )
+    speclist = scale_enmasse( cspec, async_rspec( list( r ) ) )
+    four_by_four_multiplot( cspec, speclist, path=PLOT_PATH, filename=f"{cspec.getNS()} {mchi} Multi.pdf" )
+    logging.info( "4x4" )
 
 
-def test( ):
-    pass
 
 if __name__ == '__main__':
-    from multiprocessing import freeze_support
-
-    freeze_support( )
-
-    shenCat.load( )
-    names = shenCat.keys( )
-    n = len( names )
-    final = { }
-    single( "53770-2376-290", names )
-    exit()
-    running_count = join( BASE_PLOT_PATH, 'Ave Error Search', "running_count.csv" )
-    for i in range( n ):
-        pns = names.pop( i )
-        print( f"--------------------    { pns }: {i + 1} / {n}" )
-        final.update( single( pns, names ) )
-        names.insert( i, pns )
-        with open( running_count, 'a' ) as outfile:
-            outfile.write( f"{pns},{final[pns]}{linesep}" )
-
-    namestring_dict_writer( final, join( BASE_PLOT_PATH, 'Ave Error Search' ), "results-count.csv" )
-    print( "Complete." )
+    if __debug__:
+        logging.basicConfig( level=logging.INFO )
+    main( mchi=10 )
