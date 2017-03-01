@@ -4,9 +4,9 @@ TODO:  RE-PATH ALL THE SPEC SOURCES AND MAKE USE OF RSPECLOADER VS BSPECLOADER
 TODO: Test compose methods
 TODO: Test fit parser
 
-TODO: Investigate the OIII lines
 
 Note: "53770-2376-290" is interesting
+- "54115-2493-610"
 
 First pass: EM Lines
 Second Pass: Continuum
