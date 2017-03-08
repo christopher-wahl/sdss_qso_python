@@ -4,6 +4,28 @@ DEF_MASK_DICT = { 0x40000: 'SP_MASK_FULLREJECT',  # Pixel fully rejected in extr
                  0x800000: 'SP_MASK_BRIGHTSKY',  # Sky level > flux + 10*(flux error)                   23      8.389e6
                  0x1000000: 'SP_MASK_NODATA' }  # No data available in combine B-spline                24      1.678e7
 
+allMaskCodes = { 0x000: 'SP_MASK_OK',  # No issues detected                                             -inf    x
+                 0x001: 'SP_MASK_NOPLUG',  # Fiber not listed in plugmap file                           0       1e0
+                 0x002: 'SP_MASK_BADTRACE',  # Bad trace from routine TRACE320CRUDE                     1       2e0
+                 0x004: 'SP_MASK_BADFLAT',  # Low counts in fiberflat                                   2       4e0
+                 0x008: 'SP_MASK_BADARC',  # Bad arc solution                                           3       8e0
+                 0x010: 'SP_MASK_MANYBADCOL',  # More than 10% pixels are bad columns                   4       1.6e1
+                 0x020: 'SP_MASK_MANYREJECT',  # More than 10% pixels are rejected in extraction        5       3.2e1
+                 0x040: 'SP_MASK_LARGESHIFT',  # Large spatial shift between flat & object position     6       6.4e1
+                 0x10000: 'SP_MASK_NEARBADPIX',  # Bad pixel within 3 pixels of trace                   16      6.554e4
+                 0x20000: 'SP_MASK_LOWFLAT',  # Flat field less than 0.5                                17      1.331e5
+                 0x40000: 'SP_MASK_FULLREJECT',  # Pixel fully rejected in extraction                   18      2.621e5
+                 0x80000: 'SP_MASK_PARTIALREJ',  # Some pixels rejected in extraction                   19      5.243e5
+                 0x100000: 'SP_MASK_SCATLIGHT',  # Scattered light significant                          20      1.049e6
+                 0x200000: 'SP_MASK_CROSSTALK',  # Cross-talk significant                               21      2.097e6
+                 0x400000: 'SP_MASK_NOSKY',  # Sky level unknown at this wavelength                     22      4.194e6
+                 0x800000: 'SP_MASK_BRIGHTSKY',  # Sky level > flux + 10*(flux error)                   23      8.389e6
+                 0x1000000: 'SP_MASK_NODATA',  # No data available in combine B-spline                  24      1.678e7
+                 0x2000000: 'SP_MASK_COMBINEREJ',  # Rejected in combine B-spline                       25      3.355e7
+                 0x4000000: 'SP_MASK_BADFLUXFACTOR',  # Low flux-calibration or flux-correction factor  26      6.711e7
+                 0x8000000: 'SP_MASK_BADSKYCHI',  # Chi^2 > 4 in sky residuals at this wavelength       27      1.342e8
+                 0x10000000: 'SP_MASK_REDMONSTER',  # Contiguous region of bad chi^2 in sky residuals   28      2.684e8
+                 0x40000000: 'SP_MASK_EMLINE' }  # Emission line detected here                          30      1.074e9
 
 def fit_spec_loader( path: str, filename: str, mask_dict: dict = DEF_MASK_DICT ) -> Spectrum:
     """
