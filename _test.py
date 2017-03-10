@@ -44,4 +44,4 @@ def main( ns: str = "54115-2493-610", n: float = 3, chi: float = 20, mchi=20 ) -
 if __name__ == '__main__':
     if __debug__:
         logging.basicConfig( level=logging.INFO )
-    main( mchi=10 )
+    main( mchi=20 )

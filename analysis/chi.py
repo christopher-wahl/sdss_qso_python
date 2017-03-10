@@ -4,7 +4,8 @@ from spectrum import Spectrum
 
 
 def chi( expSpec: Spectrum, obsSpec: Spectrum, doScale: bool = False, skipCopy: bool = False,
-         wl_low_limit: float = None, wl_high_limit: float = None ) -> float:
+         wl_low_limit: float = None, wl_high_limit: float = None, n_sigma: float = 1,
+         old_process: bool = False ) -> float:
     """
     Returns the chi^2 value between the given spectra
 
@@ -13,11 +14,13 @@ def chi( expSpec: Spectrum, obsSpec: Spectrum, doScale: bool = False, skipCopy: 
     :param doScale: Scale the two spectra around DEF_SCALE_WL range
     :param wl_low_limit: Trim spectra to low limit before matching
     :param wl_high_limit: Trim spectra to high limit before matching
+    :param n_sigma: Multiplicative flux-err range to zero.  ie. Any value falling within flux +/- n_sigma * err = 0
     :type expSpec: Spectrum
     :type obsSpec: Spectrum
     :type doScale: bool
     :type wl_low_limit: float
     :type wl_high_limit: float
+    :type n_sigma: float
     :return: chi^2
     :rtype: float
     """
@@ -41,7 +44,21 @@ def chi( expSpec: Spectrum, obsSpec: Spectrum, doScale: bool = False, skipCopy: 
 
     a0.alignToSpec( a1 )
 
-    return sum( [ pow( a0.getFlux( wl ) - a1.getFlux( wl ), 2 ) / a0.getFlux( wl ) for wl in a0 ] )
+    # old system, uncontrolled for error.  Left in for testing.
+    if old_process: return sum( [ pow( a0.getFlux( wl ) - a1.getFlux( wl ), 2 ) / a0.getFlux( wl ) for wl in a0 ] )
+
+    s = 0
+    for wl in a0:
+        a0_f, a0_e = a0[ wl ]
+        low, high = a0_f + n_sigma * a0_e, a0_f - n_sigma * a0_e
+        a1_f, a1_e = a1[ wl ]
+
+        # determine if flux errors overlap
+        if low <= a1_f + n_sigma * a1_e <= high or low <= a1_f - n_sigma * a1_e <= high:
+            # Flux/error ranges overlap.  Count this as a zero.
+            continue
+        s += pow( a1_f - a0_f, 2 ) / a0_f
+    return s
 
 
 def generic_chi( list0: list, list1: list ) -> float:

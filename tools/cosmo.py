@@ -4,6 +4,8 @@ from typing import List, Tuple, Union
 from astropy import units
 from astropy.cosmology import FlatLambdaCDM
 
+# TODO: Form dl_string method to reduce call-recall of the same string.  Or just localize it into dl_from_Z
+
 cosmo = FlatLambdaCDM( H0=67.74, Om0 = 0.3089 )
 
 def dl_from_z( z ):
@@ -47,12 +49,12 @@ def magnitude_evolution( m0: float, z0: float, zrange: tuple = (0.46, 0.82), ste
     from numpy import arange
     zlow, zhigh = zrange
 
-    M_init = m0 - 5 * log10( dl_from_z( z0 ) ) - 5
+    M_init = m0 - 5 * (log10( dl_from_z( z0 ) ) - 1)
 
     evolist = list()
     for z in arange( zlow, zhigh + step, step ):
         dL = dl_from_z( z )
-        m = M_init + 5 * log10( dL ) + 5
+        m = M_init + 5 * (log10( dL ) - 1)
 
         evolist.append( ( z, m, dL ) )
     if splitLists:
@@ -73,7 +75,7 @@ def absolute_magnitude( m0, z0 ):
     M: float
 
     """
-    return m0 - 5 * log10( dl_from_z( z0 ) ) - 5
+    return m0 - 5 * (log10( dl_from_z( z0 ) ) - 1)
 
 def magnitude_at_redshift( m0, z0, z ):
     """
@@ -90,7 +92,7 @@ def magnitude_at_redshift( m0, z0, z ):
     m: float
 
     """
-    return absolute_magnitude( m0, z0 ) + 5 * log10( dl_from_z( z ) ) + 5
+    return absolute_magnitude( m0, z0 ) + 5 * (log10( dl_from_z( z ) ) - 1)
 
 def difference_from_evolution( m0, z0, m1, z1 ):
     """
