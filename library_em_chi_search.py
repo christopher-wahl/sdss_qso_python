@@ -110,6 +110,5 @@ if __name__ == '__main__':
     from common import freeze_support
 
     freeze_support( )
-    logging.basicConfig( level=logging.INFO )
     dirCheck( OUTPATH )
     main_loop()
