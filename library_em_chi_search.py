@@ -7,7 +7,7 @@ from common.async_tools import generic_unordered_multiprocesser
 from common.constants import BASE_PROCESSED_PATH, BETA, GAMMA, HB_RANGE, HG_RANGE, MGII_RANGE, OIII_RANGE, join, linesep
 from common.messaging import done, tab_print, unfinished_print
 from fileio.list_dict_utils import namestring_dict_writer
-from fileio.spec_load_write import async_rspec
+from fileio.spec_load_write import async_rspec, rspecLoader
 from fileio.utils import dirCheck
 from spectrum import List, Spectrum, Tuple
 from spectrum.utils import mutli_scale
@@ -79,15 +79,16 @@ def main_loop( ):
 
     results = [ ]
     for i in range( n ):
+        prime = namelist.pop( i )
         unfinished_print( f"{i} / {n} Loading spectra from disk..." )
+        prime = rspecLoader( prime )
         speclist = async_rspec( namelist )
         done( )
-        prime = speclist.pop( i )
 
         # do analysis
         count = single_spec( prime, speclist )
+        del speclist
         results.append( (prime.getNS( ), count) )
-        speclist.insert( i, prime )
 
         # update count
         with open( join( OUTPATH, "running_count.csv" ), 'a' ) as outfile:
