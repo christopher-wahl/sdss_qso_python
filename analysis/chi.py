@@ -53,10 +53,10 @@ def chi( expSpec: Spectrum, obsSpec: Spectrum, doScale: bool = False, skipCopy: 
         low, high = a0_f + n_sigma * a0_e, a0_f - n_sigma * a0_e
         a1_f, a1_e = a1[ wl ]
 
-        # determine if flux errors overlap
-        if low <= a1_f + n_sigma * a1_e <= high or low <= a1_f - n_sigma * a1_e <= high:
-            # Flux/error ranges overlap.  Count this as a zero.
+        # determine if errors overlap
+        if abs( a0_f - a1_f ) < (a0_e + a1_e):
             continue
+
         s += pow( a1_f - a0_f, 2 ) / a0_f
     return s
 
