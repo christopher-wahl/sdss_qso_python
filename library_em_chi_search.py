@@ -48,11 +48,9 @@ def single_chi( primary: Spectrum, speclist: List[ Spectrum ], rge: tuple ) -> d
 def single_spec( primary: Spectrum, speclist: List[ Spectrum ] ) -> float:
     print( f"Anaylzing { primary.getNS() }" )
 
-    logging.info( "Performing deepcopy of speclist" )
-    speclist = deepcopy( speclist )
-    logging.info( "Scaling speclist to the primary" )
+    unfinished_print( "Scaling speclist..." )
     speclist = mutli_scale( primary, speclist )
-    logging.info( "Scaling complete." )
+    done( )
     results = { }
     for rge in R_LIST:
         # Do the chi^2
@@ -77,12 +75,12 @@ def main_loop( ):
     namelist = list( shenCat.keys( ) )
 
     n = len( namelist )
-    unfinished_print( "Loading spectra from disk..." )
-    speclist = async_rspec( namelist )
-    done( )
 
     results = [ ]
     for i in range( n ):
+        unfinished_print( f"{i} / {n} Loading spectra from disk..." )
+        speclist = async_rspec( namelist )
+        done( )
         prime = speclist.pop( i )
 
         # do analysis

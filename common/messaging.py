@@ -9,7 +9,7 @@ def tab_print( s: str, new_line: bool = True ) -> None:
     if new_line:
         print( f"       {s}" )
     else:
-        print( f"       {s}", end='' )
+        print( f"       {s}", flush=True, end='' )
 
 
 def unfinished_print( printline: str = "" ) -> None:
