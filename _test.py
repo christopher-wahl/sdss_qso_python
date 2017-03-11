@@ -26,8 +26,16 @@ def main( ns: str = "54115-2493-610", n: float = 3, chi: float = 20, mchi=20 ) -
 
     logging.info( "Speclist loaded" )
 
+    from fileio.spec_load_write import text_write
+
     cspec = compose_speclist( speclist, f"{ns} Chi 20 Results" )
     logging.info( "CSpec generated" )
+    outpath = "/home/christopher/Desktop/composite/"
+    text_write( cspec, outpath, "composite.spec" )
+    for spec in speclist:
+        text_write( spec, outpath, f"{spec.getNS()}.rspec" )
+    logging.info( "Specs written" )
+    exit( )
 
     newd = namestring_dict_reader( PLOT_PATH, f"{cspec.getNS()}.csv" )
     cspec.setNS( f"{ns} Chi {mchi} Results" )

@@ -44,7 +44,11 @@ CONT_RANGE = (STD_MIN_WL, STD_MAX_WL)
 ANGSTROM = r"‎Å"
 FLUX_UNITS = r"10^{-17} egs s^{-1} cm^{-2} %s^{-1}" % ANGSTROM
 SQUARE = "²"
+BETA = "β"
+GAMMA = "γ"
 
 if sys.platform == "win32":
     ANGSTROM = ANGSTROM.encode('cp1252', errors='replace').decode('cp1252')
     FLUX_UNITS = FLUX_UNITS.encode( 'cp1252', errors='replace' ).decode( 'cp1252' )
+    BETA = BETA.encode( 'cp1252', errors='replace' ).decode( 'cp1252' )
+    GAMMA = GAMMA.encode( 'cp1252', errors='replace' ).decode( 'cp1252' )

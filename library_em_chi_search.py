@@ -1,128 +1,115 @@
-from typing import Iterable, List, Tuple, Union
+import logging
+from copy import deepcopy
 
-from analysis.chi import pipeline_chi_wrapper
-from analysis.pipeline import speclist_analysis_pipeline
-from catalog import get_shen_header, get_shen_string, shenCat
-from common.constants import BASE_PROCESSED_PATH, HB_RANGE, HG_RANGE, MGII_RANGE, OIII_RANGE, join
-from common.messaging import tab_print
-from fileio.spec_load_write import async_rspec, rspecLoader
+from analysis.chi import chi
+from catalog import shenCat
+from common.async_tools import generic_unordered_multiprocesser
+from common.constants import BASE_PROCESSED_PATH, BETA, GAMMA, HB_RANGE, HG_RANGE, MGII_RANGE, OIII_RANGE, join, linesep
+from common.messaging import done, tab_print, unfinished_print
+from fileio.list_dict_utils import namestring_dict_writer
+from fileio.spec_load_write import async_rspec
 from fileio.utils import dirCheck
-from spectrum import Spectrum
-from spectrum.utils import scale_enmasse
-
-EM_MAX = 20
-
-def loader( nameslist: Union[ List[ str ], Iterable ] ) -> List[ Spectrum ]:
-    tab_print( f"Loading { len( nameslist ) } spectra..." )
-    speclist = async_rspec( nameslist )
-    tab_print( "Complete" )
-    return speclist
+from spectrum import List, Spectrum, Tuple
+from spectrum.utils import mutli_scale
 
 
-def range_pass( primary: Spectrum, speclist, wl_range: Tuple[ float, float ] ):
-    primary.trim( wl_range=wl_range )
-    em_pipe = speclist_analysis_pipeline( primary, speclist, pipeline_chi_wrapper, (0, EM_MAX) )
-    em_pipe.do_analysis( )
-    r = em_pipe.reduce_results()
-    return em_pipe.reduce_results( ).keys( )
+def write_shen_results( primary: Spectrum, speclist: List[ Spectrum ] ) -> None:
+    filename = f"{ primary.getNS() }.csv"
+    nsdict = { }
+    for spec in speclist:
+        nsdict.update( { spec.getNS( ): shenCat[ spec.getNS( ) ] } )
+    namestring_dict_writer( nsdict, join( OUTPATH, "Individual Results" ), filename )
 
 
-def analyze( primary: str or Spectrum, nameslist: List[ str ], n_sigma: int, OUT_PATH: str, MAX: float = EM_MAX,
-             getDict: bool = False ) -> float or dict:
-    global EM_MAX
-    EM_MAX = MAX
-    # Run Each EM line & reduce
-    tab_print( f"{primary if type( primary ) == str else primary.getNS() }" )
-    speclist = loader( nameslist )
-    speclist = scale_enmasse( rspecLoader( primary ) if type( primary ) == str else primary, speclist )
+def __single_chi_wrapper( inputV: Tuple[ Spectrum, Spectrum ] ) -> Tuple[ str, float ]:
+    pSpec, sSpec = inputV
+    return (sSpec.getNS( ), chi( pSpec, sSpec ))
 
 
-    tab_print( "MGII Analysis...", False )
-    results = range_pass( rspecLoader( primary ) if type( primary ) == str else primary, speclist, MGII_RANGE )
-    tab_print( len( results ) )
-    if len( results ) == 0:
-        return 0
+def single_chi( primary: Spectrum, speclist: List[ Spectrum ], rge: tuple ) -> dict:
+    tab_print( f"{ R_DICT[ rge ] } Analysis...", False )
 
-    for i in range( len( speclist ) - 1, -1, -1 ):
-        if speclist[ i ].getNS() not in results:
-            del speclist[ i ]
+    logging.info( "Performing deepcopy and trim of the primary" )
+    p = deepcopy( primary )
+    p.trim( wl_range=rge )
 
-    tab_print( "HB Analysis...", False )
-    results = range_pass( rspecLoader( primary ) if type( primary ) == str else primary, speclist, HB_RANGE )
-    tab_print( len( results ) )
-    if len( results ) == 0:
-        return 0
-    for i in range( len( speclist ) - 1, -1, -1 ):
-        if speclist[ i ].getNS() not in results:
-            del speclist[ i ]
+    inputV = [ (p, spec) for spec in speclist ]
+    results_list = [ ]
+    generic_unordered_multiprocesser( inputV, __single_chi_wrapper, results_list )
+    results = { }
+    for r in results_list:
+        if r[ 1 ] < EM_LINE_MAX:
+            results.update( { r[ 0 ]: r[ 1 ] } )
 
-    tab_print( "OIII Analysis...", False )
-    results = range_pass( rspecLoader( primary ) if type( primary ) == str else primary, speclist, OIII_RANGE )
-    tab_print( len( results ) )
-    if len( results ) == 0:
-        return 0
-    for i in range( len( speclist ) - 1, -1, -1 ):
-        if speclist[ i ].getNS() not in results:
-            del speclist[ i ]
+    tab_print( f"{ len( results ) }" )
+    return results
 
-    tab_print( "HG Analysis...", False )
-    results = range_pass( rspecLoader( primary ) if type( primary ) == str else primary, speclist, HG_RANGE )
-    tab_print( len( results ) )
-    if len( results ) == 0:
-        return 0
-    for i in range( len( speclist ) - 1, -1, -1 ):
-        if speclist[ i ].getNS() not in results:
-            del speclist[ i ]
 
-    # Redshift reduction
-    #tab_print( "Redshift Reduction...", False )
-    #z_pipe = redshift_ab_pipeline( primary_ns=primary, ns_of_interest=list( results ) )
-    #results = z_pipe.reduce_results( n_sigma )
-    #tab_print( len( results ) )
+def single_spec( primary: Spectrum, speclist: List[ Spectrum ] ) -> float:
+    print( f"Anaylzing { primary.getNS() }" )
 
-    # Write results
-    with open( join( OUT_PATH, f"{primary if type( primary ) == str else primary.getNS() }.csv" ), 'w' ) as outfile:
-        outfile.write( get_shen_header( CR=True ) )
-        outfile.writelines( [ get_shen_string( k, CR=True ) for k in results ] )
-    if getDict:
-        return results
-    # Return count
+    logging.info( "Performing deepcopy of speclist" )
+    speclist = deepcopy( speclist )
+    logging.info( "Scaling speclist to the primary" )
+    speclist = mutli_scale( primary, speclist )
+    logging.info( "Scaling complete." )
+    results = { }
+    for rge in R_LIST:
+        # Do the chi^2
+        results = single_chi( primary, speclist, rge )
+
+        # Reduce the results
+        if len( results ) == 0:
+            logging.info( "Zero results, returning" )
+            return 0
+        for i in range( len( speclist ) - 1, -1, -1 ):
+            if speclist[ i ].getNS( ) not in results:
+                del speclist[ i ]
+
+    # Write the results
+    logging.info( "Writing results" )
+    write_shen_results( primary, speclist )
     return len( results )
 
 
-def main( n_sigma: int ):
-    BASE_OUTPATH = join( BASE_PROCESSED_PATH, "Chi Matching", "EM Lines", f"Sigma {n_sigma} - Max {EM_MAX}" )
-    CAT_WRITE_PATH = join( BASE_OUTPATH, "Individual Matches" )
-
+def main_loop( ):
     shenCat.load( )
-    names = shenCat.keys( )
-    dirCheck( CAT_WRITE_PATH )
-    count_dict = { }
-    n = len( names )
+    namelist = list( shenCat.keys( ) )
+
+    n = len( namelist )
+    unfinished_print( "Loading spectra from disk..." )
+    speclist = async_rspec( namelist )
+    done( )
+
+    results = [ ]
     for i in range( n ):
-        primary = names.pop( i )
-        count_dict[ primary ] = count = analyze( primary, names, n_sigma, CAT_WRITE_PATH )
+        prime = speclist.pop( i )
 
-        with open( join( BASE_OUTPATH, 'running_count.csv' ), 'a' ) as outfile:
-            outfile.write( f"{primary},{count}\n" )
+        # do analysis
+        count = single_spec( prime, speclist )
+        results.append( (prime.getNS( ), count) )
+        speclist.insert( i, prime )
 
-        names.insert( i, primary )
+        # update count
+        with open( join( OUTPATH, "running_count.csv" ), 'a' ) as outfile:
+            outfile.write( f"{ prime.getNS() },{ count }" + linesep )
+        print( f"{i} / {n} complete." )
 
-        print( f"{ primary } : { count_dict[ primary ] } -> { i + 1 } / { n }" )
-    print( "Writing final counts..." )
+    # write final counts
+    results.sort( key=lambda x: x[ 1 ], reverse=True )
+    with open( join( OUTPATH, "final_count.csv" ), 'w' ) as outfile:
+        outfile.writelines( [ f"{ x[ 0 ] },{ x[ 1 ] }" + linesep for x in results ] )
 
-    from tools.list_dict import key_value_dict_to_paired_list
-    nl = key_value_dict_to_paired_list( count_dict, True )
 
-    with open( join( BASE_OUTPATH, "results.csv" ), "w" ) as outfile:
-        for k, v in count_dict.items( ):
-            outfile.write( f"{k},{v}\n" )
-
-    print( "Done." )
-
+EM_LINE_MAX = 200
+R_LIST = [ MGII_RANGE, HB_RANGE, OIII_RANGE, HG_RANGE ]
+R_DICT = { MGII_RANGE: "MgII", HB_RANGE: f"H{ BETA }", OIII_RANGE: "OIII", HG_RANGE: f"H{ GAMMA }" }
+OUTPATH = join( BASE_PROCESSED_PATH, "Analysis", "EM Line Search" )
 
 if __name__ == '__main__':
     from common import freeze_support
 
     freeze_support( )
-    main( 3 )
+    logging.basicConfig( level=logging.INFO )
+    dirCheck( OUTPATH )
+    main_loop()

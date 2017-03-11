@@ -1,7 +1,7 @@
-from typing import List, Union
+from typing import List, Tuple, Union
 
+from common.constants import DEFAULT_SCALE_RADIUS, DEFAULT_SCALE_WL
 from spectrum import Spectrum
-
 
 def compose_speclist( speclist: List[ Spectrum ], namestring: str = "" ) -> Spectrum:
     """
@@ -155,3 +155,21 @@ def find_nearest_wavelength( sorted_wavelengths: List[ float ], wavelength: floa
         return after
     else:
         return before
+
+
+def mutli_scale( primary: Spectrum, speclist: List[ Spectrum ], scale_wl: float = DEFAULT_SCALE_WL,
+                 scale_radius=DEFAULT_SCALE_RADIUS ) -> List[ Spectrum ]:
+    from common.async_tools import generic_ordered_multiprocesser
+
+    scale_flux = primary.aveFlux( central_wl=scale_wl, radius=scale_radius )
+
+    inputV = [ (spec, scale_flux, scale_wl, scale_radius) for spec in speclist ]
+    speclist = [ ]
+    generic_ordered_multiprocesser( inputV, __multi_scale_wrapper, speclist )
+    return speclist
+
+
+def __multi_scale_wrapper( inputV: Tuple[ Spectrum, float, float, float ] ) -> Spectrum:
+    spec, scale_flux, scale_wl, scale_radius = inputV
+    spec.scale( scaleflx=scale_flux, scalewl=scale_wl, radius=scale_radius )
+    return spec
