@@ -75,6 +75,7 @@ def single_spec( primary: Spectrum, speclist: List[ Spectrum ] ) -> float:
 def main_loop( ):
     shenCat.load( )
     namelist = list( shenCat.keys( ) )
+    print(f"Limiting chi^2 values to {EM_LINE_MAX}")
 
     n = len( namelist )
     unfinished_print( "Loading spectra from disk..." )
