@@ -101,10 +101,10 @@ def main_loop( ):
         outfile.writelines( [ f"{ x[ 0 ] },{ x[ 1 ] }" + linesep for x in results ] )
 
 
-EM_LINE_MAX = 200
+EM_LINE_MAX = 20
 R_LIST = [ MGII_RANGE, HB_RANGE, OIII_RANGE, HG_RANGE ]
 R_DICT = { MGII_RANGE: "MgII", HB_RANGE: f"H{ BETA }", OIII_RANGE: "OIII", HG_RANGE: f"H{ GAMMA }" }
-OUTPATH = join( BASE_PROCESSED_PATH, "Analysis", "EM Line Search" )
+OUTPATH = join( BASE_PROCESSED_PATH, "Analysis", "EM Line Search", "Chi 20" )
 
 if __name__ == '__main__':
     from common import freeze_support
