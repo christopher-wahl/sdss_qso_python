@@ -101,6 +101,7 @@ def main_loop( ):
 
         # do analysis
         count = single_spec( prime, speclist )
+        namelist.insert( i, prime )
         del speclist
         results[ prime.getNS( ) ] = count
 
