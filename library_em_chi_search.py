@@ -98,9 +98,9 @@ def main_loop( ):
             namelist.insert( i, prime )
             continue
         unfinished_print( f"{i} / {n} Loading spectra from disk..." )
-        prime = rspecLoader( prime )
         speclist = async_rspec( namelist )
         namelist.insert( i, prime )
+        prime = rspecLoader( prime )
         done( )
 
         # do analysis
