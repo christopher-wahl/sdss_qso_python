@@ -78,17 +78,20 @@ def main_loop( ):
     n = len( namelist )
 
     results = {}
-    with open( join( OUTPATH, "running_count.csv" ), 'r' ) as infile:
-        for line in infile:
-            if line == "\n":
-                continue
-            line.strip()
-            line = line.split(',')
-            if '\n' in line[ 1 ]:
-                line[ 1 ] = line[ 1 ][:-1]
-            results[ line[ 0 ] ] = int( line[ 1 ].strip() )
-        try: del line
-        except: pass
+    try:
+        with open( join( OUTPATH, "running_count.csv" ), 'r' ) as infile:
+            for line in infile:
+                if line == "\n":
+                    continue
+                line.strip()
+                line = line.split(',')
+                if '\n' in line[ 1 ]:
+                    line[ 1 ] = line[ 1 ][:-1]
+                results[ line[ 0 ] ] = int( line[ 1 ].strip() )
+            try: del line
+            except: pass
+    except: pass
+
     for i in range( n ):
         prime = namelist.pop( i )
         if prime in results:
@@ -97,11 +100,12 @@ def main_loop( ):
         unfinished_print( f"{i} / {n} Loading spectra from disk..." )
         prime = rspecLoader( prime )
         speclist = async_rspec( namelist )
+        namelist.insert( i, prime )
         done( )
 
         # do analysis
         count = single_spec( prime, speclist )
-        namelist.insert( i, prime )
+
         del speclist
         results[ prime.getNS( ) ] = count
 
