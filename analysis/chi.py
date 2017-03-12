@@ -54,7 +54,7 @@ def chi( expSpec: Spectrum, obsSpec: Spectrum, doScale: bool = False, skipCopy: 
         a1_f, a1_e = a1[ wl ]
 
         # determine if errors overlap
-        if abs( a0_f - a1_f ) < (a0_e + a1_e):
+        if abs( a0_f - a1_f ) < n_sigma * (a0_e + a1_e):
             continue
 
         s += pow( a1_f - a0_f, 2 ) / a0_f

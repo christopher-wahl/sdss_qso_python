@@ -23,7 +23,7 @@ def write_shen_results( primary: Spectrum, speclist: List[ Spectrum ] ) -> None:
 
 def __single_chi_wrapper( inputV: Tuple[ Spectrum, Spectrum ] ) -> Tuple[ str, float ]:
     pSpec, sSpec = inputV
-    return (sSpec.getNS( ), chi( pSpec, sSpec ))
+    return (sSpec.getNS( ), chi( pSpec, sSpec, old_process = True ))
 
 
 def single_chi( primary: Spectrum, speclist: List[ Spectrum ], rge: tuple ) -> dict:
@@ -72,14 +72,28 @@ def single_spec( primary: Spectrum, speclist: List[ Spectrum ] ) -> float:
 
 def main_loop( ):
     shenCat.load( )
-    namelist = list( shenCat.keys( ) )
+    namelist = sorted( list( shenCat.keys( ) ) )
     print(f"Limiting chi^2 values to {EM_LINE_MAX}")
 
     n = len( namelist )
 
-    results = [ ]
+    results = {}
+    with open( join( OUTPATH, "running_count.csv" ), 'r' ) as infile:
+        for line in infile:
+            if line == "\n":
+                continue
+            line.strip()
+            line = line.split(',')
+            if '\n' in line[ 1 ]:
+                line[ 1 ] = line[ 1 ][:-1]
+            results[ line[ 0 ] ] = int( line[ 1 ].strip() )
+        try: del line
+        except: pass
     for i in range( n ):
         prime = namelist.pop( i )
+        if prime in results:
+            namelist.insert( i, prime )
+            continue
         unfinished_print( f"{i} / {n} Loading spectra from disk..." )
         prime = rspecLoader( prime )
         speclist = async_rspec( namelist )
@@ -88,7 +102,7 @@ def main_loop( ):
         # do analysis
         count = single_spec( prime, speclist )
         del speclist
-        results.append( (prime.getNS( ), count) )
+        results[ prime.getNS( ) ] = count
 
         # update count
         with open( join( OUTPATH, "running_count.csv" ), 'a' ) as outfile:
@@ -96,6 +110,7 @@ def main_loop( ):
         print( f"{i} / {n} complete." )
 
     # write final counts
+    results = [ ( k, v ) for k, v in results.items() ]
     results.sort( key=lambda x: x[ 1 ], reverse=True )
     with open( join( OUTPATH, "final_count.csv" ), 'w' ) as outfile:
         outfile.writelines( [ f"{ x[ 0 ] },{ x[ 1 ] }" + linesep for x in results ] )
@@ -104,7 +119,7 @@ def main_loop( ):
 EM_LINE_MAX = 20
 R_LIST = [ MGII_RANGE, HB_RANGE, OIII_RANGE, HG_RANGE ]
 R_DICT = { MGII_RANGE: "MgII", HB_RANGE: f"H{ BETA }", OIII_RANGE: "OIII", HG_RANGE: f"H{ GAMMA }" }
-OUTPATH = join( BASE_PROCESSED_PATH, "Analysis", "EM Line Search", "Chi 20" )
+OUTPATH = join( BASE_PROCESSED_PATH, "Analysis", "EM Line Search", "Chi 20 Old" )
 
 if __name__ == '__main__':
     from common import freeze_support
