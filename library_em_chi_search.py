@@ -128,7 +128,7 @@ def main_loop( ):
 EM_LINE_MAX = 20
 CONT_MAX = 200
 ERRSET = set( )
-C_RANGE = (MGII_RANGE[ 0 ], HB_RANGE[ 0 ])
+C_RANGE = (MGII_RANGE[1], HB_RANGE[0])
 R_LIST = [ MGII_RANGE, HB_RANGE, C_RANGE ]  # , OIII_RANGE, HG_RANGE ]
 R_DICT = { MGII_RANGE: "MgII", HB_RANGE: f"H{ BETA }", OIII_RANGE: "OIII", HG_RANGE: f"H{ GAMMA }",
            C_RANGE: "Continuum" }
