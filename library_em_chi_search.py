@@ -7,7 +7,7 @@ from common.async_tools import generic_unordered_multiprocesser
 from common.constants import BASE_PROCESSED_PATH, BETA, GAMMA, HB_RANGE, HG_RANGE, MGII_RANGE, OIII_RANGE, join, linesep
 from common.messaging import done, tab_print, unfinished_print
 from fileio.list_dict_utils import namestring_dict_writer
-from fileio.spec_load_write import async_rspec, rspecLoader
+from fileio.spec_load_write import async_rspec_scaled, rspecLoader
 from fileio.utils import dirCheck
 from spectrum import List, Spectrum, Tuple
 from spectrum.utils import mutli_scale
@@ -23,7 +23,7 @@ def write_shen_results( primary: Spectrum, speclist: List[ Spectrum ] ) -> None:
 
 def __single_chi_wrapper( inputV: Tuple[ Spectrum, Spectrum ] ) -> Tuple[ str, float ]:
     pSpec, sSpec = inputV
-    return (sSpec.getNS( ), chi( pSpec, sSpec, old_process = True ))
+    return (sSpec.getNS( ), *chi( pSpec, sSpec, old_process=True, get_count=True ))
 
 
 def single_chi( primary: Spectrum, speclist: List[ Spectrum ], rge: tuple ) -> dict:
@@ -38,8 +38,13 @@ def single_chi( primary: Spectrum, speclist: List[ Spectrum ], rge: tuple ) -> d
     generic_unordered_multiprocesser( inputV, __single_chi_wrapper, results_list )
     results = { }
     for r in results_list:
-        if r[ 1 ] < EM_LINE_MAX:
-            results.update( { r[ 0 ]: r[ 1 ] } )
+        try:
+            if r[ 1 ] / r[ 2 ] < EM_LINE_MAX:
+                results.update( { r[ 0 ]: r[ 1 ] / r[ 2 ] } )
+        except ZeroDivisionError:
+            ERRSET.add( r[ 1 ] )
+
+
 
     tab_print( f"{ len( results ) }" )
     return results
@@ -93,14 +98,16 @@ def main_loop( ):
     except: pass
 
     for i in range( n ):
-        prime = namelist.pop( i )
+        # prime = namelist.pop( i )
+        prime = "54115-2493-610";
+        namelist.remove( prime )
         if prime in results:
             namelist.insert( i, prime )
             continue
         unfinished_print( f"{i} / {n} Loading spectra from disk..." )
-        speclist = async_rspec( namelist )
-        namelist.insert( i, prime )
         prime = rspecLoader( prime )
+        speclist = async_rspec_scaled( namelist, prime )
+        namelist.insert( i, prime )
         done( )
 
         # do analysis
@@ -113,18 +120,22 @@ def main_loop( ):
         with open( join( OUTPATH, "running_count.csv" ), 'a' ) as outfile:
             outfile.write( f"{ prime.getNS() },{ count }" + linesep )
         print( f"{i} / {n} complete." )
+        exit()
 
     # write final counts
     results = [ ( k, v ) for k, v in results.items() ]
     results.sort( key=lambda x: x[ 1 ], reverse=True )
     with open( join( OUTPATH, "final_count.csv" ), 'w' ) as outfile:
         outfile.writelines( [ f"{ x[ 0 ] },{ x[ 1 ] }" + linesep for x in results ] )
+    with open( join( OUTPATH, "errors.list" ), 'w' ) as outfile:
+        outfile.writelines( [ f"{ns}\n" for ns in ERRSET ] )
 
 
-EM_LINE_MAX = 20
+EM_LINE_MAX = 0.5
+ERRSET = set( )
 R_LIST = [ MGII_RANGE, HB_RANGE, OIII_RANGE, HG_RANGE ]
 R_DICT = { MGII_RANGE: "MgII", HB_RANGE: f"H{ BETA }", OIII_RANGE: "OIII", HG_RANGE: f"H{ GAMMA }" }
-OUTPATH = join( BASE_PROCESSED_PATH, "Analysis", "EM Line Search", "Chi 20 Old" )
+OUTPATH = join( BASE_PROCESSED_PATH, "Analysis", "EM Line Search Testing", f"Chi {EM_LINE_MAX} Old" )
 
 if __name__ == '__main__':
     from common import freeze_support

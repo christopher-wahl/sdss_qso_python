@@ -5,7 +5,7 @@ from spectrum import Spectrum
 
 def chi( expSpec: Spectrum, obsSpec: Spectrum, doScale: bool = False, skipCopy: bool = False,
          wl_low_limit: float = None, wl_high_limit: float = None, n_sigma: float = 1,
-         old_process: bool = False ) -> float:
+         old_process: bool = False, get_count: bool = False ) -> float:
     """
     Returns the chi^2 value between the given spectra
 
@@ -45,19 +45,22 @@ def chi( expSpec: Spectrum, obsSpec: Spectrum, doScale: bool = False, skipCopy: 
     a0.alignToSpec( a1 )
 
     # old system, uncontrolled for error.  Left in for testing.
-    if old_process: return sum( [ pow( a0.getFlux( wl ) - a1.getFlux( wl ), 2 ) / a0.getFlux( wl ) for wl in a0 ] )
+    if old_process:
+        s = sum( [ pow( a0.getFlux( wl ) - a1.getFlux( wl ), 2 ) / a0.getFlux( wl ) for wl in a0 ] )
+    else:
+        s = 0
+        for wl in a0:
+            a0_f, a0_e = a0[ wl ]
+            low, high = a0_f + n_sigma * a0_e, a0_f - n_sigma * a0_e
+            a1_f, a1_e = a1[ wl ]
 
-    s = 0
-    for wl in a0:
-        a0_f, a0_e = a0[ wl ]
-        low, high = a0_f + n_sigma * a0_e, a0_f - n_sigma * a0_e
-        a1_f, a1_e = a1[ wl ]
+            # determine if errors overlap
+            if abs( a0_f - a1_f ) < n_sigma * (a0_e + a1_e):
+                continue
 
-        # determine if errors overlap
-        if abs( a0_f - a1_f ) < n_sigma * (a0_e + a1_e):
-            continue
-
-        s += pow( a1_f - a0_f, 2 ) / a0_f
+            s += pow( a1_f - a0_f, 2 ) / a0_f
+    if get_count:
+        s = (s, len( a0 ))
     return s
 
 
