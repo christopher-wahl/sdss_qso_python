@@ -10,7 +10,6 @@ from fileio.list_dict_utils import namestring_dict_writer
 from fileio.spec_load_write import async_rspec_scaled, rspecLoader
 from fileio.utils import dirCheck
 from spectrum import List, Spectrum, Tuple
-from spectrum.utils import mutli_scale
 
 
 def write_shen_results( primary: Spectrum, speclist: List[ Spectrum ] ) -> None:
@@ -23,7 +22,7 @@ def write_shen_results( primary: Spectrum, speclist: List[ Spectrum ] ) -> None:
 
 def __single_chi_wrapper( inputV: Tuple[ Spectrum, Spectrum ] ) -> Tuple[ str, float ]:
     pSpec, sSpec = inputV
-    return (sSpec.getNS( ), *chi( pSpec, sSpec, old_process=True, get_count=True ))
+    return (sSpec.getNS( ), chi( pSpec, sSpec, old_process=True ))
 
 
 def single_chi( primary: Spectrum, speclist: List[ Spectrum ], rge: tuple ) -> dict:
@@ -39,12 +38,10 @@ def single_chi( primary: Spectrum, speclist: List[ Spectrum ], rge: tuple ) -> d
     results = { }
     for r in results_list:
         try:
-            if r[ 1 ] / r[ 2 ] < EM_LINE_MAX:
-                results.update( { r[ 0 ]: r[ 1 ] / r[ 2 ] } )
+            if r[ 1 ] < LIMIT_DICT[ rge ]:
+                results.update( { r[ 0 ]: r[ 1 ] } )
         except ZeroDivisionError:
             ERRSET.add( r[ 1 ] )
-
-
 
     tab_print( f"{ len( results ) }" )
     return results
@@ -53,9 +50,6 @@ def single_chi( primary: Spectrum, speclist: List[ Spectrum ], rge: tuple ) -> d
 def single_spec( primary: Spectrum, speclist: List[ Spectrum ] ) -> float:
     print( f"Anaylzing { primary.getNS() }" )
 
-    unfinished_print( "Scaling speclist..." )
-    speclist = mutli_scale( primary, speclist )
-    done( )
     results = { }
     for rge in R_LIST:
         # Do the chi^2
@@ -78,7 +72,7 @@ def single_spec( primary: Spectrum, speclist: List[ Spectrum ] ) -> float:
 def main_loop( ):
     shenCat.load( )
     namelist = sorted( list( shenCat.keys( ) ) )
-    print(f"Limiting chi^2 values to {EM_LINE_MAX}")
+    print( f"Limiting EM Line values to {EM_LINE_MAX} and Continuum to {CONT_MAX}" )
 
     n = len( namelist )
 
@@ -98,9 +92,8 @@ def main_loop( ):
     except: pass
 
     for i in range( n ):
-        # prime = namelist.pop( i )
-        prime = "54115-2493-610";
-        namelist.remove( prime )
+        prime = namelist.pop( i )
+        # prime = "54115-2493-610"; namelist.remove( prime )
         if prime in results:
             namelist.insert( i, prime )
             continue
@@ -120,22 +113,28 @@ def main_loop( ):
         with open( join( OUTPATH, "running_count.csv" ), 'a' ) as outfile:
             outfile.write( f"{ prime.getNS() },{ count }" + linesep )
         print( f"{i} / {n} complete." )
-        exit()
+
 
     # write final counts
     results = [ ( k, v ) for k, v in results.items() ]
     results.sort( key=lambda x: x[ 1 ], reverse=True )
     with open( join( OUTPATH, "final_count.csv" ), 'w' ) as outfile:
         outfile.writelines( [ f"{ x[ 0 ] },{ x[ 1 ] }" + linesep for x in results ] )
-    with open( join( OUTPATH, "errors.list" ), 'w' ) as outfile:
-        outfile.writelines( [ f"{ns}\n" for ns in ERRSET ] )
+    if len( ERRSET ) > 0:
+        with open( join( OUTPATH, "errors.list" ), 'w' ) as outfile:
+            outfile.writelines( [ f"{ns}\n" for ns in ERRSET ] )
 
 
-EM_LINE_MAX = 0.5
+EM_LINE_MAX = 20
+CONT_MAX = 200
 ERRSET = set( )
-R_LIST = [ MGII_RANGE, HB_RANGE, OIII_RANGE, HG_RANGE ]
-R_DICT = { MGII_RANGE: "MgII", HB_RANGE: f"H{ BETA }", OIII_RANGE: "OIII", HG_RANGE: f"H{ GAMMA }" }
-OUTPATH = join( BASE_PROCESSED_PATH, "Analysis", "EM Line Search Testing", f"Chi {EM_LINE_MAX} Old" )
+C_RANGE = (MGII_RANGE[ 0 ], HB_RANGE[ 0 ])
+R_LIST = [ MGII_RANGE, HB_RANGE, C_RANGE ]  # , OIII_RANGE, HG_RANGE ]
+R_DICT = { MGII_RANGE: "MgII", HB_RANGE: f"H{ BETA }", OIII_RANGE: "OIII", HG_RANGE: f"H{ GAMMA }",
+           C_RANGE: "Continuum" }
+LIMIT_DICT = { MGII_RANGE: EM_LINE_MAX, HB_RANGE: EM_LINE_MAX, OIII_RANGE: EM_LINE_MAX, HG_RANGE: EM_LINE_MAX,
+               C_RANGE: CONT_MAX }
+OUTPATH = join( BASE_PROCESSED_PATH, "Analysis", "EM + C Search", f"EM {EM_LINE_MAX} CONT {CONT_MAX} Old" )
 
 if __name__ == '__main__':
     from common import freeze_support
