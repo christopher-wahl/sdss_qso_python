@@ -98,16 +98,16 @@ def main_loop( ):
             namelist.insert( i, prime )
             continue
         unfinished_print( f"{i} / {n} Loading spectra from disk..." )
-        prime = rspecLoader( prime )
-        speclist = async_rspec_scaled( namelist, prime )
+        prime_spec = rspecLoader( prime )
+        speclist = async_rspec_scaled( namelist, prime_spec )
         namelist.insert( i, prime )
         done( )
 
         # do analysis
-        count = single_spec( prime, speclist )
+        count = single_spec( prime_spec, speclist )
 
         del speclist
-        results[ prime.getNS( ) ] = count
+        results[ prime_spec.getNS( ) ] = count
 
         # update count
         with open( join( OUTPATH, "running_count.csv" ), 'a' ) as outfile:
