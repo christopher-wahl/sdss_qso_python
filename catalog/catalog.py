@@ -97,7 +97,7 @@ class catalog( dict ):
     def rewrite( self ):
         if self.__THIS_CAT != self.SHEN_CATALOG:
             raise TypeError( f"catalog.rewrite(): Catalog type is not SHEN_CATALOG.  Unable to rewrite.\n__THIS_CAT: {self.__THIS_CAT}" )
-        d = {}.update( self )
+        d = self.copy( )
         with open( self.__CAT_DICT[ self.__THIS_CAT ], 'wb' ) as outfile:
             pickle.dump( d, outfile )
 

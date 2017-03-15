@@ -1,6 +1,6 @@
 import pickle
 from csv import DictReader, DictWriter
-from typing import List
+from typing import List, Union
 
 from common.constants import BINNED_SPEC_PATH, REST_SPEC_PATH, SOURCE_SPEC_PATH, os
 from fileio.utils import dirCheck, extCheck, fileCheck, fns, join, ns2f
@@ -181,3 +181,28 @@ def async_write( path: str, speclist: List[ Spectrum ], extention: str = ".spec"
                 generic_async_wrapper( [ (path, spec, extention) for spec in speclist ], __async_write_wrapper ) )
     finally:
         write_loop.close( )
+
+
+def async_rspec_scaled( namelist: List[ str ], scale_to: Union[ float, Spectrum ] ) -> List[ Spectrum ]:
+    from common.async_tools import generic_async_wrapper
+    from common.constants import REST_SPEC_PATH
+    import asyncio
+
+    if type( scale_to ) is Spectrum:
+        scale_to = scale_to.aveFlux( )
+
+    async def __async_scaled_load_wrapper( path, filename, scaleflx ):
+        return load( path, filename ).scale( scaleflx=scaleflx )
+
+    output_list = [ ]
+    load_loop = asyncio.new_event_loop( )
+
+    try:
+        load_loop.run_until_complete(
+                generic_async_wrapper( [ (REST_SPEC_PATH, f"{ns}.rspec", scale_to) for ns in namelist ],
+                                       __async_scaled_load_wrapper,
+                                       output_list ) )
+    finally:
+        load_loop.close( )
+
+    return output_list
