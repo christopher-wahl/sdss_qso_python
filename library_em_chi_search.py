@@ -111,7 +111,7 @@ def main_loop( ):
 
         # update count
         with open( join( OUTPATH, "running_count.csv" ), 'a' ) as outfile:
-            outfile.write( f"{ prime.getNS() },{ count }" + linesep )
+            outfile.write( f"{ prime_spec.getNS() },{ count }" + linesep )
         print( f"{i} / {n} complete." )
 
 
