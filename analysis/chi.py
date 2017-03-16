@@ -5,7 +5,7 @@ from spectrum import Spectrum
 
 def chi( expSpec: Spectrum, obsSpec: Spectrum, doScale: bool = False, skipCopy: bool = False,
          wl_low_limit: float = None, wl_high_limit: float = None, n_sigma: float = 1,
-         old_process: bool = False, get_count: bool = False ) -> float:
+         old_process: bool = False, get_count: bool = False, skip_2cpy = False ) -> float:
     """
     Returns the chi^2 value between the given spectra
 
@@ -27,6 +27,8 @@ def chi( expSpec: Spectrum, obsSpec: Spectrum, doScale: bool = False, skipCopy: 
     if not skipCopy:
         a0 = expSpec.cpy( )
         a1 = obsSpec.cpy( )
+    elif skip_2cpy:
+        a0 = expSpec.cpy()
     else:
         a0 = expSpec
         a1 = obsSpec

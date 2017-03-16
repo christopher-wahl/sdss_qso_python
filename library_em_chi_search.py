@@ -23,7 +23,7 @@ def write_shen_results( primary: Spectrum, speclist: List[ Spectrum ] ) -> None:
 
 def __single_chi_wrapper( inputV: Tuple[ Spectrum, Spectrum ] ) -> Tuple[ str, float ]:
     pSpec, sSpec = inputV
-    return (sSpec.getNS( ), chi( pSpec, sSpec, old_process=True ))
+    return (sSpec.getNS( ), chi( pSpec, sSpec, old_process=True, skip_2cpy = True ))
 
 
 def single_chi( primary: Spectrum, speclist: List[ Spectrum ], rge: tuple ) -> dict:
@@ -130,7 +130,7 @@ EM_LINE_MAX = 20
 CONT_MAX = 200
 ERRSET = set( )
 
-R_LIST = [ MGII_RANGE, HB_RANGE, CONT_RANGE ]  # , OIII_RANGE, HG_RANGE ]
+R_LIST = [ MGII_RANGE, HB_RANGE, OIII_RANGE, CONT_RANGE ]  # , OIII_RANGE, HG_RANGE ]
 R_DICT = { MGII_RANGE: "MgII", HB_RANGE: f"H{ BETA }", OIII_RANGE: "OIII", HG_RANGE: f"H{ GAMMA }",
            CONT_RANGE: "Continuum" }
 LIMIT_DICT = { MGII_RANGE: EM_LINE_MAX, HB_RANGE: EM_LINE_MAX, OIII_RANGE: EM_LINE_MAX, HG_RANGE: EM_LINE_MAX,
@@ -142,4 +142,7 @@ if __name__ == '__main__':
 
     freeze_support( )
     dirCheck( OUTPATH )
-    main_loop()
+    try:
+        main_loop()
+    except KeyboardInterrupt:
+        exit()
