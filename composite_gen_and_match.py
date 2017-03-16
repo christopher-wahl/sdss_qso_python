@@ -13,11 +13,11 @@ from spectrum.utils import compose_speclist, flux_from_AB, reduce_speclist
 from tools.list_dict import sort_list_by_shen_key
 from tools.plot import ab_z_plot, four_by_four_multiplot, spectrum_plot
 
-EM_LINE_MAX = 30
+EM_LINE_MAX = 10
 CONTNUUM_MAX = 100
 MATCH_SCHEMA = [ MGII_RANGE, HB_RANGE ]
 FITTING_FUNC = log10
-OLD_PROCESS = False
+OLD_PROCESS = True
 LIMIT_DICT = { MGII_RANGE: EM_LINE_MAX, HB_RANGE: EM_LINE_MAX, HG_RANGE: EM_LINE_MAX, OIII_RANGE: EM_LINE_MAX,
                CONT_RANGE: CONTNUUM_MAX }
 CDIR = "/home/christopher/Desktop/Composites/"
