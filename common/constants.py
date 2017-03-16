@@ -38,7 +38,7 @@ MGII_RANGE = ( 2680, 2910 )#( 2750, 2850 )
 HG_RANGE = (4250, 4400)
 HB_RANGE = ( 4750, 4950 )
 OIII_RANGE = (4950, 5050)
-CONT_RANGE = (STD_MIN_WL, STD_MAX_WL)
+CONT_RANGE = (MGII_RANGE[ 1 ], HB_RANGE[ 0 ])
 
 """ CHARACTERS """
 ANGSTROM = r"‎Å"
@@ -52,3 +52,6 @@ if sys.platform == "win32":
     FLUX_UNITS = FLUX_UNITS.encode( 'cp1252', errors='replace' ).decode( 'cp1252' )
     BETA = BETA.encode( 'cp1252', errors='replace' ).decode( 'cp1252' )
     GAMMA = GAMMA.encode( 'cp1252', errors='replace' ).decode( 'cp1252' )
+
+RANGE_STRING_DICT = { MGII_RANGE: "MgII", HG_RANGE: f"H{GAMMA}", HB_RANGE: f"H{BETA}", OIII_RANGE: "OIII",
+                      CONT_RANGE: "Continuum" }

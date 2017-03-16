@@ -45,7 +45,10 @@ class Spectrum( dict ):
         err_v = list( )
         for wl in self.getWavelengths( ):
             if minwl <= wl <= maxwl:
-                err_v.append( -2.5 * log10( 3.34E4 * pow( wl, 2 ) * 1E-17 * self[ wl ][ 0 ] ) + 8.9 )
+                f_v = 3.34E4 * pow( wl, 2 ) * 1E-17 * self[ wl ][ 0 ]
+                if f_v < 0:
+                    continue
+                err_v.append( -2.5 * log10( f_v ) + 8.9 )
         return float( nanstd( err_v ) )
 
     def align(self, wlList ):
@@ -149,7 +152,7 @@ class Spectrum( dict ):
         spec = Spectrum( ns=self.getNS( ), z=self.getRS( ), gmag=self.getGmag( ) )
         return spec
 
-    def dim_to_ab( self, to_mag_ab: float, scale_wl=None ) -> None:
+    def dim_to_ab( self, to_mag_ab: float, scale_wl=DEFAULT_SCALE_WL ) -> None:
         """
         Determines the desired flux that would be exhibited at a given AB Magnitude and wavelength,
         then passes that value to the Spectrum.scale() method, scaling the spectrum to that flux density
@@ -160,7 +163,6 @@ class Spectrum( dict ):
         :return: None
         :rtype: None
         """
-        scale_wl = scale_wl or DEFAULT_SCALE_WL
         exponent = (8.9 - to_mag_ab) / 2.5
         f_v = pow( 10, exponent )
         f_lambda = f_v / (3.34E4 * 1E-17 * pow( scale_wl, 2 ))

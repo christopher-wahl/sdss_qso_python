@@ -4,7 +4,7 @@ from typing import List, Union
 
 from common.constants import BINNED_SPEC_PATH, REST_SPEC_PATH, SOURCE_SPEC_PATH, os
 from fileio.utils import dirCheck, extCheck, fileCheck, fns, join, ns2f
-from spectrum import Spectrum
+from spectrum import Iterable, Spectrum
 
 
 def text_load( path: str, filename: str ) -> Spectrum:
@@ -183,7 +183,7 @@ def async_write( path: str, speclist: List[ Spectrum ], extention: str = ".spec"
         write_loop.close( )
 
 
-def async_rspec_scaled( namelist: List[ str ], scale_to: Union[ float, Spectrum ] ) -> List[ Spectrum ]:
+def async_rspec_scaled( namelist: Iterable[ str ], scale_to: Union[ float, Spectrum ] ) -> List[ Spectrum ]:
     from common.async_tools import generic_async_wrapper
     from common.constants import REST_SPEC_PATH
     import asyncio

@@ -58,7 +58,7 @@ def four_by_four_multiplot( prime: Spectrum, speclist: list, path: str = None, f
     for i in range( 0, len( coSpecs ), 4 ):
         g( f'set multiplot layout 2,2 title "{plotTitle}"' )
         for coSpec in coSpecs[ i : i + 4 ]:
-            g.plot( primeData, coSpec )
+            g.plot( coSpec, primeData )
         g( 'unset multiplot' )
 
     if debug:
@@ -69,7 +69,7 @@ def four_by_four_multiplot( prime: Spectrum, speclist: list, path: str = None, f
 
 def ab_z_plot( path: str, filename: str, primary: Union[ str or Spectrum ],
                points: Union[ results_pipeline or dict or List[ str ] or List[ Spectrum ] ], plotTitle: str = "",
-               n_sigma: float = 1,
+               n_sigma: float = 1, rs_fit_func=None, rs_fit_title=None,
                debug: bool = False ) -> Union[ Gnuplot.Gnuplot or None ]:
     from tools.cosmo import magnitude_evolution
     from catalog import shenCat
@@ -121,6 +121,13 @@ def ab_z_plot( path: str, filename: str, primary: Union[ str or Spectrum ],
             ab_err.append( shenCat.subkey( ns, 'ab_err' ) )
 
     plot_points = make_points_plotitem( z_data, ab_data, ab_err, color="royalblue" )
+    plotlist = [ plot_points, prime_plot, prime_upper_plot, prime_lower_plot, prime_point ]
+    if rs_fit_func is not None:
+        fitx = [ (z / 100) for z in range( 46, 83 ) ]
+        fity = [ rs_fit_func( z ) for z in fitx ]
+        fitplot = make_line_plotitem( fitx, fity, "Fit Function" if rs_fit_title is None else rs_fit_title,
+                                      with_="lines dt '-'", color="grey50" )
+        plotlist.append( fitplot )
 
     """ Data has been formed.  Make actual plot """
     g = Gnuplot.Gnuplot( persist=debug )  # 1 if debug else 0 )
@@ -136,7 +143,7 @@ def ab_z_plot( path: str, filename: str, primary: Union[ str or Spectrum ],
         g( 'set terminal pdf enhanced size 9,6' )
         g( f'set output {__fix_outpath( path, filename ) }' )
 
-    g.plot( plot_points, prime_plot, prime_upper_plot, prime_lower_plot, prime_point )
+    g.plot( *plotlist )
 
     if not debug:
         g( 'set output' )
@@ -157,7 +164,9 @@ def spectrum_plot( spec: Spectrum, path: str, filename: str, color: str = "royal
     g( 'set grid' )
     if not debug:
         g( 'set terminal pdf color enhanced size 9,6' )
-        g( f'set output {__fix_outpath( path, "%s.pdf" % filename )}' )
+        if ".pdf" not in filename:
+            filename += ".pdf"
+        g( f'set output {__fix_outpath( path, "%s" % filename )}' )
 
     g.plot( make_spectrum_plotitem( spec, color = color ) )
 

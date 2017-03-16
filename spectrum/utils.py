@@ -1,4 +1,4 @@
-from typing import List, Tuple, Union
+from typing import Iterable, List, Tuple, Union
 
 from common.constants import DEFAULT_SCALE_RADIUS, DEFAULT_SCALE_WL
 from spectrum import Spectrum
@@ -173,3 +173,27 @@ def __multi_scale_wrapper( inputV: Tuple[ Spectrum, float, float, float ] ) -> S
     spec, scale_flux, scale_wl, scale_radius = inputV
     spec.scale( scaleflx=scale_flux, scalewl=scale_wl, radius=scale_radius )
     return spec
+
+
+def reduce_speclist( namelist: Iterable[ str ], speclist: List[ Spectrum ] ) -> None:
+    """
+    Deletes any spectrum in speclist with a namestring not contained in namelist
+
+    :param namelist: Iterable of namestrings
+    :param speclist: List of Spectrum
+    :type namelist: Iterable
+    :type speclist: list
+    :return: None
+    """
+    for i in range( len( speclist ) - 1, -1, -1 ):
+        if speclist[ i ].getNS( ) not in namelist:
+            del speclist[ i ]
+
+
+def flux_from_AB( ABmag: float, wavelength: float = DEFAULT_SCALE_WL ) -> float:
+    # Convert AB magntiude to flux_frequency
+    exponent = (8.9 - ABmag) / 2.5
+    f_v = pow( 10, exponent )
+
+    # Conert flux_frequency to flux_wavelength, and put into SDSS units
+    return f_v / (3.34E4 * 1E-17 * pow( wavelength, 2 ))
