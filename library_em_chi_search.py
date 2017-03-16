@@ -4,7 +4,8 @@ from copy import deepcopy
 from analysis.chi import chi
 from catalog import shenCat
 from common.async_tools import generic_unordered_multiprocesser
-from common.constants import BASE_PROCESSED_PATH, BETA, GAMMA, HB_RANGE, HG_RANGE, MGII_RANGE, OIII_RANGE, join, linesep
+from common.constants import BASE_PROCESSED_PATH, BETA, CONT_RANGE, GAMMA, HB_RANGE, HG_RANGE, MGII_RANGE, OIII_RANGE, \
+    join, linesep
 from common.messaging import done, tab_print, unfinished_print
 from fileio.list_dict_utils import namestring_dict_writer
 from fileio.spec_load_write import async_rspec_scaled, rspecLoader
@@ -128,12 +129,12 @@ def main_loop( ):
 EM_LINE_MAX = 20
 CONT_MAX = 200
 ERRSET = set( )
-C_RANGE = (MGII_RANGE[1], HB_RANGE[0])
-R_LIST = [ MGII_RANGE, HB_RANGE, C_RANGE ]  # , OIII_RANGE, HG_RANGE ]
+
+R_LIST = [ MGII_RANGE, HB_RANGE, CONT_RANGE ]  # , OIII_RANGE, HG_RANGE ]
 R_DICT = { MGII_RANGE: "MgII", HB_RANGE: f"H{ BETA }", OIII_RANGE: "OIII", HG_RANGE: f"H{ GAMMA }",
-           C_RANGE: "Continuum" }
+           CONT_RANGE: "Continuum" }
 LIMIT_DICT = { MGII_RANGE: EM_LINE_MAX, HB_RANGE: EM_LINE_MAX, OIII_RANGE: EM_LINE_MAX, HG_RANGE: EM_LINE_MAX,
-               C_RANGE: CONT_MAX }
+               CONT_RANGE: CONT_MAX }
 OUTPATH = join( BASE_PROCESSED_PATH, "Analysis", "EM + C Search", f"EM {EM_LINE_MAX} CONT {CONT_MAX} Old" )
 
 if __name__ == '__main__':
