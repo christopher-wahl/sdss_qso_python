@@ -55,8 +55,7 @@ def match_scheme( composite: Spectrum, range_scheme: Iterable[ Tuple[ float, flo
             return { }
         reduce_speclist( results.keys( ), speclist )
         print( len( speclist ) )
-        for spec in speclist:
-            print( spec.magAB( ) )
+
     return results
 
 
@@ -137,7 +136,7 @@ def main( base_ns: str ):
     unfinished_print( "Writing and plotting match results..." )
     first = list( results.keys( ) )[ 0 ]
     composite.scale( spec=rspecLoader( first ) )
-    composite.setRS( shenCat[ first.getNS( ) ][ 'z' ] )
+    composite.setRS( shenCat[ first ][ 'z' ] )
     for ns in results:
         results[ ns ] = shenCat[ ns ]
     namestring_dict_writer( results, BASE_PATH, "Composite Matches.dat" )
