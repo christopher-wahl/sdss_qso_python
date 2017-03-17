@@ -117,7 +117,6 @@ def main_loop( ):
         with open( join( OUTPATH, "running_count.csv" ), 'a' ) as outfile:
             outfile.write( f"{ prime_spec.getNS() },{ count }" + linesep )
         print( f"{i} / {n} complete." )
-        exit()
 
     # write final counts
     results = [ ( k, v ) for k, v in results.items() ]
@@ -129,7 +128,7 @@ def main_loop( ):
             outfile.writelines( [ f"{ns}\n" for ns in ERRSET ] )
 
 
-EM_LINE_MAX = 10
+EM_LINE_MAX = 15
 CONT_MAX = 100
 ERRSET = set( )
 
