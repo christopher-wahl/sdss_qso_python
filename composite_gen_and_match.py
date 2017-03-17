@@ -14,13 +14,14 @@ from tools.list_dict import sort_list_by_shen_key
 from tools.plot import ab_z_plot, four_by_four_multiplot, spectrum_plot
 
 EM_LINE_MAX = 10
-CONTNUUM_MAX = 100
-MATCH_SCHEMA = [ MGII_RANGE, HB_RANGE ]
+CONTNUUM_MAX = 50
+MATCH_SCHEMA = [ MGII_RANGE, HB_RANGE, CONT_RANGE ]
 FITTING_FUNC = log10
 OLD_PROCESS = True
 LIMIT_DICT = { MGII_RANGE: EM_LINE_MAX, HB_RANGE: EM_LINE_MAX, HG_RANGE: EM_LINE_MAX, OIII_RANGE: EM_LINE_MAX,
                CONT_RANGE: CONTNUUM_MAX }
-CDIR = "/home/christopher/Desktop/Composites/"
+SOURCE_DIR = "/media/christopher/Research/Processed/Analysis/EM + C Search/EM 20 CONT 200 Old/Individual Results"
+CDIR = "/media/christopher/Research/Processed/Analysis/EM + C Search/EM 20 CONT 200 Old/Composites"
 
 
 def __chi_wrapper( inputV ):
@@ -40,9 +41,11 @@ def anaylsis( composite: Spectrum, speclist: List[ Spectrum ], rge: Tuple[ float
     return dict( out )
 
 
-def match_scheme( composite: Spectrum, range_scheme: Iterable[ Tuple[ float, float ] ] = MATCH_SCHEMA ) -> dict:
+def match_scheme( composite: Spectrum, range_scheme: Iterable[ Tuple[ float, float ] ] = MATCH_SCHEMA,
+                  ns_list: Iterable = shenCat.keys( ) ) -> dict:
     unfinished_print( "Loading scaled catalog..." )
-    speclist = async_rspec_scaled( shenCat.keys( ), composite )
+    composite.scale( scaleflx=flux_from_AB( 20 ) )
+    speclist = async_rspec_scaled( ns_list, composite )
     done( )
     results = { }
     for rge in range_scheme:
@@ -52,6 +55,8 @@ def match_scheme( composite: Spectrum, range_scheme: Iterable[ Tuple[ float, flo
             return { }
         reduce_speclist( results.keys( ), speclist )
         print( len( speclist ) )
+        for spec in speclist:
+            print( spec.magAB( ) )
     return results
 
 
@@ -77,7 +82,7 @@ def main( base_ns: str ):
     done( )
 
     unfinished_print( "Loading base matches DAT..." )
-    source_dict = namestring_dict_reader( BASE_PATH, f"{base_ns}.dat" )
+    source_dict = namestring_dict_reader( SOURCE_DIR, f"{base_ns}.csv" )
     done( )
 
     # Fit AB( z ) function, determine scale values
@@ -97,8 +102,12 @@ def main( base_ns: str ):
 
     # Scale all spectra to z = 0.46 on fit function
     unfinished_print( "Loading scaled matches..." )
-    speclist = async_rspec_scaled( [ base_ns, *source_dict.keys( ) ], base )
+    speclist = async_rspec_scaled( [ *source_dict.keys( ) ], base )
     done( )
+
+    # Drop a 4x4 plot of these
+    four_by_four_multiplot( base, speclist, BASE_PATH, "Source Multiplot.pdf",
+                            f"Matches to {base_ns} EM 20 CONT 200 Old" )
 
     unfinished_print( "Generating composite spectrum..." )
     composite = compose_speclist( speclist, f"Composite Base {base_ns}" )
@@ -126,6 +135,9 @@ def main( base_ns: str ):
 
     # Plot AB v Z of results
     unfinished_print( "Writing and plotting match results..." )
+    first = list( results.keys( ) )[ 0 ]
+    composite.scale( spec=rspecLoader( first ) )
+    composite.setRS( shenCat[ first.getNS( ) ][ 'z' ] )
     for ns in results:
         results[ ns ] = shenCat[ ns ]
     namestring_dict_writer( results, BASE_PATH, "Composite Matches.dat" )
@@ -160,12 +172,54 @@ def test( ):
     exit( )
 
 
+def redo_comp( base_ns: str ):
+    from fileio.spec_load_write import load
+
+    BASE_PATH = join( CDIR, base_ns )
+    composite = load( BASE_PATH, "composite.rspec" )
+    compdict = namestring_dict_reader( BASE_PATH, "Composite Matches.dat" )
+    firstmatch = rspecLoader( list( compdict.keys( ) )[ 0 ] )
+    composite.scale( scaleflx=flux_from_AB( 20 ) )
+    # composite.setRS( shenCat.subkey( firstmatch.getNS(), 'z' ) )
+    speclist = async_rspec_scaled( list( compdict.keys( ) ), flux_from_AB( 20 ) )
+    for spec in speclist:
+        print( spec.magAB( ) )
+    print( f"Composite AB Magnitude: {composite.magAB()}" )
+    unfinished_print( f"Running match scheme (EM: {EM_LINE_MAX}, CONT: {CONTNUUM_MAX})...\n" )
+    results = match_scheme( composite, ns_list=compdict.keys( ) )
+    done( )
+
+    # get new fit from results
+    unfinished_print( "Fitting new results... " )
+    a, b = fit_log( results )
+    print( f"New fit: {a} {FITTING_FUNC.__name__}( z ) + {b}" )
+
+    # Plot AB v Z of results
+    unfinished_print( "Writing and plotting match results..." )
+    for ns in results:
+        results[ ns ] = shenCat[ ns ]
+    namestring_dict_writer( results, BASE_PATH, "Composite Matches - redo.dat" )
+    ab_z_plot( BASE_PATH, "Composite AB v Z sigma 1 - redo.pdf", composite, results, n_sigma=1,
+               rs_fit_func=lambda x: fit_func( x, a, b ),
+               rs_fit_title=f"Fit: %0.2f {FITTING_FUNC.__name__}( z ) + %0.2f" % (a, b) )
+    ab_z_plot( BASE_PATH, "Composite AB v Z sigma 2 - redo.pdf", composite, results, n_sigma=2,
+               rs_fit_func=lambda x: fit_func( x, a, b ),
+               rs_fit_title=f"Fit: %0.2f {FITTING_FUNC.__name__}( z ) + %0.2f" % (a, b) )
+    # Plot 4x4 results
+    speclist = sort_list_by_shen_key( async_rspec_scaled( results.keys( ), composite ) )
+    four_by_four_multiplot( composite, speclist, BASE_PATH, "Composite Multiplot - redo.pdf", composite.getNS( ) )
+    done( )
+    exit( )
+
+
+#redo_comp( "51821-0408-552" )
+
 if __name__ == '__main__':
     from common import freeze_support
 
     freeze_support( )
     try:
-        main( "54115-2493-610" )
+        main( "51821-0408-552" )
     except KeyboardInterrupt:
         print( "Got BREAK command. Quitting..." )
     finally:
