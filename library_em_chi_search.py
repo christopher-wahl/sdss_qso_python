@@ -49,7 +49,8 @@ def single_chi( primary: Spectrum, speclist: List[ Spectrum ], rge: tuple ) -> d
 
 
 def single_spec( primary: Spectrum, speclist: List[ Spectrum ] ) -> float:
-    print( f"Anaylzing { primary.getNS() }" )
+    print(
+        f"Anaylzing { primary.getNS() }:  AB = { shenCat[ primary.getNS() ][ 'ab' ] }; Z = {shenCat[ primary.getNS() ][ 'z' ]}" )
 
     results = { }
     for rge in R_LIST:
@@ -93,8 +94,9 @@ def main_loop( ):
     except: pass
     print( len( results ) )
     for i in range( n ):
-        prime = namelist.pop( i )
-        # prime = "54115-2493-610"; namelist.remove( prime )
+        # prime = namelist.pop( i )
+        prime = "54095-2583-381";
+        namelist.remove( prime )
         if prime in results:
             namelist.insert( i, prime )
             continue
@@ -115,7 +117,7 @@ def main_loop( ):
         with open( join( OUTPATH, "running_count.csv" ), 'a' ) as outfile:
             outfile.write( f"{ prime_spec.getNS() },{ count }" + linesep )
         print( f"{i} / {n} complete." )
-
+        exit()
 
     # write final counts
     results = [ ( k, v ) for k, v in results.items() ]
@@ -127,8 +129,8 @@ def main_loop( ):
             outfile.writelines( [ f"{ns}\n" for ns in ERRSET ] )
 
 
-EM_LINE_MAX = 20
-CONT_MAX = 200
+EM_LINE_MAX = 10
+CONT_MAX = 100
 ERRSET = set( )
 
 R_LIST = [ MGII_RANGE, HB_RANGE, OIII_RANGE, CONT_RANGE ]  # , OIII_RANGE, HG_RANGE ]
