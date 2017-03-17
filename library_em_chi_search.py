@@ -94,9 +94,8 @@ def main_loop( ):
     except: pass
     print( len( results ) )
     for i in range( n ):
-        # prime = namelist.pop( i )
-        prime = "54095-2583-381";
-        namelist.remove( prime )
+        prime = namelist.pop( i )
+        #prime = "54095-2583-381"; namelist.remove( prime )
         if prime in results:
             namelist.insert( i, prime )
             continue
