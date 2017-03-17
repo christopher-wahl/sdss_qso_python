@@ -4,9 +4,7 @@ from typing import List, Tuple, Union
 from astropy import units
 from astropy.cosmology import FlatLambdaCDM
 
-# TODO: Form dl_string method to reduce call-recall of the same string.  Or just localize it into dl_from_Z
-
-cosmo = FlatLambdaCDM( H0=67.74, Om0 = 0.3089 )
+__cosmo = FlatLambdaCDM( H0=67.74, Om0=0.3089 )
 
 def dl_from_z( z ):
     """
@@ -18,7 +16,7 @@ def dl_from_z( z ):
     :return: Luminosity distance at z
     :rtype: float
     """
-    return cosmo.luminosity_distance( z ).to( units.parsec ).value
+    return __cosmo.luminosity_distance( z ).to( units.parsec ).value
 
 
 def magnitude_evolution( m0: float, z0: float, zrange: tuple = (0.46, 0.82), step: float = 0.01,

@@ -93,3 +93,50 @@ def namestring_dict_reader( path: str, filename: str, top_key: str = "namestring
             outdict.update( reader_func( line ) )
 
     return outdict
+
+
+def simple_list_reader( path: str, filename: str, valuespliter: Union[ str, None ] = "," ) -> list:
+    """
+    Reads in a simple list from a file.  Will attempt to split each line by valuesplitter variable.
+    Is capable of discerning between input types of int, float and str.  Will evaluate to these types accordingly.
+
+    If the length of line.split( valuesplitter ) == 1, returns a simple list of values.  If that length is greater than one,
+    the entry will be a tuple of all the individual values.
+
+    :param path: /path/to/filename
+    :param filename: name of the file
+    :param valuespliter: value to split the line by.  Defaults to a comma ","  If you need to ensure the line is NOT split, enter valuesplitter = None
+    :type path: str
+    :type filename: str
+    :type valuespliter: str or NoneType
+    :return: List of file lines
+    :rtype: list
+    """
+    from fileio.utils import fileCheck, join
+
+    # Use this method to determine subtypes and assign accordingly
+    # i.e. firgure out if it's an int, float, or string
+    # If it can't make value one of those three terms, it throws an error
+    def __get_type( value ) -> type:
+        types = [ int, float, str ]
+        for t in types:
+            try:
+                t( value )
+                return t
+            except ValueError:
+                continue
+        raise ValueError( f"Unable to determine type if input value: { value }" )
+
+    fileCheck( path, filename )
+    outlist = [ ]
+    with open( join( path, filename ), 'r' ) as infile:
+        for line in infile:
+            line = line.strip( ).split( valuespliter )
+            for i in range( len( line ) ):
+                line[ i ] = __get_type( line[ i ].strip( ) )( line[ i ] )
+            if len( line ) == 1:
+                line = line[ 0 ]
+            else:
+                line = tuple( line )
+            outlist.append( line )
+    return outlist

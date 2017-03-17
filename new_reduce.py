@@ -1,26 +1,20 @@
 from catalog import shenCat
-from common.constants import MGII_RANGE, OIII_RANGE
-from fileio.spec_load_write import async_rspec
+from fileio.list_dict_utils import namestring_dict_reader, simple_list_reader
+from fileio.utils import join
+from tools.plot import ab_z_plot
+
 
 shenCat.load( )
 
-speclist = async_rspec( shenCat.keys( ) )
-for spec in speclist:
-    spec.trim( wlLow=MGII_RANGE[ 0 ], wlHigh=OIII_RANGE[ 1 ] )
-    i = 0
-    max_i = 0
-    wls = spec.getWavelengths( )
-    for wl in wls:
-        if spec.getErr( wl ) == 0:
-            i += 1
-        else:
-            max_i = max( max_i, i )
-            i = 0
+path, filename = "/media/christopher/Research/Processed/Analysis/EM + C Search/EM 20 CONT 200 Old/", "final_count.csv"
+countlist = simple_list_reader( path, filename )
 
-    if max_i > 100:
-        del shenCat[ spec.getNS( ) ]
-        print( spec.getNS( ) )
+plotpath = join( path, "Plots2" )
+indipath = join( path, "Individual Results" )
+for line in countlist:
+    if 15 > line[ 1 ] > 5:
+        rdict = namestring_dict_reader( indipath, f"{line[ 0 ]}.csv" )
+        ab_z_plot( plotpath, f"{line[ 0 ]}.pdf", line[ 0 ], rdict )
+        print( *line )
 
-print( len( shenCat ) )
-# shenCat.rewrite()
-shenCat.export_text( )
+print( "Complete" )
