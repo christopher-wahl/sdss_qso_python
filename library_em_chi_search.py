@@ -81,7 +81,7 @@ def main_loop( ):
     try:
         with open( join( OUTPATH, "running_count.csv" ), 'r' ) as infile:
             for line in infile:
-                if line == "\n":
+                if len(line) < 3:
                     continue
                 line.strip()
                 line = line.split(',')
@@ -91,7 +91,7 @@ def main_loop( ):
             try: del line
             except: pass
     except: pass
-
+    print( len( results ) )
     for i in range( n ):
         prime = namelist.pop( i )
         # prime = "54115-2493-610"; namelist.remove( prime )
