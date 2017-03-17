@@ -138,7 +138,8 @@ R_DICT = { MGII_RANGE: "MgII", HB_RANGE: f"H{ BETA }", OIII_RANGE: "OIII", HG_RA
            CONT_RANGE: "Continuum" }
 LIMIT_DICT = { MGII_RANGE: EM_LINE_MAX, HB_RANGE: EM_LINE_MAX, OIII_RANGE: EM_LINE_MAX, HG_RANGE: EM_LINE_MAX,
                CONT_RANGE: CONT_MAX }
-OUTPATH = join( BASE_PROCESSED_PATH, "Analysis", "EM + C CHI20 Search", f"EM {EM_LINE_MAX} CONT {CONT_MAX} Old" )
+OUTPATH = join(BASE_PROCESSED_PATH, "Analysis", f"EM + C CHI{CHI_BASE_MAG} Search",
+               f"EM {EM_LINE_MAX} CONT {CONT_MAX} Old")
 
 if __name__ == '__main__':
     from common import freeze_support
