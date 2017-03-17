@@ -4,13 +4,13 @@ from copy import deepcopy
 from analysis.chi import chi
 from catalog import shenCat
 from common.async_tools import generic_unordered_multiprocesser
-from common.constants import BASE_PROCESSED_PATH, BETA, CONT_RANGE, GAMMA, HB_RANGE, HG_RANGE, MGII_RANGE, OIII_RANGE, \
-    join, linesep
+from common.constants import BASE_PROCESSED_PATH, BETA, CHI_BASE_MAG, CONT_RANGE, GAMMA, HB_RANGE, HG_RANGE, MGII_RANGE, \
+    OIII_RANGE, join, linesep
 from common.messaging import done, tab_print, unfinished_print
 from fileio.list_dict_utils import namestring_dict_writer
 from fileio.spec_load_write import async_rspec_scaled, rspecLoader
 from fileio.utils import dirCheck
-from spectrum import List, Spectrum, Tuple
+from spectrum import List, Spectrum, Tuple, flux_from_AB
 
 
 def write_shen_results( primary: Spectrum, speclist: List[ Spectrum ] ) -> None:
@@ -100,6 +100,7 @@ def main_loop( ):
             continue
         unfinished_print( f"{i} / {n} Loading spectra from disk..." )
         prime_spec = rspecLoader( prime )
+        prime_spec.scale( scaleflx=flux_from_AB( CHI_BASE_MAG ) )
         speclist = async_rspec_scaled( namelist, prime_spec )
         namelist.insert( i, prime )
         done( )
@@ -135,7 +136,7 @@ R_DICT = { MGII_RANGE: "MgII", HB_RANGE: f"H{ BETA }", OIII_RANGE: "OIII", HG_RA
            CONT_RANGE: "Continuum" }
 LIMIT_DICT = { MGII_RANGE: EM_LINE_MAX, HB_RANGE: EM_LINE_MAX, OIII_RANGE: EM_LINE_MAX, HG_RANGE: EM_LINE_MAX,
                CONT_RANGE: CONT_MAX }
-OUTPATH = join( BASE_PROCESSED_PATH, "Analysis", "EM + C Search", f"EM {EM_LINE_MAX} CONT {CONT_MAX} Old" )
+OUTPATH = join( BASE_PROCESSED_PATH, "Analysis", "EM + C CHI20 Search", f"EM {EM_LINE_MAX} CONT {CONT_MAX} Old" )
 
 if __name__ == '__main__':
     from common import freeze_support
