@@ -94,9 +94,8 @@ def main_loop( ):
     except: pass
     print( len( results ) )
     for i in range( n ):
-        # prime = namelist.pop( i )
-        prime = "54095-2583-381";
-        namelist.remove( prime )
+        prime = namelist.pop( i )
+        #prime = "54095-2583-381"; namelist.remove( prime )
         if prime in results:
             namelist.insert( i, prime )
             continue
@@ -117,7 +116,6 @@ def main_loop( ):
         with open( join( OUTPATH, "running_count.csv" ), 'a' ) as outfile:
             outfile.write( f"{ prime_spec.getNS() },{ count }" + linesep )
         print( f"{i} / {n} complete." )
-        exit()
 
     # write final counts
     results = [ ( k, v ) for k, v in results.items() ]
@@ -129,7 +127,7 @@ def main_loop( ):
             outfile.writelines( [ f"{ns}\n" for ns in ERRSET ] )
 
 
-EM_LINE_MAX = 10
+EM_LINE_MAX = 15
 CONT_MAX = 100
 ERRSET = set( )
 
@@ -138,7 +136,8 @@ R_DICT = { MGII_RANGE: "MgII", HB_RANGE: f"H{ BETA }", OIII_RANGE: "OIII", HG_RA
            CONT_RANGE: "Continuum" }
 LIMIT_DICT = { MGII_RANGE: EM_LINE_MAX, HB_RANGE: EM_LINE_MAX, OIII_RANGE: EM_LINE_MAX, HG_RANGE: EM_LINE_MAX,
                CONT_RANGE: CONT_MAX }
-OUTPATH = join( BASE_PROCESSED_PATH, "Analysis", "EM + C CHI20 Search", f"EM {EM_LINE_MAX} CONT {CONT_MAX} Old" )
+OUTPATH = join(BASE_PROCESSED_PATH, "Analysis", f"EM + C CHI{CHI_BASE_MAG} Search",
+               f"EM {EM_LINE_MAX} CONT {CONT_MAX} Old")
 
 if __name__ == '__main__':
     from common import freeze_support
