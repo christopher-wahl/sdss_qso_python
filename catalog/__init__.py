@@ -5,6 +5,7 @@ shenCat = catalog( catalog.SHEN_CATALOG )
 divCat = catalog( catalog.DIVIDE_CATALOG )
 chiCat = catalog( catalog.CHI_CATALOG )
 
+shenCat.load( )
 
 def get_shen_string( namestring: str, *append_values, CR: bool = False ) -> str:
     """

@@ -4,7 +4,8 @@ from scipy.optimize import curve_fit
 from analysis.chi import chi
 from catalog import shenCat
 from common.async_tools import generic_unordered_multiprocesser
-from common.constants import CONT_RANGE, HB_RANGE, HG_RANGE, MGII_RANGE, OIII_RANGE, RANGE_STRING_DICT
+from common.constants import BASE_ANALYSIS_PATH, CHI_BASE_MAG, CONT_RANGE, HB_RANGE, HG_RANGE, MGII_RANGE, OIII_RANGE, \
+    RANGE_STRING_DICT
 from common.messaging import done, unfinished_print
 from fileio.list_dict_utils import namestring_dict_reader, namestring_dict_writer
 from fileio.spec_load_write import async_rspec, async_rspec_scaled, join, rspecLoader, text_write, write
@@ -20,8 +21,9 @@ FITTING_FUNC = log10
 OLD_PROCESS = True
 LIMIT_DICT = { MGII_RANGE: EM_LINE_MAX, HB_RANGE: EM_LINE_MAX, HG_RANGE: EM_LINE_MAX, OIII_RANGE: EM_LINE_MAX,
                CONT_RANGE: CONTNUUM_MAX }
-SOURCE_DIR = "/media/christopher/Research/Processed/Analysis/EM + C Search/EM 20 CONT 200 Old/Individual Results"
-CDIR = "/media/christopher/Research/Processed/Analysis/EM + C Search/EM 20 CONT 200 Old/Composites"
+BASE_PATH = join( BASE_ANALYSIS_PATH, "EM 15 CONT 100 Old" )
+SOURCE_DIR = join( BASE_PATH, "Individual Results" )
+CDIR = join( BASE_PATH, "Composites" )
 
 
 def __chi_wrapper( inputV ):
@@ -75,9 +77,12 @@ def fit_log( data_dict: dict ):
 def main( base_ns: str ):
     shenCat.load( )
     BASE_PATH = join( CDIR, base_ns )
+    scaleAB = CHI_BASE_MAG
+    scaleflx = flux_from_AB( scaleAB )
 
     unfinished_print( f"Loading base spectrum {base_ns}..." )
     base = rspecLoader( base_ns )
+    base.scale( scaleflx=scaleflx )
     done( )
 
     unfinished_print( "Loading base matches DAT..." )
@@ -88,8 +93,7 @@ def main( base_ns: str ):
     unfinished_print( "Fitting AB magnitudes as a function of redshift... " )
     a, b = fit_log( source_dict )
     print( f"Fit function: {a} {FITTING_FUNC.__name__}( z ) + {b}" )
-    scaleAB = fit_func( 0.46, a, b )
-    scaleflx = flux_from_AB( scaleAB )
+
     print( f"Scale values:  AB( z = 0.46 ) = {scaleAB};   Flux Density = {scaleflx}" )
 
     # Do Source AB v Z plot
@@ -101,7 +105,7 @@ def main( base_ns: str ):
 
     # Scale all spectra to z = 0.46 on fit function
     unfinished_print( "Loading scaled matches..." )
-    speclist = async_rspec_scaled( [ *source_dict.keys( ) ], base )
+    speclist = sort_list_by_shen_key( async_rspec_scaled( [ base_ns, *source_dict.keys( ) ], scaleflx ) )
     done( )
 
     # Drop a 4x4 plot of these

@@ -1,20 +1,53 @@
+from analysis.chi import multi_chi_analysis
 from catalog import shenCat
-from fileio.list_dict_utils import namestring_dict_reader, simple_list_reader
+from common.constants import BASE_ANALYSIS_PATH, CHI_BASE_MAG, CONT_RANGE, HG_RANGE, MGII_RANGE
+from fileio.spec_load_write import async_rspec_scaled, load
 from fileio.utils import join
-from tools.plot import ab_z_plot
+from spectrum import flux_from_AB
+from tools.plot import ab_z_plot, four_by_four_multiplot
+
+EM_LINE = 7
+BASE_PATH = join( BASE_ANALYSIS_PATH, "EM 15 CONT 100 Old" )
+SOURCE_DIR = join( BASE_PATH, "Individual Results" )
+CDIR = join( BASE_PATH, "Composites" )
+sourcepath, sourcefile = "/media/christopher/Research/Processed/Analysis/EM 15 CONT 100 Old/Composites/53818-2440-539/", "composite.rspec"
 
 
-shenCat.load( )
+def main( ns: str ) -> None:
+    composite = load( sourcepath, sourcefile )
+    composite.scale( scaleflx=flux_from_AB( CHI_BASE_MAG ) )
+    speclist = async_rspec_scaled( shenCat.keys( ), composite )
+    chilist = [ ]
+    c2 = composite.cpy( )
+    c2.trim( wl_range=HG_RANGE )
+    chid = multi_chi_analysis( c2, speclist, skip_2cpy=True )
+    chilist = [ (k, v) for k, v in chid.items( ) ]
+    chilist.sort( key=lambda x: x[ 1 ], reverse=True )
+    chilist = list( filter( lambda x: x[ 1 ] < 5, chilist ) )
+    print( f"HG Range done: {len(chilist)}" )
 
-path, filename = "/media/christopher/Research/Processed/Analysis/EM + C Search/EM 20 CONT 200 Old/", "final_count.csv"
-countlist = simple_list_reader( path, filename )
+    c2 = composite.cpy( )
+    c2.trim( wl_range=MGII_RANGE )
+    speclist = async_rspec_scaled( [ x[ 0 ] for x in chilist ], composite )
+    chid = multi_chi_analysis( c2, speclist, skip_2cpy=True )
+    chilist = [ (k, v) for k, v in chid.items( ) ]
+    chilist.sort( key=lambda x: x[ 1 ], reverse=True )
+    chilist = list( filter( lambda x: x[ 1 ] < EM_LINE, chilist ) )
+    print( f"MGII Range done: {len(chilist)}" )
 
-plotpath = join( path, "Plots2" )
-indipath = join( path, "Individual Results" )
-for line in countlist:
-    if 15 > line[ 1 ] > 5:
-        rdict = namestring_dict_reader( indipath, f"{line[ 0 ]}.csv" )
-        ab_z_plot( plotpath, f"{line[ 0 ]}.pdf", line[ 0 ], rdict )
-        print( *line )
+    c2 = composite.cpy( )
+    c2.trim( wl_range=CONT_RANGE )
+    speclist = async_rspec_scaled( [ x[ 0 ] for x in chilist ], composite )
+    chid = multi_chi_analysis( c2, speclist, skip_2cpy=True )
+    chilist = [ (k, v) for k, v in chid.items( ) ]
+    chilist.sort( key=lambda x: x[ 1 ], reverse=True )
+    chilist = list( filter( lambda x: x[ 1 ] < EM_LINE, chilist ) )
+    print( f"MGII Range done: {len(chilist)}" )
 
-print( "Complete" )
+    speclist = async_rspec_scaled( [ x[ 0 ] for x in chilist ], composite )
+    ab_z_plot( sourcepath, "test.pdf", None, speclist )
+    four_by_four_multiplot( composite, speclist, sourcepath, "testmulti.pdf" )
+
+
+if __name__ == '__main__':
+    main( None )

@@ -1,6 +1,6 @@
 from typing import Dict, Tuple
 
-from spectrum import Spectrum
+from spectrum import List, Spectrum, Union
 
 
 def chi( expSpec: Spectrum, obsSpec: Spectrum, doScale: bool = False, skipCopy: bool = False,
@@ -24,11 +24,12 @@ def chi( expSpec: Spectrum, obsSpec: Spectrum, doScale: bool = False, skipCopy: 
     :return: chi^2
     :rtype: float
     """
-    if not skipCopy:
+    if skip_2cpy:
+        a0 = expSpec.cpy( )
+        a1 = obsSpec
+    elif not skipCopy:
         a0 = expSpec.cpy( )
         a1 = obsSpec.cpy( )
-    elif skip_2cpy:
-        a0 = expSpec.cpy()
     else:
         a0 = expSpec
         a1 = obsSpec
@@ -104,7 +105,9 @@ def async_chi_analysis( expSpec, speclist ):
 
     return resultsDict
 
-def multi_chi_analysis( expSpec, speclist, MAX_PROC = None ):
+
+def multi_chi_analysis( expSpec: Spectrum, speclist: List[ Spectrum ], getlist: bool = False, **kwargs ) -> Union[
+    List[ Tuple[ str, float ] ], dict ]:
     """
     Multiprocessing module for chi^2 analysis.  Returns a dictionary keyed by namestrings in the speclist with values of chi^2 result
 
@@ -113,15 +116,14 @@ def multi_chi_analysis( expSpec, speclist, MAX_PROC = None ):
     :return: Dictionary of { namestring : chi^2 value }, namestrings taken from the respective speclist entrys
     :rtype: dict
     """
+    from common.async_tools import generic_unordered_multiprocesser
 
     results = []
-    multiproc( [ ( expSpec, spec ) for spec in speclist ], __multi_chi_wrapper, results, MAX_PROC )
-
-    resultsDict = {}
-    for result in results:
-        resultsDict.update( result )
-
-    return resultsDict
+    input_values = [ (expSpec, spec, kwargs) for spec in speclist ]
+    generic_unordered_multiprocesser( input_values, __multi_chi_wrapper, results )
+    if getlist:
+        return results
+    return dict( results )
 
 def __multi_chi_wrapper( inputV ):
     """
@@ -132,8 +134,10 @@ def __multi_chi_wrapper( inputV ):
     :return: Dictionary of { obsSpec.namestring : chi^2 result }
     :rtype: dict
     """
-    expSpec, obsSpec = inputV
-    return { obsSpec.getNS() : chi( expSpec, obsSpec ) }
+    expSpec, obsSpec = inputV[ :2 ]
+    kwargs = { }
+    [ kwargs.update( pt ) for pt in inputV[ 2: ] ]
+    return (obsSpec.getNS( ), chi( expSpec, obsSpec, **kwargs ))
 
 def pipeline_chi_wrapper( inputV ):
     return __multi_chi_wrapper( inputV )

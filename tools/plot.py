@@ -1,4 +1,4 @@
-from typing import List, Union
+from typing import Callable, List, Union
 
 import Gnuplot
 
@@ -69,30 +69,32 @@ def four_by_four_multiplot( prime: Spectrum, speclist: list, path: str = None, f
 
 def ab_z_plot( path: str, filename: str, primary: Union[ str or Spectrum ],
                points: Union[ results_pipeline or dict or List[ str ] or List[ Spectrum ] ], plotTitle: str = "",
-               n_sigma: float = 1, rs_fit_func=None, rs_fit_title=None,
+               n_sigma: float = 1, rs_fit_func: Callable[ [ float ], float ] = None, rs_fit_title: str = None,
+               png: bool = False,
                debug: bool = False ) -> Union[ Gnuplot.Gnuplot or None ]:
     from tools.cosmo import magnitude_evolution
     from catalog import shenCat
 
-    if type( primary ) is Spectrum:
-        if primary.getNS( ) in shenCat:
-            p_z, p_ab, p_ab_err = shenCat.subkey( primary.getNS( ), 'z', 'ab', 'ab_err' )
+    if primary is not None:
+        if type( primary ) is Spectrum:
+            if primary.getNS( ) in shenCat:
+                p_z, p_ab, p_ab_err = shenCat.subkey( primary.getNS( ), 'z', 'ab', 'ab_err' )
+            else:
+                p_z, p_ab, p_ab_err = primary.getRS( ), primary.magAB( ), primary.abErr( )
+            primary = primary.getNS( )
         else:
-            p_z, p_ab, p_ab_err = primary.getRS( ), primary.magAB( ), primary.abErr( )
-        primary = primary.getNS( )
-    else:
-        p_z, p_ab, p_ab_err = shenCat.subkey( primary, 'z', 'ab', 'ab_err' )
+            p_z, p_ab, p_ab_err = shenCat.subkey( primary, 'z', 'ab', 'ab_err' )
 
-    """ Make Magnitude Evolutiion Data """
-    p_ab_err *= n_sigma
-    prime_upper_plot = make_line_plotitem( *magnitude_evolution( p_ab + p_ab_err, p_z, splitLists=True )[ :2 ],
-                                           title="Upper / Lower Bounds of Expected Evolution", color="grey" )
-    prime_lower_plot = make_line_plotitem( *magnitude_evolution( p_ab - p_ab_err, p_z, splitLists=True )[ :2 ],
-                                           title="", color="grey" )
-    prime_plot = make_line_plotitem( *magnitude_evolution( p_ab, p_z, splitLists=True )[ :2 ],
-                                     title="Expected Evolution", color="black" )
-    prime_point = make_points_plotitem( [ p_z ], [ p_ab ], error_data=[ p_ab_err ], title=f"{primary}",
-                                        color="dark-red" )
+        """ Make Magnitude Evolutiion Data """
+        p_ab_err *= n_sigma
+        prime_upper_plot = make_line_plotitem( *magnitude_evolution( p_ab + p_ab_err, p_z, splitLists=True )[ :2 ],
+                                               title="Upper / Lower Bounds of Expected Evolution", color="grey" )
+        prime_lower_plot = make_line_plotitem( *magnitude_evolution( p_ab - p_ab_err, p_z, splitLists=True )[ :2 ],
+                                               title="", color="grey" )
+        prime_plot = make_line_plotitem( *magnitude_evolution( p_ab, p_z, splitLists=True )[ :2 ],
+                                         title="Expected Evolution", color="black" )
+        prime_point = make_points_plotitem( [ p_z ], [ p_ab ], error_data=[ p_ab_err ], title=f"{primary}",
+                                            color="dark-red" )
 
     """ Make AB vs Z points data """
     z_data = [ ]
@@ -121,7 +123,9 @@ def ab_z_plot( path: str, filename: str, primary: Union[ str or Spectrum ],
             ab_err.append( shenCat.subkey( ns, 'ab_err' ) )
 
     plot_points = make_points_plotitem( z_data, ab_data, ab_err, color="royalblue" )
-    plotlist = [ plot_points, prime_plot, prime_upper_plot, prime_lower_plot, prime_point ]
+    plotlist = [ plot_points ]
+    if primary is not None:
+        plotlist.extend( [ prime_plot, prime_upper_plot, prime_lower_plot, prime_point ] )
     if rs_fit_func is not None:
         fitx = [ (z / 100) for z in range( 46, 83 ) ]
         fity = [ rs_fit_func( z ) for z in fitx ]
@@ -130,17 +134,21 @@ def ab_z_plot( path: str, filename: str, primary: Union[ str or Spectrum ],
         plotlist.append( fitplot )
 
     """ Data has been formed.  Make actual plot """
-    g = Gnuplot.Gnuplot( persist=debug )  # 1 if debug else 0 )
+    g = Gnuplot.Gnuplot( persist=debug )
     g.title( r"%s" % plotTitle )
     g.xlabel( "Redshift" )
     g.ylabel( "AB Magnitude" )
     g( "set key bottom right opaque box" )
     g( "set grid" )
+    g( "set xrange [0.46:0.82]" )
 
     if not debug:
         from fileio.utils import dirCheck, join
         dirCheck( path )
-        g( 'set terminal pdf enhanced size 9,6' )
+        if png:
+            g( 'set terminal png enhanced size 800, 600' )
+        else:
+            g( 'set terminal pdf enhanced size 9,6' )
         g( f'set output {__fix_outpath( path, filename ) }' )
 
     g.plot( *plotlist )

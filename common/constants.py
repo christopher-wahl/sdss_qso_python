@@ -20,6 +20,7 @@ def get_base_code_path( ) -> str:
 
 BASE_CODE_PATH = get_base_code_path( )
 BASE_PROCESSED_PATH = abspath( "../../Processed" )
+BASE_ANALYSIS_PATH = join( BASE_PROCESSED_PATH, "Analysis" )
 BASE_SPEC_PATH = join( BASE_PROCESSED_PATH, "Spec" )
 BINNED_SPEC_PATH = join( BASE_SPEC_PATH, "BIN SOURCE" )
 REST_SPEC_PATH = join( BINNED_SPEC_PATH, "REST" )
