@@ -105,22 +105,22 @@ def ab_z_plot( path: str, filename: str, primary: Union[ str or Spectrum ],
             for ns in points:
                 z_data.append( shenCat.subkey( ns, 'z' ) )
                 ab_data.append( shenCat.subkey( ns, 'ab' ) )
-                ab_err.append( shenCat.subkey( ns, 'ab_err' ) )
+                ab_err.append( n_sigma * shenCat.subkey( ns, 'ab_err' ) )
         else:
             for spec in points:
                 z_data.append( shenCat.subkey( spec.getNS( ), 'z' ) )
                 ab_data.append( shenCat.subkey( spec.getNS( ), 'ab' ) )
-                ab_err.append( shenCat.subkey( spec.getNS( ), 'ab_err' ) )
+                ab_err.append( n_sigma * shenCat.subkey( spec.getNS( ), 'ab_err' ) )
     elif type( points ) is dict:
         for ns in points:
             z_data.append( shenCat.subkey( ns, 'z' ) )
             ab_data.append( shenCat.subkey( ns, 'ab' ) )
-            ab_err.append( shenCat.subkey( ns, 'ab_err' ) )
+            ab_err.append( n_sigma * shenCat.subkey( ns, 'ab_err' ) )
     elif isinstance( points, results_pipeline ):
         for ns in points.get_results( ):
             z_data.append( shenCat.subkey( ns, 'z' ) )
             ab_data.append( shenCat.subkey( ns, 'ab' ) )
-            ab_err.append( shenCat.subkey( ns, 'ab_err' ) )
+            ab_err.append( n_sigma * shenCat.subkey( ns, 'ab_err' ) )
 
     plot_points = make_points_plotitem( z_data, ab_data, ab_err, color="royalblue" )
     plotlist = [ plot_points ]

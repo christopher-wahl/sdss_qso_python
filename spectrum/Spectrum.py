@@ -4,6 +4,7 @@ from common.constants import DEFAULT_SCALE_RADIUS, DEFAULT_SCALE_WL, linesep
 from common.messaging import KeyErrorString
 
 
+
 class Spectrum( dict ):
     __z = float( )
     __gmag = float( )
@@ -331,6 +332,9 @@ class Spectrum( dict ):
                 scaleSpec = val
             elif key in [ 'radius', 'r' ]:
                 radius = val
+            elif key in [ 'ab' ]:
+                from spectrum.utils import flux_from_AB
+                scaleflux = flux_from_AB( val )
             else:
                 raise KeyError( KeyErrorString( "spectrum.scale", key, val ) )
 
