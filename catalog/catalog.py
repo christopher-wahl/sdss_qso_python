@@ -56,11 +56,19 @@ class catalog( dict ):
             return self.get( namestring )
 
     def export_text(self, path = None, filename = None ):
+        """
+        Writes a .json copy of the shenCat.  If no path or filename are specificed, the values default to
+        the backup folder in the catalog package.  It is recommended to use these default values.
+        
+        :param path: 
+        :param filename: 
+        :return: 
+        """
         import json
         from fileio.utils import dirCheck
 
         if path is None:
-            path = join( self.__BASE_CODE_CAT_PATH, "text_backup" )
+            path = join( self.__BASE_CODE_CAT_PATH, "backup" )
         if filename is None:
             filename = f"{self.__THIS_CAT[ 1 ]}.json"
 

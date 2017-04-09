@@ -1,13 +1,34 @@
 import pickle
 from csv import DictReader, DictWriter
+
 from typing import List, Union
 
 from common.constants import BINNED_SPEC_PATH, REST_SPEC_PATH, SOURCE_SPEC_PATH, os
 from fileio.utils import dirCheck, extCheck, fileCheck, fns, join, ns2f
 from spectrum import Iterable, Spectrum
 
+"""
+The methods contained here exist for the sole purpose of reading and writing Spectrum class files to/from the disk.
+Unless specified by the "text_" delineation in the method name, all methods write/load serialized objects using
+Python's pickle package.  All are written with the highest protocol.
 
+"async_" delineated methods make use of Python's asyncio package and common.async_tool's generic_async_wrapper method
+"""
 def text_load( path: str, filename: str ) -> Spectrum:
+    """
+    Loads the standardized ASCII format Spectrum file as written by text_write.
+    
+    Note: If for some reason, the redshift and/or gmag values cannot be converted to a float,
+    they will be assigned a value of -1
+    
+    :param path: /path/to/input file
+    :param filename: input file name
+    :type path: str
+    :type filename: str
+    :return: Loaded Spectrum
+    :rtype: Spectrum
+    :raises: FileNotFoundError
+    """
     fileCheck( path, filename )
 
     with open( join( path, filename ), 'r' ) as infile:
@@ -21,8 +42,14 @@ def text_load( path: str, filename: str ) -> Spectrum:
          """
         header = infile.readline( ).strip( ).split( ',' )
         namestring = fns( header[ 0 ] )
-        z = float( header[ 1 ].strip( "z=" ) )
-        gmag = float( header[ 2 ].strip( "gmag=" ) )
+        try:
+            z = float( header[ 1 ].strip( "z=" ) )
+        except ValueError:
+            z = -1
+        try:
+            gmag = float( header[ 2 ].strip( "gmag=" ) )
+        except ValueError:
+            gmag = -1
 
         reader = DictReader( infile, fieldnames=infile.readline( ).strip( ).split( ',' ) )
         wls = [ ]
@@ -77,6 +104,7 @@ def load( path: str, filename: str ) -> Spectrum:
     :type path: str
     :type filename: str
     :rtype: Spectrum
+    :raises: FileNotFoundError
     """
     fileCheck( path, filename )
     return pickle.load( open( join( path, filename ), 'rb' ) )
@@ -99,21 +127,59 @@ def write( spec: Spectrum, path: str, filename: str ) -> None:
 
 
 def bspecLoader( namestring: str ) -> Spectrum:
+    """
+    Loads a single Spectrum from BINNED_SPEC_PATH
+    
+    :param namestring: Namestring of desired spectrum
+    :type namestring: str
+    :rtype: Spectrum
+    """
     return load( BINNED_SPEC_PATH, ns2f( namestring, ".bspec" ) )
 
 
 def rspecLoader( namestring: str ) -> Spectrum:
+    """
+    Loads a single Spectrum from REST_SPEC_PATH
+
+    :param namestring: Namestring of desired spectrum
+    :type namestring: str
+    :rtype: Spectrum
+    """
     return load( REST_SPEC_PATH, ns2f( namestring, ".rspec" ) )
 
 
 def sspecLoader( namestring: str ) -> Spectrum:
+    """
+    Loads a single Spectrum from SOURCE_SPEC_PATH
+
+    :param namestring: Namestring of desired spectrum
+    :type namestring: str
+    :rtype: Spectrum
+    """
     return load( SOURCE_SPEC_PATH, ns2f( namestring, ".spec" ) )
 
+
 def async_bspec( namelist: List[ str ] ) -> List[ Spectrum ]:
+    """
+    Loads all given binned, observed frame spectra from the BINNED_SPEC_PATH using async_load
+
+    :param namelist:  Iterable
+    :type namelist: Iterable[ str ]
+    :return: List of binned, observed frame spectra
+    :rtype: List[ Spectrum ]
+    """
     return async_load( BINNED_SPEC_PATH, namelist, ".bspec" )
 
 
-def async_rspec( namelist: List[ str ] ) -> List[ Spectrum ]:
+def async_rspec( namelist: Iterable[ str ] ) -> List[ Spectrum ]:
+    """
+    Loads all given rest frame spectra from the REST_SPEC_PATH using async_load
+    
+    :param namelist:  Iterable
+    :type namelist: Iterable[ str ]
+    :return: List of rest frame spectra
+    :rtype: List[ Spectrum ]
+    """
     return async_load( REST_SPEC_PATH, namelist, ".rspec" )
 
 
@@ -156,7 +222,7 @@ def async_load( path: str, filelist: List[ str ], extention: str = None ) -> Lis
 
 def async_write( path: str, speclist: List[ Spectrum ], extention: str = ".spec" ) -> None:
     """
-    Uses asyncio to write a speclist to the disk.
+    Uses asyncio to write a list of Spectrum to the disk.
 
     Will set filename from spectrum namestring.  If extention is not specificed, will default to ".spec"
 
@@ -184,6 +250,22 @@ def async_write( path: str, speclist: List[ Spectrum ], extention: str = ".spec"
 
 
 def async_rspec_scaled( namelist: Iterable[ str ], scale_to: Union[ float, Spectrum ] ) -> List[ Spectrum ]:
+    """
+    Uses the asyncio library to load the given namelist of Spectrum namestrings from the default rest frame spectra
+    folder REST_SPEC_PATH.  While spectra are loaded from the disk, they are scaled to the given value for the scale_to variable
+    centered on the DEFAULT_SCALE_WL constant in common.constants.
+    
+    scale_to can be either a floating point value (which is passed to the Spectrum.scale() method) or a Spectrum class,
+    in which case the average flux density around the DEF_SCALE_WL constant will be determined and passed.
+    
+    :param namelist: List of MJD-PLATE-FIBER namestrings.  The corresponding MJD-PLATE-FIBER.rspec must be present
+     in the REST_SPEC_PATH.
+    :param scale_to: float or Spectrum class which all loaded spectra will be scaled to.
+    :type namelist: Iterable
+    :type scale_to: Spectrum or float
+    :return: Scaled restframe speclist
+    :rtype: List[ Spectrum ]
+    """
     from common.async_tools import generic_async_wrapper
     from common.constants import REST_SPEC_PATH
     import asyncio

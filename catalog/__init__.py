@@ -1,4 +1,4 @@
-from common.constants import linesep
+from common.constants import SHEN_FIT_FILE, linesep
 from .catalog import catalog
 
 shenCat = catalog( catalog.SHEN_CATALOG )
@@ -38,3 +38,32 @@ def get_shen_header( CR: bool = False ):
     if CR:
         out_str += linesep
     return out_str
+
+
+def load_shen_source( path: str = SHEN_FIT_FILE ) -> tuple:
+    """
+    Returns ( header, data ) where header is the 2nd layer:  getheader( FIT_FILE, 1 )
+
+    Print header[ key ] for key in header to access field names, noting that the
+    numbering given beings at 1.  Thus, to access that field, subtract 1 from it (Python
+    starts counting at 0).
+
+    data[ 6 ] = MJD
+    data[ 4 ] = PLATE
+    data[ 5 ] = FIBER
+
+    data[ 142 ] = Z_HW
+    data[ 143 ] = Z_HW_ERR
+
+    :param path:
+    :return: tuple
+    """
+    from astropy.io.fits import getdata, getheader
+    header = getheader( SHEN_FIT_FILE, 1 )
+    data = getdata( SHEN_FIT_FILE )
+
+    return header, data
+
+
+def get_source_ns( fits_record ) -> str:
+    return "%05i-%04i-%03i" % (fits_record[ 6 ], fits_record[ 4 ], fits_record[ 5 ])

@@ -9,14 +9,11 @@ linesep = os.linesep
 MAX_PROC = cpu_count()
 
 """ BASE PATHS """
-
-
 def get_base_code_path( ) -> str:
     path = os.getcwd( )
     while (os.path.split( path )[ 1 ] != "pythonqso"):
         path = os.path.split( path )[ 0 ]
     return os.path.abspath( path )
-
 
 BASE_CODE_PATH = get_base_code_path( )
 BASE_PROCESSED_PATH = abspath( "../../Processed" )
@@ -27,7 +24,6 @@ REST_SPEC_PATH = join( BINNED_SPEC_PATH, "REST" )
 SOURCE_SPEC_PATH = join( BASE_SPEC_PATH, "PSource" )
 OLD_REST_PATH = join( SOURCE_SPEC_PATH, "Rest" )
 OLD_BINNED_PATH = join( OLD_REST_PATH, "Binned" )
-
 BASE_PLOT_PATH = join( BASE_PROCESSED_PATH, "Plot" )
 
 """ DEFAULT VALUES """
@@ -57,3 +53,7 @@ if sys.platform == "win32":
 
 RANGE_STRING_DICT = { MGII_RANGE: "MgII", HG_RANGE: f"H{GAMMA}", HB_RANGE: f"H{BETA}", OIII_RANGE: "OIII",
                       CONT_RANGE: "Continuum" }
+
+""" MISC VALUES """
+BASE_SOURCE_FILES_PATH = join( os.path.split( BASE_PROCESSED_PATH )[ 0 ], "Source" )
+SHEN_FIT_FILE = join( BASE_SOURCE_FILES_PATH, "shen", "dr7_bh_May_2011.fits" )

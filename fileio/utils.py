@@ -1,4 +1,5 @@
 from re import search
+
 from typing import List, Union
 
 from common.constants import abspath, join, os
@@ -23,6 +24,7 @@ def dirCheck( *args : Union[ list or str ] ) -> None:
 def extCheck( extention: str ) -> str:
     """
     Ensures a file extention includes the leading '.'
+    This is just used to error trap the lazy programmer who wrote it.
 
     :param extention: file extention
     :type extention: str
@@ -34,19 +36,16 @@ def extCheck( extention: str ) -> str:
     return extention
 
 
-def fileCheck( path: str, filename: str = "" ) -> None:
+def fileCheck( path: str, filename: str ) -> None:
     """
     Checks if a file exists.  If not, raises FileNotFound error
-
-    Note, if filename is not passed, it will default to "" and only the
-    value of path is checked.  Thus, if path does not hold a file, the exception will be raised.
-    This is NOT a folder check.  Use dirCheck() for checking/creating a folder.
 
     :param path: /path/to/file
     :param filename: file.name
     :type path: str
     :type filename: str
     :rtype: None
+    :raises: FileNotFoundError
     """
     if not os.path.isfile( abspath( join( path, filename ) ) ):
         raise FileNotFoundError( f"{join( path, filename )}" )
@@ -78,6 +77,7 @@ def fns( inputString: str ) -> str:
     :type inputString: str
     :return: Namestring
     :rtype: str
+    :raises: ValueError
     """
     return findNamestring( inputString )
 
@@ -101,21 +101,43 @@ def getFiles( path: str, extention: str = None ) -> List[ str ]:
 
 
 def object_loader( path: str, filename: str ) -> object:
+    """
+    Simple serialized data reader
+    
+    :param path: /path/to/input file 
+    :param filename: input file name
+    :type path: str
+    :type filename: str
+    :return: object
+    :rtype: object
+    """
     import pickle
     fileCheck( path, filename )
     return pickle.load( open( join( path, filename ), 'rb' ) )
 
 
-def object_writer( object: object, path: str, filename: str ) -> None:
+def object_writer( obj: object, path: str, filename: str ) -> None:
+    """
+    Simple serialized data writer.
+    
+    :param obj: Object to write 
+    :param path: /path/to/output file
+    :param filename: output file name
+    :type obj: object
+    :type path: str
+    :type filename: str
+    :return: None
+    """
     import pickle
     dirCheck( path )
     with open( join( path, filename ), 'wb' ) as outfile:
-        pickle.dump( object, outfile, protocol=pickle.HIGHEST_PROTOCOL )
+        pickle.dump( obj, outfile, protocol=pickle.HIGHEST_PROTOCOL )
 
 
 def ns2f( namestring: str, extention: str ) -> str:
     """
-    Shortcut call for utils.namestringToFilename( namestring, extention )
+    Shortcut call for utils.namestringToFilename( namestring, extention ).  See that method's documentation
+    for more information.
 
     :param namestring: leading filename
     :param extention:  file extention
@@ -129,7 +151,11 @@ def ns2f( namestring: str, extention: str ) -> str:
 
 def namestringToFilename( namestring: str, extention: str ) -> str:
     """
-    Concatates namestring & extention, passing extention through extCheck first
+    Concatates namestring & extention, passing extention through extCheck first.
+    
+    Note:  This is leftover of a function from when filenames were maintained with the leading "spSpec-"
+    as used by Sloan.  However, in the move to serialized Spectrum files, it was decided to leave that practice
+    behind.
 
     :param namestring: leading filename
     :param extention:  file extention
