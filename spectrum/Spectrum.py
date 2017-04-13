@@ -4,7 +4,6 @@ from common.constants import DEFAULT_SCALE_RADIUS, DEFAULT_SCALE_WL, linesep
 from common.messaging import KeyErrorString
 
 
-
 class Spectrum( dict ):
     __z = float( )
     __gmag = float( )
@@ -82,7 +81,8 @@ class Spectrum( dict ):
             print(
                 f"Spectrum.aveFlux: ZeroDivisionError - unable to determine average flux for spectrum {self.getNS() }.  Is the region of interest loaded?" )
             print( f"central_wl{central_wl}     radius: {radius}" )
-            print( self )
+            print( self, flush=True )
+            from sys import exit
             exit( 1 )
 
     def aveErr( self, wl_low: float = None, wl_high: float = None, wl_range: Tuple[ float, float ] = None ) -> float:
@@ -312,9 +312,11 @@ class Spectrum( dict ):
         scaleflx: flux of spectrum scaling to
 
         spectrum: Make use of a spectrum to directly determine scaleflx.
-
+        
+        ab: AB Magntiude to scale the spectrum to over the default range.
 
         :param kwargs:
+        :type kwargs: dict
         :return:
         """
         scaleWL = None
@@ -329,6 +331,7 @@ class Spectrum( dict ):
             elif key in [ 'scaleflux', 'scaleflx', 'sf' ]:
                 scaleflux = val
             elif key in [ 'specturm', 'spec' ]:
+                assert isinstance( scaleSpec, Spectrum )
                 scaleSpec = val
             elif key in [ 'radius', 'r' ]:
                 radius = val
@@ -349,7 +352,8 @@ class Spectrum( dict ):
         scalar = scaleflux / self.aveFlux( scaleWL, radius )
         if scalar == 1.0: return self
         for wl in self:
-            self[ wl ] = (self[ wl ][ 0 ] * scalar, self[ wl ][ 1 ] * scalar)
+            self[ wl ][ 0 ] *= scalar
+            self[ wl ][ 1 ] *= scalar
         return self
 
     def scaleFactor( self, **kwargs ) -> float:

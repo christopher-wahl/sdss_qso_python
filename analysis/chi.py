@@ -27,11 +27,8 @@ def chi( primary: Spectrum, secondary: Spectrum, wl_low: float = None, wl_high: 
     :return: Chi^2 value over the two spectra
     :rtype: float
     """
-    wls = set( primary.keys() ).intersection( secondary.keys() )
-    if wl_low is not None:
-        wls = filter( lambda x: x >= wl_low, wls )
-    if wl_high is not None:
-        wls = filter( lambda x: x <= wl_high, wls )
+    from spectrum.utils import align_wavelengths
+    wls = align_wavelengths( primary, secondary, wl_low, wl_high )
     return sum( [ __chi_value( primary[ wl ], secondary[ wl ], n_sigma ) for wl in wls ] )
 
 
@@ -60,7 +57,7 @@ def multi_chi_analysis( primary: Spectrum, speclist: Iterable[ Spectrum ], wl_lo
     :return: Namestring dictionary of { spectrum.getNS() : chi^2 value }
     :rtype: dict
     """
-    from common.async_tools import generic_unordered_multiprocesser
+    from tools.async_tools import generic_unordered_multiprocesser
 
     results = [ ]
     input_values = [ (primary, spec, wl_low, wl_high, n_sigma) for spec in speclist ]

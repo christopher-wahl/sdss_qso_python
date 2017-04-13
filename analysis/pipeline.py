@@ -158,9 +158,9 @@ class speclist_analysis_pipeline( results_pipeline ):
         from tools.list_dict import paired_list_to_dict
         multi_op = None
         if use_imap:
-            from common.async_tools import generic_unordered_multiprocesser as multi_op
+            from tools.async_tools import generic_unordered_multiprocesser as multi_op
         else:
-            from common.async_tools import generic_map_async_multiprocesser as multi_op
+            from tools.async_tools import generic_map_async_multiprocesser as multi_op
 
         if input_values is not None: self.set_input_values( input_values )
 
@@ -195,7 +195,7 @@ class redshift_ab_pipeline( results_pipeline ):
         :raises TypeError:
         """
 
-        from tools.cosmo import magnitude_at_redshift
+        from tools.cosmo import apparent_magnitude_at_redshift
         super( redshift_ab_pipeline, self ).__init__( results_range=(None, None) )
 
         err = False
@@ -221,7 +221,7 @@ class redshift_ab_pipeline( results_pipeline ):
             raise TypeError(
                 f"redshift_ab_pipeline.__init__(): NoneType values in constructor:\nprime_ns:{self._prime_ns}\nprime_z: {self._prime_z}\nprime_mag: {self._prime_mag}\nprime_mag_err: {self._prime_mag_err}" )
 
-        self._evofunction = magnitude_at_redshift
+        self._evofunction = apparent_magnitude_at_redshift
 
         if ns_of_interest is not None:
             self.set_namelist( ns_of_interest )
