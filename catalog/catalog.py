@@ -1,6 +1,6 @@
 import pickle
 
-from common.constants import BASE_CODE_PATH, BASE_PROCESSED_PATH, join
+from common.constants import BASE_CODE_PATH, join
 
 """
 Working notes:
@@ -29,17 +29,12 @@ class catalog( dict ):
     __isLoaded = False
 
     SHEN_CATALOG = ( 0, "shenCat" )
-    DIVIDE_CATALOG = ( 1, "divCat" ) # Format: slope, intercept, average
-    CHI_CATALOG = ( 2, "chiCat" )
 
     __BASE_CODE_CAT_PATH = join( BASE_CODE_PATH, "catalog" )
 
     __SHEN_PATH = join( __BASE_CODE_CAT_PATH, "shenCat.bin" )
 
-    __DIV_PATH = join( BASE_PROCESSED_PATH, "Catalogs", "DivCat" )
-    __CHI_PATH = join( BASE_PROCESSED_PATH, "Catalogs", "ChiCat" )
-
-    __CAT_DICT = { SHEN_CATALOG: __SHEN_PATH, DIVIDE_CATALOG: __DIV_PATH, CHI_CATALOG: __CHI_PATH }
+    __CAT_DICT = { SHEN_CATALOG: __SHEN_PATH }
 
     def __init__( self, catalog = SHEN_CATALOG ):
         super( self.__class__, self ).__init__()
@@ -88,19 +83,9 @@ class catalog( dict ):
         elif namestring is None:
             import os
             path = os.path.split( self.__CAT_DICT[ self.__THIS_CAT ] )[ 0 ]
-            if self.__THIS_CAT == self.DIVIDE_CATALOG:
-                path = join( path, "DivDict.bin" )
-            elif self.__THIS_CAT == self.CHI_CATALOG:
-                path = join( path, "ChiDict.bin" )
             with open( path, 'rb' ) as infile:
                 self.update( pickle.load( infile ) )
             self.__isLoaded = True
-        elif self.__THIS_CAT == self.DIVIDE_CATALOG:
-            with open( join( self.__CAT_DICT[ self.__THIS_CAT ], f"{namestring}-div.bin" ), 'rb' ) as infile:
-                self.__setitem__( namestring, pickle.load( infile ) )
-        elif self.__THIS_CAT == self.CHI_CATALOG:
-            with open( join( self.__CAT_DICT[ self.__THIS_CAT ], f"{namestring}-chi.bin" ), 'rb' ) as infile:
-                self.__setitem__( namestring, pickle.load( infile ) )
 
     def rewrite( self ):
         if self.__THIS_CAT != self.SHEN_CATALOG:

@@ -2,7 +2,8 @@
 This method creates a single instance of the FlatLambdaCDM in astropy and uses it to
 evolve magnitudes with redshift (via the luminosity distance relation).
 
-FlatLambdaCDM model with constraints of H0 = 67.74, Om0 = 0.3089 (values from Wikipedia, 2016-07-21)
+FlatLambdaCDM model with constraints of H0 = 67.6, Om0 = 0.3089 (values from SDSS BOSS, published 2016-07-13 and 
+        1-Omega_Lambda = 1 - 0.6911 = 0.3089 from the Planck Collaboration in 2015)
 """
 from math import log10
 from typing import List, Tuple, Union
@@ -10,7 +11,7 @@ from typing import List, Tuple, Union
 from astropy import units
 from astropy.cosmology import FlatLambdaCDM
 
-__cosmo = FlatLambdaCDM( H0=67.74, Om0=0.3089 )
+__cosmo = FlatLambdaCDM( H0=67.6, Om0=0.3089 )
 
 
 def luminsoity_distance_from_redshift( z: float ) -> float:

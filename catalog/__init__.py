@@ -1,10 +1,9 @@
+from typing import List
+
 from common.constants import SHEN_FIT_FILE, linesep
 from .catalog import catalog
 
 shenCat = catalog( catalog.SHEN_CATALOG )
-divCat = catalog( catalog.DIVIDE_CATALOG )
-chiCat = catalog( catalog.CHI_CATALOG )
-
 shenCat.load( )
 
 def get_shen_string( namestring: str, *append_values, CR: bool = False ) -> str:
@@ -18,7 +17,7 @@ def get_shen_string( namestring: str, *append_values, CR: bool = False ) -> str:
     :return:
     """
     out_str = namestring
-    for k in get_shen_subkeys( ):
+    for k in get_shen_key_list():
         if k == "namestring":
             continue
         out_str += f",{shenCat.subkey( namestring, k )}"
@@ -29,12 +28,29 @@ def get_shen_string( namestring: str, *append_values, CR: bool = False ) -> str:
     return out_str
 
 
-def get_shen_subkeys( ):
-    return [ "namestring", "ab", "ab_err", "bh_hb", "bh_hb_err", "bh_mgii", "bh_mgii_err", "gmag", "z" ]
+def get_shen_key_list() -> List[ str ]:
+    """
+    Returns an alphabetic list of of the subkeys in the shenCat.  Also inserts the value "namestring" into the first
+    position of the list.  This is intended to feed the namestring dict writing processes 
+    get_shen_string and get_shen_header
+    
+    :return: A list of [ "namestring", ... shenCat subkeys ]
+    :rtype: str
+    """
+    subkeys = sorted( shenCat.items()[ 0 ].keys() )
+    subkeys.insert( 0, "namestring" )
+    return subkeys
 
 
-def get_shen_header( CR: bool = False ):
-    out_str = ''.join( f"{key}," for key in get_shen_subkeys( ) )[ :-1 ]
+def get_shen_header( CR: bool = False ) -> str:
+    """
+    Returns a CSV formatted header string of namestring,...shenCat subkeys,...
+    
+    :param CR: Defaults to False.  If True, appends a line return to the returned string 
+    :return: Formatted header string
+    :rtype: str
+    """
+    out_str = ''.join( f"{key}," for key in get_shen_key_list() )[ :-1 ]
     if CR:
         out_str += linesep
     return out_str
