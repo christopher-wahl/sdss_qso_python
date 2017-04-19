@@ -5,6 +5,7 @@ import Gnuplot
 from analysis.pipeline import results_pipeline
 from spectrum import Spectrum
 
+
 def __fix_outpath( path : str, filename : str = None ) -> str:
     from fileio.utils import join
     path = join( path, filename ) if filename is not None else path
@@ -160,10 +161,28 @@ def ab_z_plot( path: str, filename: str, primary: Union[ str or Spectrum ],
     return g
 
 def spectrum_plot( spec: Spectrum, path: str, filename: str, color: str = "royalblue", debug: bool = False ) -> None:
+    """
+    Simple spectrum plotter.  Passes values to Gnuplot.py.  Plots in PDF format.
+    
+    If debug = True, no values will be written to the disk and Gnuplot will be initialized with persist = True and
+    the path/filename values should be passed as empty strings "" to avoid an error.
+    
+    :param spec: Spectrum to be plot
+    :type spec: Spectrum
+    :param path: /path/to/output/file
+    :type path: str
+    :param filename: output file name
+    :type filename: str
+    :param color: Color to make the spectrum line.  Defaults to "royalblue."  Must be a color acceptable to Gnuplot
+    :type color: str
+    :param debug: Use the debug process, print outputs on the screen
+    :type debug: bool
+    :rtype: None
+    """
     from common.constants import ANGSTROM, FLUX_UNITS
     from fileio.utils import dirCheck
 
-    dirCheck( path )
+    if not debug: dirCheck( path )
     g = Gnuplot.Gnuplot( persist=debug )
     g.title( spec.getNS() )
     g.xlabel( f"Wavelength ({ANGSTROM})" )

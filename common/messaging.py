@@ -1,3 +1,6 @@
+"""
+Simple messaging methods for easy communication
+"""
 from common.constants import linesep
 
 

@@ -1,9 +1,11 @@
 from spectrum import Spectrum
 
+# The standard mask values
 DEF_MASK_DICT = { 0x40000: 'SP_MASK_FULLREJECT',  # Pixel fully rejected in extraction                   18      2.621e5
                  0x800000: 'SP_MASK_BRIGHTSKY',  # Sky level > flux + 10*(flux error)                   23      8.389e6
                  0x1000000: 'SP_MASK_NODATA' }  # No data available in combine B-spline                24      1.678e7
 
+# These codes are for reference
 allMaskCodes = { 0x000: 'SP_MASK_OK',  # No issues detected                                             -inf    x
                  0x001: 'SP_MASK_NOPLUG',  # Fiber not listed in plugmap file                           0       1e0
                  0x002: 'SP_MASK_BADTRACE',  # Bad trace from routine TRACE320CRUDE                     1       2e0

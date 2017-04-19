@@ -1,17 +1,17 @@
+"""
+This process package was designed to be extensible to multiple catalogs and for a time, did.  However, at one point
+the basic data had to be regenerated.  The other catalogs - one for division values and another for chi^2 values - were
+initially created to prevent the need to constantly re-divide and re-chi^2 test spectra.  They depended upon the data
+which was regenerated, so were rendered moot after that.  Nor were they regenerated.  The basic structure here remains
+as much of it is very useful to the heavily used shenCat.
+"""
+
 import pickle
 
 from common.constants import BASE_CODE_PATH, join
 
 """
-Working notes:
-
 The RAW shencatalog.FITS file pulls the following key indecies
-
-128: -> LOGBH_HB_VP06
-129: -> LOGBH_HB_VP06_ERR
-
-134: -> LOGBH_MGII_S10
-135: -> LOGBH_MGII_S10_ERR
 
 4: -> PLATE
 5: -> FIBER
@@ -19,8 +19,24 @@ The RAW shencatalog.FITS file pulls the following key indecies
 
 Namestring format: MJD->PLATE->FIBER: 6-4-5
 
-3: O.G. Redshift
-142: Z_HW
+128: -> LOGBH_HB_VP06
+129: -> LOGBH_HB_VP06_ERR
+
+134: -> LOGBH_MGII_S10
+135: -> LOGBH_MGII_S10_ERR
+
+    Used the BROAD - not narrow line values
+89 -> LOG_LUM_MGII
+90 -> LOG_LUM_MGII_ERR
+93 -> EW_MGII
+94 -> EW_MGII_ERR
+
+55 -> LOG_LUM_HB
+56 -> LOG_LUM_HB_ERR
+59 -> EW_HB
+60 -> EW_HB_ERR
+
+142 -> Z_HW
 """
 
 class catalog( dict ):
@@ -76,7 +92,15 @@ class catalog( dict ):
             self.load( )
         return list( super( catalog, self ).keys() )
 
-    def load( self, namestring = None ):
+    def load( self, namestring: str = None ) -> None:
+        """
+        If called with no arguments, loads the entire catalog.  If passed a namestring, loads that corresponding
+        catalog.
+        
+        :param namestring:
+        :type namestring: str
+        :rtype: None
+        """
         if self.__THIS_CAT == self.SHEN_CATALOG:
             self.update( pickle.load( open( self.__CAT_DICT[ self.__THIS_CAT ], 'rb' ) ) )
             self.__isLoaded = True
@@ -87,7 +111,15 @@ class catalog( dict ):
                 self.update( pickle.load( infile ) )
             self.__isLoaded = True
 
-    def rewrite( self ):
+    def rewrite( self ) -> None:
+        """
+        Makes a copy of the current shenCat.bin file, then writes the current shenCat variable as it stands to
+        shenCat.bin using the pickle method.
+        
+        :rtype: None 
+        """
+        from shutil import copyfile
+        copyfile( self.__CAT_DICT[ self.__THIS_CAT ], self.__CAT_DICT[ self.__THIS_CAT ] + '.bak' )
         if self.__THIS_CAT != self.SHEN_CATALOG:
             raise TypeError( f"catalog.rewrite(): Catalog type is not SHEN_CATALOG.  Unable to rewrite.\n__THIS_CAT: {self.__THIS_CAT}" )
         d = self.copy( )

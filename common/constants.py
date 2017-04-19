@@ -2,10 +2,12 @@ import os
 import sys
 from multiprocessing import cpu_count
 
+""" Easy import of os.path methods """
 join = os.path.join
 abspath = os.path.abspath
 linesep = os.linesep
 
+""" Maximum concurrent processes for multiprocessing.  Default value of cpu_count stored in the constant """
 MAX_PROC = cpu_count()
 
 """ BASE PATHS """

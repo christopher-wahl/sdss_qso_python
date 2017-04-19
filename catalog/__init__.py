@@ -37,7 +37,8 @@ def get_shen_key_list() -> List[ str ]:
     :return: A list of [ "namestring", ... shenCat subkeys ]
     :rtype: str
     """
-    subkeys = sorted( shenCat.items()[ 0 ].keys() )
+    first = next( iter( shenCat.values() ) )
+    subkeys = sorted( first.keys() )
     subkeys.insert( 0, "namestring" )
     return subkeys
 

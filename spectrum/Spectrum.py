@@ -51,12 +51,14 @@ class Spectrum( dict ):
                 err_v.append( -2.5 * log10( f_v ) + 8.9 )
         return float( nanstd( err_v ) )
 
-    def align(self, wlList ):
+    @DeprecationWarning
+    def align( self, wlList: List ):
         wls = self.getWavelengths()
         for wl in wls:
             if wl not in wlList:
                 del self[ wl ]
 
+    @DeprecationWarning
     def alignToSpec(self, spec ):
         self_wls = set( self.getWavelengths() )
         spec_wls = set( spec.getWavelengths() )
@@ -169,16 +171,26 @@ class Spectrum( dict ):
         f_lambda = f_v / (3.34E4 * 1E-17 * pow( scale_wl, 2 ))
         self.scale( scaleflx=f_lambda )
 
-    def getFlux( self, wavelength ):
+    def getFlux( self, wavelength: float ) -> float:
         return self[ wavelength ][ 0 ]
 
-    def getErr( self, wavelength ):
+    def getErr( self, wavelength: float ) -> float:
         return self[ wavelength ][ 1 ]
 
-    def getFluxlist( self ):
+    def getFluxlist( self ) -> List[ float ]:
+        """
+        Returns the flux densities in a list, ordered by wavelength
+        
+        :rtype: list 
+        """
         return [ self.getFlux( wl ) for wl in self.getWavelengths( ) ]
 
-    def getErrList( self ):
+    def getErrList( self ) -> List[ float ]:
+        """
+        Returns the flux densities in a list, ordered by wavelength
+
+        :rtype: list 
+        """
         return [ self.getErr( wl ) for wl in self.getWavelengths( ) ]
 
     def getGmag( self ) -> float:
@@ -210,11 +222,24 @@ class Spectrum( dict ):
     def isAligned(self, spec ) -> bool:
         return spec.keys() == self.keys()
 
-    def lineDict( self, wavelength ) -> dict:
+    def lineDict( self, wavelength: float ) -> dict:
+        """
+        Returns a simple dictionary of { wavelength : float, flux density : float, error : float }
+        to allow writing with a CSV dict writer
+        
+        :param wavelength:
+        :type wavelength: float
+        :rtype: dict 
+        """
         return { 'wavelength': wavelength, 'flux density': self.getFlux( wavelength ),
                  'error': self.getErr( wavelength ) }
 
     def lineDictList( self ) -> List[ dict ]:
+        """
+        Returns a list of Spectrum.lineDict values
+        
+        :rtype: list
+        """
         return [ self.lineDict( wl ) for wl in self.getWavelengths( ) ]
 
     def magAB( self, wl_range: Tuple[ float, float ] = (None, None) ) -> float:
@@ -291,6 +316,13 @@ class Spectrum( dict ):
         self.__namestring = namestring
 
     def shiftToRest( self, z: float = None ) -> None:
+        """
+        Shifts this spectrum to rest frame using z.  If z is None, uses the stored value of z.
+        
+        :param z: Redshift to use to shift to rest frame
+        :type z: float
+        :rtype: None
+        """
         if z is None:
             z = self.__z
 
