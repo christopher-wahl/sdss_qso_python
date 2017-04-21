@@ -1,6 +1,6 @@
 from typing import List, Tuple
 
-from common.constants import DEFAULT_SCALE_RADIUS, DEFAULT_SCALE_WL, linesep
+from common.constants import DEFAULT_SCALE_RADIUS, DEFAULT_SCALE_WL
 from common.messaging import KeyErrorString
 
 
@@ -9,7 +9,26 @@ class Spectrum( dict ):
     __gmag = float( )
     __namestring = str( )
 
-    def __init__( self, *args, **kwargs ):
+    def __init__( self, **kwargs ):
+        """
+        Spectrum constructor.  Possible kwargs:
+            z: redshift value
+        
+            gmag: Fiber magnitude in g
+        
+            namestring or ns: Spectrum ID namestring
+        
+            dict: A premade { wl: (flux, err) } dictionary
+        
+        All other values will raise a KeyError
+        
+        Contructor CAN be called with no values passed.  Values are assigned types, but not initialized.
+        Getters and setters are available for z, gmag and redshift.  Use the dictionary access form for the
+        spectrographic data.
+        
+        :param kwargs:
+        :type kwargs: dict
+        """
         super( Spectrum, self ).__init__( )
         if len( kwargs ) != 0:
             for arg, val in kwargs.items( ):
@@ -22,7 +41,7 @@ class Spectrum( dict ):
                 elif arg in "dict":
                     self.update( val )
                 else:
-                    raise KeyError( KeyErrorString( "specturm constructor", arg, val ) )
+                    raise KeyError( KeyErrorString( "Specturm constructor", arg, val ) )
         return
 
     def __repr__( self ):
@@ -68,7 +87,17 @@ class Spectrum( dict ):
         for wl in ( spec_wls - self_wls ):
             del spec[ wl ]
 
-    def aveFlux( self, central_wl=None, radius=None ):
+    def aveFlux( self, central_wl=DEFAULT_SCALE_WL, radius=DEFAULT_SCALE_RADIUS ) -> float:
+        """
+        Determines the average flux density within a radius of a central wavelength.
+        
+        :param central_wl:
+        :type central_wl: float
+        :param radius: 
+        :type radius: float
+        :return: 
+        :rtype: float
+        """
         central_wl = central_wl or DEFAULT_SCALE_WL
         radius = radius or DEFAULT_SCALE_RADIUS
         s = 0
@@ -87,61 +116,11 @@ class Spectrum( dict ):
             from sys import exit
             exit( 1 )
 
-    def aveErr( self, wl_low: float = None, wl_high: float = None, wl_range: Tuple[ float, float ] = None ) -> float:
-        if wl_range is not None:
-            wl_low, wl_high = wl_range
-        elif wl_low is None or wl_high is None:
-            raise ValueError(
-                f"Spectrum.aveErr: Need low and high wl values, or need a wl_range{linesep}wl_low: {wl_low} - wl_high:{wl_high}{linesep}{self}" )
-        n = 0
-        err = 0
-        for wl in self:
-            if wl_low <= wl <= wl_high:
-                err += self.getErr( wl )
-                n += 1
-        return err / n if n != 0 else -1
-
-    def bin( self, step: float = 1, init_wl: float = None ) -> None:
-        wls = self.getWavelengths()
-        wlslist = []
-        flxlist = []
-        errlist = []
-
-        lowIndex, highIndex = 0, 1
-
-        while( lowIndex < len( wls ) - 1 ):
-            lowWL = wls[ lowIndex ]
-            highWL = wls[ highIndex ]
-            newWL = init_wl if init_wl is not None else int( lowWL )
-            while( highWL - newWL < step ):
-                highIndex += 1
-                if( highIndex == len( wls ) ):
-                    break
-                else:
-                    highWL = wls[ highIndex ]
-        #highIndex -= 1
-        #highWL = wls[ highIndex ]
-            fluxsum, errsum = 0, 0
-            for i in range( lowIndex, highIndex, 1 ):
-                lowWL = wls[ i ]
-                fluxsum += self.getFlux( lowWL )
-                errsum += self.getErr( lowWL )
-            fluxsum /= ( highIndex - lowIndex )
-            errsum /= ( highIndex - lowIndex )
-
-            flxlist.append( fluxsum )
-            errlist.append( errsum )
-            wlslist.append( newWL )
-            lowIndex = highIndex
-            highIndex += 1
-        self.setDict( wlslist, flxlist, errlist )
-        return self
-
     def cpy( self ):
         """
         Returns a deep copy of this spectrum
 
-        :return: spectrum
+        :rtype: Spectrum
         """
         from copy import deepcopy
         return deepcopy( self )
@@ -155,13 +134,14 @@ class Spectrum( dict ):
         spec = Spectrum( ns=self.getNS( ), z=self.getRS( ), gmag=self.getGmag( ) )
         return spec
 
-    def dim_to_ab( self, to_mag_ab: float, scale_wl=DEFAULT_SCALE_WL ) -> None:
+    def dim_to_ab( self, to_mag_ab: float, scale_wl: float = DEFAULT_SCALE_WL ) -> None:
         """
         Determines the desired flux that would be exhibited at a given AB Magnitude and wavelength,
         then passes that value to the Spectrum.scale() method, scaling the spectrum to that flux density
+        
         :param to_mag_ab: AB Magnitude desired to be dimmed to
-        :param scale_wl: Wavelength to scale around.  Defaults to common.constants.DEFAULT_SCALE_WL
         :type to_mag_ab: float
+        :param scale_wl: Wavelength to scale around.  Defaults to common.constants.DEFAULT_SCALE_WL
         :type scale_wl: float
         :return: None
         :rtype: None
@@ -172,9 +152,21 @@ class Spectrum( dict ):
         self.scale( scaleflx=f_lambda )
 
     def getFlux( self, wavelength: float ) -> float:
+        """
+        :param wavelength:
+        :type wavelength: float
+        :return: The flux density at wavelength.  Equivalent to Spectrum[ wavelength ][ 0 ]
+        :rtype: float
+        """
         return self[ wavelength ][ 0 ]
 
     def getErr( self, wavelength: float ) -> float:
+        """
+        :param wavelength:
+        :type wavelength: float
+        :return: The flux density error at wavelength.  Equivalent to Spectrum[ wavelength ][ 1 ]
+        :rtype: float
+        """
         return self[ wavelength ][ 1 ]
 
     def getFluxlist( self ) -> List[ float ]:
@@ -217,10 +209,11 @@ class Spectrum( dict ):
         return self.__z
 
     def getWavelengths( self ) -> List[ float ]:
+        """
+        :return: A list of the wavelengths in this Spectrum, sorted by increasing value
+        :rtype: list
+        """
         return sorted( self.keys( ) )
-
-    def isAligned(self, spec ) -> bool:
-        return spec.keys() == self.keys()
 
     def lineDict( self, wavelength: float ) -> dict:
         """
@@ -315,8 +308,11 @@ class Spectrum( dict ):
     def setNS(self, namestring : str ):
         self.__namestring = namestring
 
+    @DeprecationWarning
     def shiftToRest( self, z: float = None ) -> None:
         """
+        Depreciated.  Use the methods in source_bin_ops.
+        
         Shifts this spectrum to rest frame using z.  If z is None, uses the stored value of z.
         
         :param z: Redshift to use to shift to rest frame
@@ -333,53 +329,27 @@ class Spectrum( dict ):
         for i in range( len( wls ) ):
             self[ wls[ i ] ] = (fluxlist[ i ], errlist[ i ])
 
-    def scale( self, **kwargs ):
+    def scale( self, scale_spec=None, scaleflux: float = None, scaleWL: float = DEFAULT_SCALE_WL,
+               radius: float = DEFAULT_SCALE_RADIUS ):
         """
-        Possible kwargs:
-
-        scalewl: central scale wavelength to scale around; defaults to common.constants.DEFAULT_SCALE_WL
-
-        radius: radius to use for average flux determination; defaults to common.constants.DEFAULT_SCALE_RADIUS
-
-        scaleflx: flux of spectrum scaling to
-
-        spectrum: Make use of a spectrum to directly determine scaleflx.
+        Simple scaling process.  At minimum, pass either scale_spec or scaleflux.  If scale_spec is passed, the
+        scaling flux density will be determined from it via scale_spec.aveFlux().
         
-        ab: AB Magntiude to scale the spectrum to over the default range.
-
-        :param kwargs:
-        :type kwargs: dict
-        :return:
+        :param scale_spec: Spectrum to scale to.  If not used, pass scaleflux.
+        :type scale_spec: Spectrum
+        :param scaleflux: Flux density to scale to.  If not used, pass scale_spec
+        :type scaleflux: float
+        :param scaleWL: Central wavelength to scale around.  Defaults to common.constants.DEFAULT_SCALE_WL
+        :type scaleWL: float
+        :param radius: Radius around central wavelength.  Defaults to common.constants.DEFAULT_SCALE_RADIUS
+        :type radius: float
+        :rtype: Spectrum
+        :raises: AssertionError
         """
-        scaleWL = None
-        scaleflux = None
-        scaleSpec = None
-        radius = None
+        assert scale_spec is not None or scaleflux is not None
 
-        for key, val, in kwargs.items( ):
-            key = key.lower( )
-            if key in [ 'scalewl', 'sw' ]:
-                scaleWL = val
-            elif key in [ 'scaleflux', 'scaleflx', 'sf' ]:
-                scaleflux = val
-            elif key in [ 'specturm', 'spec' ]:
-                assert isinstance( scaleSpec, Spectrum )
-                scaleSpec = val
-            elif key in [ 'radius', 'r' ]:
-                radius = val
-            elif key in [ 'ab' ]:
-                from spectrum.utils import flux_from_AB
-                scaleflux = flux_from_AB( val )
-            else:
-                raise KeyError( KeyErrorString( "spectrum.scale", key, val ) )
-
-        scaleWL = scaleWL or DEFAULT_SCALE_WL
-        radius = radius or DEFAULT_SCALE_RADIUS
-
-        if scaleSpec is not None:
-            scaleflux = scaleSpec.aveFlux( scaleWL, radius )
-        elif scaleflux is None:
-            raise TypeError( "No scaleflux value determined in spectrum.scale( **kwargs )" )
+        if scale_spec is not None:
+            scaleflux = scale_spec.aveFlux( scaleWL, radius )
 
         scalar = scaleflux / self.aveFlux( scaleWL, radius )
         if scalar == 1.0: return self
@@ -417,9 +387,16 @@ class Spectrum( dict ):
 
         return scaleflux
 
-    def trim( self, wlLow: float = None, wlHigh: float = None, wl_range=None ):
-        if wl_range is not None:
-            wlLow, wlHigh = wl_range
+    def trim( self, wlLow: float = None, wlHigh: float = None ) -> None:
+        """
+        Deletes any values exclusive of the wlLow or wlHigh range.
+        
+        :param wlLow: Minimum wavelength to keep
+        :type wlLow: float
+        :param wlHigh: Maximum wavelength to keep
+        :type wlHigh: float
+        :return: None
+        """
         for wl in self.getWavelengths():
             if wlLow is not None and wl < wlLow:
                 del self[ wl ]
@@ -430,6 +407,18 @@ class Spectrum( dict ):
         return [ ( wl, self[ wl ][ 0 ] ) for wl in self.getWavelengths() ]
 
     def plot( self, path : str, color : str = "royalblue", debug : bool = False ) -> None:
+        """
+        Makes use of tools.plot.spectrum_plot to make a plot of this Spectrum.  The file name will be determined from
+        this Spectrum's namestring.
+        
+        :param path: /path/to/output file 
+        :type path: str
+        :param color: Gnuplot compatible color to plot with.  Defaults to "royalblue"
+        :type color: str
+        :param debug: If passed as True, will engage the spectrum_plot debug process.
+        :type debug: bool
+        :rtype: None
+        """
         from tools.plot import spectrum_plot
         from fileio.utils import dirCheck
         dirCheck( path )

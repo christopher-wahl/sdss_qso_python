@@ -1,17 +1,19 @@
-from typing import Dict, List, Tuple, Union
+from typing import List, Tuple, Union
 
 from spectrum import Iterable, Spectrum
 
 
-def paired_list_to_dict( paired_list: List[ Tuple ] ) -> Dict:
+def paired_list_to_dict( paired_list: Iterable[ Tuple ] ) -> dict:
     """
     Converts a list of [ ( a, b ), ( c, d ) ... ] or [ { a : b }, { c : d } ... ]
     to a dictionary: {  a : b, c : d ... }
 
     If the entires of paired_list are not either a dictionary or a tuple/list of length 2, raises Attribute Error
 
-    :param paired_list:
-    :return:
+    :param paired_list: Tupled list
+    :type paired_list: Iterable
+    :return: dictionary k,v based on tupled pair
+    :rtype: dict
     """
 
     def __err( ):
@@ -31,8 +33,20 @@ def paired_list_to_dict( paired_list: List[ Tuple ] ) -> Dict:
     return out_dict
 
 
-def paired_tuple_list_to_two_lists( inlist ) -> Tuple[ List, List ]:
-    xlist, ylist, zlist = zip( *inlist )
+def paired_tuple_list_to_two_lists( inlist: Iterable[ Tuple ] ) -> Tuple[ List, List ]:
+    """
+    Splits a list of the form [ ( value1_1, value1_2 ), ( value 2_1, value2_2 ), ... ]
+    and returns two lists containing values split by indices:
+    
+    [ value1_1, value2_1, ... ]
+    [ value1_2, value2_2, ... ]
+    
+    :param inlist: Paired tuple list
+    :type inlist: Iterable
+    :return: Tuple of two lists
+    :rtype: tuple
+    """
+    xlist, ylist = zip( *inlist )
     return list( xlist ), list( ylist )
 
 

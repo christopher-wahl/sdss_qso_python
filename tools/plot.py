@@ -7,6 +7,25 @@ from spectrum import Iterable, Spectrum
 
 
 def __fix_outpath( path: str, filename: str = None ) -> str:
+    """
+    Simple wrapper to ensure that the output path sent to Gnuplot is properly formatted.
+    The path returned works in both Linux and Windows systems.  It's the result of not just passing a path to an
+    open/close operation, but passing a string to a method to a wrapper to a pipe to Gnuplot.  Automatically inserts
+    the quotations around the "filename" in the string.
+    
+    i.e. the gnuplot command is sent properly as
+    
+    set output "/path/to/file name"
+    
+    which takes a few extra backslashes so that the string doesn't just see escape characters the whole way.
+    
+    :param path: /path/to/filename
+    :type path: str
+    :param filename: output file name
+    :type filename: str
+    :return: File path formatted in a way that Gnuplot.py will properly find the correct file
+    :rtype: str
+    """
     from fileio.utils import join
     path = join( path, filename ) if filename is not None else path
     return '"' + ''.join( [ r"\\" if char == "\\" else char for char in path ] ) + '"'
@@ -14,6 +33,26 @@ def __fix_outpath( path: str, filename: str = None ) -> str:
 
 def make_points_plotitem( x_data: Iterable, y_data: Iterable, error_data: Iterable = None, title: str = "",
                           point_type: int = 7, point_size: int = 1, color: str = None ) -> Gnuplot.Data:
+    """
+    Takes two iterables of x and y data (order paired) and returns an XY scatter plot object in Gnuplot.Data format
+    
+    :param x_data: 
+    :type x_data: Iterable
+    :param y_data: 
+    :type y_data: Iterable
+    :param error_data: 
+    :type error_data: Iterable
+    :param title: Plot object title - what will be displayed in the key
+    :type title: str
+    :param point_type: Gnuplot point type number.
+    :type point_type: int
+    :param point_size: 
+    :type pont_size: int
+    :param color: Gnuplot compatible color for the plot item.
+    :type color: str
+    :return: Gnuplot plotable data
+    :rtype: Gnuplot.Data
+    """
     with_ = ""
     if error_data is not None:
         with_ = "yerrorbars"
