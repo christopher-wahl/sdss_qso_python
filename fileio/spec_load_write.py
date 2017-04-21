@@ -273,7 +273,7 @@ def async_rspec_scaled( namelist: Iterable[ str ], scale_to: Union[ float, Spect
         scale_to = scale_to.aveFlux( )
 
     async def __async_scaled_load_wrapper( path, filename, scaleflx ):
-        return load( path, filename ).scale( scaleflx=scaleflx )
+        return load( path, filename ).scale( scaleflux=scaleflx )
 
     output_list = [ ]
     load_loop = asyncio.new_event_loop( )

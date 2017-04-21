@@ -94,7 +94,7 @@ def scale_enmasse( primary_spectrum: Spectrum, speclist: List[ Spectrum ], scale
 
     scaleflx = primary_spectrum.aveFlux( scale_wl, scale_radius )
     for spec in speclist:
-        spec.scale( scalewl=scale_wl, scaleflx=scaleflx, radius=scale_radius )
+        spec.scale( scaleWL=scale_wl, scaleflux=scaleflx, radius=scale_radius )
 
     if (len( speclist )) == 1:
         return speclist[ 0 ]
@@ -141,7 +141,7 @@ def mutli_scale( primary: Spectrum, speclist: List[ Spectrum ], scale_wl: float 
 
 def __multi_scale_wrapper( inputV: Tuple[ Spectrum, float, float, float ] ) -> Spectrum:
     spec, scale_flux, scale_wl, scale_radius = inputV
-    spec.scale( scaleflx=scale_flux, scalewl=scale_wl, radius=scale_radius )
+    spec.scale( scaleflux=scale_flux, scaleWL=scale_wl, radius=scale_radius )
     return spec
 
 

@@ -255,7 +255,7 @@ class redshift_ab_pipeline( results_pipeline ):
     def plot_results( self, path, filename, debug=False ) -> None:
         from tools.plot import ab_z_plot
 
-        return ab_z_plot( path=path, filename=filename, primary=self._prime_ns, points=self,
+        return ab_z_plot( path=path, filename=filename, points=self, primary=self._prime_ns,
                           plotTitle=f"Catalog Points within Expected Evolution of {self._prime_ns} within {self._n_sigma} sigma",
                           debug=debug )
 

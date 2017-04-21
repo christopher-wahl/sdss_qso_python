@@ -1,6 +1,7 @@
 from typing import List
 
-from common.constants import SHEN_FIT_FILE, linesep
+from common.constants import SHEN_FIT_FILE
+from common.messaging import linesep
 from .catalog import catalog
 
 shenCat = catalog( catalog.SHEN_CATALOG )

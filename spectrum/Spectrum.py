@@ -1,7 +1,6 @@
 from typing import List, Tuple
 
 from common.constants import DEFAULT_SCALE_RADIUS, DEFAULT_SCALE_WL
-from common.messaging import KeyErrorString
 
 
 class Spectrum( dict ):
@@ -28,6 +27,7 @@ class Spectrum( dict ):
         
         :param kwargs:
         :type kwargs: dict
+        :raises: KeyError
         """
         super( Spectrum, self ).__init__( )
         if len( kwargs ) != 0:
@@ -41,7 +41,8 @@ class Spectrum( dict ):
                 elif arg in "dict":
                     self.update( val )
                 else:
-                    raise KeyError( KeyErrorString( "Specturm constructor", arg, val ) )
+                    raise KeyError(
+                        "Unknown key value in Spectrum constructor( **kwargs )\nKey: %s\nValue: %s" % (arg, val) )
         return
 
     def __repr__( self ):
@@ -358,35 +359,6 @@ class Spectrum( dict ):
             self[ wl ][ 1 ] *= scalar
         return self
 
-    def scaleFactor( self, **kwargs ) -> float:
-        scaleWL = None
-        scaleflux = None
-        scaleSpec = None
-        radius = None
-
-        for key, val, in kwargs.items( ):
-            key = key.lower( )
-            if key in [ 'scalewl', 'sw' ]:
-                scaleWL = val
-            elif key in [ 'scaleflux', 'scaleflx', 'sf' ]:
-                scaleflux = val
-            elif key in [ 'specturm', 'spec' ]:
-                scaleSpec = val
-            elif key in [ 'radius', 'r' ]:
-                radius = val
-            else:
-                raise KeyError( KeyErrorString( "spectrum.scale", key, val ) )
-
-        scaleWL = scaleWL or DEFAULT_SCALE_WL
-        radius = radius or DEFAULT_SCALE_RADIUS
-
-        if scaleSpec is not None:
-            scaleflux = scaleSpec.aveFlux( scaleWL, radius )
-        elif scaleflux is None:
-            raise TypeError( "No scaleflux value determined in spectrum.scaleFactor( **kwargs )" )
-
-        return scaleflux
-
     def trim( self, wlLow: float = None, wlHigh: float = None ) -> None:
         """
         Deletes any values exclusive of the wlLow or wlHigh range.
@@ -402,9 +374,6 @@ class Spectrum( dict ):
                 del self[ wl ]
             elif wlHigh is not None and wlHigh < wl:
                 del self[ wl ]
-
-    def wl_flux_plotlist(self) -> List[ Tuple[ float, float ] ]:
-        return [ ( wl, self[ wl ][ 0 ] ) for wl in self.getWavelengths() ]
 
     def plot( self, path : str, color : str = "royalblue", debug : bool = False ) -> None:
         """
@@ -422,4 +391,4 @@ class Spectrum( dict ):
         from tools.plot import spectrum_plot
         from fileio.utils import dirCheck
         dirCheck( path )
-        spectrum_plot( spec = self, path = path, filename = self.getNS( ), color = color, debug = debug )
+        spectrum_plot( path=path, filename=self.getNS(), spec=self, color=color, debug=debug )

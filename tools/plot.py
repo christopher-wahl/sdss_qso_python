@@ -111,19 +111,42 @@ def make_spectrum_plotitem( spec: Spectrum, color: str = None ) -> Gnuplot.Data:
     return make_line_plotitem( spec.getWavelengths(), spec.getFluxlist(), title=spec.getNS(), with_=_with )
 
 
-def four_by_four_multiplot( prime: Spectrum, speclist: list, path: str = None, filename: str = None,
-                            plotTitle: str = "", debug: bool = False ) -> Union[ Gnuplot.Gnuplot, None ]:
-    from common.constants import ANGSTROM, FLUX_UNITS
+def four_panel_multiplot( path: str, filename: str, prime: Spectrum, speclist: Iterable[ Spectrum ],
+                          plotTitle: str = "", debug: bool = False ) -> None:
+    """
+    Creates a 4 panel plot of two overlaid spectra.  The prime Spectrum object will be plot in royalblue, overlaid
+    in independent panels with each Spectrum in speclist.  Uses Gnuplot PDF terminal.  Key labels will be generated from
+    Spectrum.getNS().
+    
+    This method plots the order found in speclist and makes no attempt to scale the spectra to prime.  Scaling/ordering
+    should be applied before calling this method if those are desired.
+    
+    :param path: /path/to/output file
+    :type path: str
+    :param filename: output filename 
+    :param prime: Primary Spectrum to plot against
+    :type prime: Spectrum
+    :param speclist: Iterable of Spectrum to plot against prime
+    :type speclist: Iterable
+    :param plotTitle: Title to place at the top of every plot
+    :type plotTitle: str
+    :param debug: If True, no output will be written and persist will be passed to Gnuplot.  Defaults to False
+    :type debug: bool
+    :return:
+    :rtype: None
+    """
+    from common.messaging import ANGSTROM, FLUX_UNITS
 
     primeData = make_spectrum_plotitem( prime, color="royalblue" )
     coSpecs = [ make_spectrum_plotitem( spec, color="black" ) for spec in speclist ]
 
-    g = Gnuplot.Gnuplot()
+    g = Gnuplot.Gnuplot( persist=debug )
     g( 'set grid' )
     g( 'set key opaque box' )
     g.xlabel( u'Wavelength %s' % ANGSTROM )
     g.ylabel( u'Flux Density %s' % FLUX_UNITS )
     if not debug:
+        if not filename.lower().endswith( ".pdf" ): filename += ".pdf"
         g( "set terminal pdf enhanced color size 11, 8.5" )
         g( f"set output {__fix_outpath( path, filename )}" )
 
@@ -133,40 +156,58 @@ def four_by_four_multiplot( prime: Spectrum, speclist: list, path: str = None, f
             g.plot( coSpec, primeData )
         g( 'unset multiplot' )
 
-    if debug:
-        return g
-    g( 'set output' )
-    g.close()
+    if not debug:
+        g( 'set output' )
+        g.close()
 
 
-def ab_z_plot( path: str, filename: str, primary: Union[ str or Spectrum ],
-               points: Union[ results_pipeline or dict or List[ str ] or List[ Spectrum ] ], plotTitle: str = "",
-               n_sigma: float = 1, rs_fit_func: Callable[ [ float ], float ] = None, rs_fit_title: str = None,
-               png: bool = False,
-               debug: bool = False ) -> Union[ Gnuplot.Gnuplot or None ]:
+def ab_z_plot( path: str, filename: str, points: Union[ results_pipeline or dict or List[ str ] or List[ Spectrum ] ],
+               primary: Union[ str or Spectrum ] = None, plotTitle: str = "", n_sigma: float = 1,
+               rs_fit_func: Callable[ [ float ], float ] = None, rs_fit_title: str = None, png: bool = False,
+               debug: bool = False ) -> None:
+    """
+    Make an AB magnitude vs Redshift plot.
+    
+    The input values can vary from Spectrum to namestrings, or in the case of points, even a results_pipeline.  All data
+    used for plotting is pulled out of shenCat, so if a Spectrum carries different information, it will be lost.
+    
+    If primary is not passed, this will simply make a scatter plot.  If it IS passed, this will generate a magnitude
+    evolution line using tools.cosmo and will highlight that primary point in dark-red with n_sigma as the multiplier
+    of evolution error
+    
+    The rs_fit_func can be used to provide a fit line a to the points data.  This will not fit the data - it should 
+    already be fit to the data.  This will simply call it over the redshift range ( 0.46, 0.82 ) to generate a line on
+    the plot and so should only take one value: rs_fit_func( z ).  A specific title for the key can be provided in 
+    rs_fit_title.  Otherwise it will be labeled simply "Fit function."
+    
+    If png = True is passed, png terminal will be used to plot output rather than the default PDF terminal.  The
+    filename extension will be adjusted accordingly.
+    
+    :param path: /path/to/output file
+    :type path: str
+    :param filename: output filename
+    :type filename: str
+    :param points:  list[ string ] or [ Spectrum ], dict{ namestring : otherdata }, or resutls_pipeline of data to plot
+    :type points: list or dict or results_pipeline
+    :param primary: Primary point to highlight / generate evolution from
+    :type primary: Spectrum or str
+    :param plotTitle: Title of plot
+    :type plotTitle: str
+    :param n_sigma: Magnitude evolution uncertainty multiplier
+    :type n_sigma: float
+    :param rs_fit_func: Callable.  Takes one input:  redshift over range ( 0.46, 0.82 ).  Returns one output: float
+    :type rs_fit_func: Callable
+    :param rs_fit_title: Title of rs_fit_function for key
+    :type rs_fit_title: str
+    :param png: Use PNG terminal rather than PDF terminal.  Not as pretty, but quicker to scroll between when visually parsing data
+    :type png: bool
+    :param debug: Don't output to a file, call Gnuplot with persist = True.
+    :type debug: bool
+    :return: 
+    :rtype: None
+    """
     from tools.cosmo import magnitude_evolution
     from catalog import shenCat
-
-    if primary is not None:
-        if type( primary ) is Spectrum:
-            if primary.getNS() in shenCat:
-                p_z, p_ab, p_ab_err = shenCat.subkey( primary.getNS(), 'z', 'ab', 'ab_err' )
-            else:
-                p_z, p_ab, p_ab_err = primary.getRS(), primary.magAB(), primary.abErr()
-            primary = primary.getNS()
-        else:
-            p_z, p_ab, p_ab_err = shenCat.subkey( primary, 'z', 'ab', 'ab_err' )
-
-        """ Make Magnitude Evolutiion Data """
-        p_ab_err *= n_sigma
-        prime_upper_plot = make_line_plotitem( *magnitude_evolution( p_ab + p_ab_err, p_z, splitLists=True )[ :2 ],
-                                               title="Upper / Lower Bounds of Expected Evolution", color="grey" )
-        prime_lower_plot = make_line_plotitem( *magnitude_evolution( p_ab - p_ab_err, p_z, splitLists=True )[ :2 ],
-                                               title="", color="grey" )
-        prime_plot = make_line_plotitem( *magnitude_evolution( p_ab, p_z, splitLists=True )[ :2 ],
-                                         title="Expected Evolution", color="black" )
-        prime_point = make_points_plotitem( [ p_z ], [ p_ab ], error_data=[ p_ab_err ], title=f"{primary}",
-                                            color="dark-red" )
 
     """ Make AB vs Z points data """
     z_data = [ ]
@@ -196,7 +237,29 @@ def ab_z_plot( path: str, filename: str, primary: Union[ str or Spectrum ],
 
     plot_points = make_points_plotitem( z_data, ab_data, ab_err, color="royalblue" )
     plotlist = [ plot_points ]
+
+    """ If there is a primary value to identify, make that data """
     if primary is not None:
+        if type( primary ) is Spectrum:
+            if primary.getNS() in shenCat:
+                p_z, p_ab, p_ab_err = shenCat.subkey( primary.getNS(), 'z', 'ab', 'ab_err' )
+            else:
+                p_z, p_ab, p_ab_err = primary.getRS(), primary.magAB(), primary.abErr()
+            primary = primary.getNS()
+        else:
+            p_z, p_ab, p_ab_err = shenCat.subkey( primary, 'z', 'ab', 'ab_err' )
+
+        """ Make Magnitude Evolutiion Data """
+        p_ab_err *= n_sigma
+        prime_upper_plot = make_line_plotitem( *magnitude_evolution( p_ab + p_ab_err, p_z, splitLists=True )[ :2 ],
+                                               title="Upper / Lower Bounds of Expected Evolution", color="grey" )
+        prime_lower_plot = make_line_plotitem( *magnitude_evolution( p_ab - p_ab_err, p_z, splitLists=True )[ :2 ],
+                                               title="", color="grey" )
+        prime_plot = make_line_plotitem( *magnitude_evolution( p_ab, p_z, splitLists=True )[ :2 ],
+                                         title="Expected Evolution", color="black" )
+        prime_point = make_points_plotitem( [ p_z ], [ p_ab ], error_data=[ p_ab_err ], title=f"{primary}",
+                                            color="dark-red" )
+
         plotlist.extend( [ prime_plot, prime_upper_plot, prime_lower_plot, prime_point ] )
     if rs_fit_func is not None:
         fitx = [ (z / 100) for z in range( 46, 83 ) ]
@@ -218,8 +281,10 @@ def ab_z_plot( path: str, filename: str, primary: Union[ str or Spectrum ],
         from fileio.utils import dirCheck, join
         dirCheck( path )
         if png:
+            if not filename.lower().endswith( ".png" ): filename += ".png"
             g( 'set terminal png enhanced size 800, 600' )
         else:
+            if not filename.lower().endswith( ".pdf" ): filename += ".pdf"
             g( 'set terminal pdf enhanced size 9,6' )
         g( f'set output {__fix_outpath( path, filename ) }' )
 
@@ -228,11 +293,9 @@ def ab_z_plot( path: str, filename: str, primary: Union[ str or Spectrum ],
     if not debug:
         g( 'set output' )
         g.close()
-        return None
-    return g
 
 
-def spectrum_plot( spec: Spectrum, path: str, filename: str, color: str = "royalblue", debug: bool = False ) -> None:
+def spectrum_plot( path: str, filename: str, spec: Spectrum, color: str = "royalblue", debug: bool = False ) -> None:
     """
     Simple spectrum plotter.  Passes values to Gnuplot.py.  Plots in PDF format.
     
@@ -251,7 +314,7 @@ def spectrum_plot( spec: Spectrum, path: str, filename: str, color: str = "royal
     :type debug: bool
     :rtype: None
     """
-    from common.constants import ANGSTROM, FLUX_UNITS
+    from common.messaging import ANGSTROM, FLUX_UNITS
     from fileio.utils import dirCheck
 
     if not debug: dirCheck( path )
@@ -262,15 +325,15 @@ def spectrum_plot( spec: Spectrum, path: str, filename: str, color: str = "royal
     g( 'set key top right' )
     g( 'set grid' )
     if not debug:
+        if not filename.lower().endswith( ".pdf" ): filename += ".pdf"
         g( 'set terminal pdf color enhanced size 9,6' )
-        if ".pdf" not in filename:
-            filename += ".pdf"
         g( f'set output {__fix_outpath( path, "%s" % filename )}' )
 
     g.plot( make_spectrum_plotitem( spec, color=color ) )
 
     if not debug:
         g( 'set output' )
+        g.close()
 
 
 def xy_scatterplot( path: str, filename: str, x_data: Iterable, y_data: Iterable, y_error_bars: Iterable = None,
@@ -317,10 +380,10 @@ def xy_scatterplot( path: str, filename: str, x_data: Iterable, y_data: Iterable
     if dataTitle is None:
         g( "unset key" )
     if not debug:
+        if not filename.lower().endswith( ".pdf" ): filename += ".pdf"
         g( 'set terminal pdf color enhanced size 9,6' )
-        if ".pdf" not in filename:
-            filename += ".pdf"
         g( f'set output {__fix_outpath( path, "%s" % filename )}' )
     g.plot( make_points_plotitem( x_data, y_data, y_error_bars, title=dataTitle, color=plotcolor ) )
     if not debug:
         g( 'set output' )
+        g.close()
