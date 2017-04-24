@@ -1,6 +1,6 @@
-from typing import List, Tuple, Union
+from typing import List, Tuple
 
-from spectrum import Iterable, Spectrum
+from spectrum import Iterable
 
 
 def paired_list_to_dict( paired_list: Iterable[ Tuple ] ) -> dict:
@@ -48,29 +48,6 @@ def paired_tuple_list_to_two_lists( inlist: Iterable[ Tuple ] ) -> Tuple[ List, 
     """
     xlist, ylist = zip( *inlist )
     return list( xlist ), list( ylist )
-
-
-def sort_list_by_shen_key( in_list: Iterable[ Spectrum ] or Iterable[ str ], sort_key='z' ) -> List:
-    """
-    Takes in a list of either Spectrum or namestrings and sorts them by a key used in shenCat, ascending values.
-    If sort_key is not specified, defaults to redshift key 'z'
-
-    :param in_list:
-    :param sort_key:
-    :type in_list: Iterable
-    :type sort_key: str
-    :return:
-    :rtype: list
-    """
-    from catalog import shenCat
-    def _sort_key( x: Union[ Spectrum, str ] ) -> float:
-        return shenCat.subkey( x.getNS( ) if isinstance( x, Spectrum ) else x, sort_key )
-
-    shenCat.load( )
-    if not isinstance( in_list, list ):
-        in_list = list( in_list )
-    in_list.sort( key=_sort_key )
-    return in_list
 
 
 def dict_to_paired_list( in_dict: dict, sort: bool = False, reverse: bool = False ) -> List[ Tuple ]:

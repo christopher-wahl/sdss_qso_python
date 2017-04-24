@@ -2,7 +2,6 @@ from typing import Callable, List, Union
 
 import Gnuplot
 
-from analysis.pipeline import results_pipeline
 from spectrum import Iterable, Spectrum
 
 
@@ -57,7 +56,7 @@ def make_points_plotitem( x_data: Iterable, y_data: Iterable, error_data: Iterab
     if error_data is not None:
         with_ = "yerrorbars"
 
-    with_ = f"{with_} points pt {point_type} ps {point_size}"
+    with_ = f"{with_} pt {point_type} ps {point_size}"
 
     if color is not None:
         with_ = f"{with_} lc \"{color}\""
@@ -105,13 +104,12 @@ def make_spectrum_plotitem( spec: Spectrum, color: str = None ) -> Gnuplot.Data:
     :return: 
     :rtype: Gnuplot.Data
     """
-    _with = "lines"
     if color is not None:
-        _with = f'{_with} lc "{color}"'
+        _with = f' lc "{color}"'
     return make_line_plotitem( spec.getWavelengths(), spec.getFluxlist(), title=spec.getNS(), with_=_with )
 
 
-def four_panel_multiplot( path: str, filename: str, prime: Spectrum, speclist: Iterable[ Spectrum ],
+def four_panel_multiplot( path: str, filename: str, prime: Spectrum, speclist: Iterable[ Union[ Spectrum, str ] ],
                           plotTitle: str = "", debug: bool = False ) -> None:
     """
     Creates a 4 panel plot of two overlaid spectra.  The prime Spectrum object will be plot in royalblue, overlaid
@@ -136,6 +134,14 @@ def four_panel_multiplot( path: str, filename: str, prime: Spectrum, speclist: I
     :rtype: None
     """
     from common.messaging import ANGSTROM, FLUX_UNITS
+    from fileio.spec_load_write import rspecLoader
+    from fileio.utils import fns
+
+    if not isinstance( speclist, list ):
+        speclist = list( speclist )
+    for i in range( len( speclist ) ):
+        if not isinstance( speclist[ i ], Spectrum ):
+            speclist[ i ] = rspecLoader( fns( speclist[ i ] ) )
 
     primeData = make_spectrum_plotitem( prime, color="royalblue" )
     coSpecs = [ make_spectrum_plotitem( spec, color="black" ) for spec in speclist ]
@@ -161,7 +167,7 @@ def four_panel_multiplot( path: str, filename: str, prime: Spectrum, speclist: I
         g.close()
 
 
-def ab_z_plot( path: str, filename: str, points: Union[ results_pipeline or dict or List[ str ] or List[ Spectrum ] ],
+def ab_z_plot( path: str, filename: str, points: Union[ dict, List[ str ], List[ Spectrum ] ],
                primary: Union[ str or Spectrum ] = None, plotTitle: str = "", n_sigma: float = 1,
                rs_fit_func: Callable[ [ float ], float ] = None, rs_fit_title: str = None, png: bool = False,
                debug: bool = False ) -> None:
@@ -229,11 +235,6 @@ def ab_z_plot( path: str, filename: str, points: Union[ results_pipeline or dict
             z_data.append( shenCat.subkey( ns, 'z' ) )
             ab_data.append( shenCat.subkey( ns, 'ab' ) )
             ab_err.append( n_sigma * shenCat.subkey( ns, 'ab_err' ) )
-    elif isinstance( points, results_pipeline ):
-        for ns in points.get_results():
-            z_data.append( shenCat.subkey( ns, 'z' ) )
-            ab_data.append( shenCat.subkey( ns, 'ab' ) )
-            ab_err.append( n_sigma * shenCat.subkey( ns, 'ab_err' ) )
 
     plot_points = make_points_plotitem( z_data, ab_data, ab_err, color="royalblue" )
     plotlist = [ plot_points ]
@@ -259,13 +260,13 @@ def ab_z_plot( path: str, filename: str, points: Union[ results_pipeline or dict
                                          title="Expected Evolution", color="black" )
         prime_point = make_points_plotitem( [ p_z ], [ p_ab ], error_data=[ p_ab_err ], title=f"{primary}",
                                             color="dark-red" )
-
         plotlist.extend( [ prime_plot, prime_upper_plot, prime_lower_plot, prime_point ] )
+
     if rs_fit_func is not None:
         fitx = [ (z / 100) for z in range( 46, 83 ) ]
         fity = [ rs_fit_func( z ) for z in fitx ]
         fitplot = make_line_plotitem( fitx, fity, "Fit Function" if rs_fit_title is None else rs_fit_title,
-                                      with_="lines dt '-'", color="grey50" )
+                                      with_=" dt '-'", color="grey50" )
         plotlist.append( fitplot )
 
     """ Data has been formed.  Make actual plot """

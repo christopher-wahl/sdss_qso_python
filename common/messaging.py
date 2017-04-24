@@ -57,9 +57,17 @@ SQUARE = "²"
 BETA = "β"
 GAMMA = "γ"
 linesep = os.linesep
+PM = "±"
+CHI = "χ²"
 
 if sys.platform == "win32":
-    ANGSTROM = ANGSTROM.encode( 'cp1252', errors='replace' ).decode( 'cp1252' )
-    FLUX_UNITS = FLUX_UNITS.encode( 'cp1252', errors='replace' ).decode( 'cp1252' )
-    BETA = BETA.encode( 'cp1252', errors='replace' ).decode( 'cp1252' )
-    GAMMA = GAMMA.encode( 'cp1252', errors='replace' ).decode( 'cp1252' )
+    def __fix_str( s: str ) -> str:
+        return s.encode( 'cp1252', errors='replace' ).decode( 'cp1252' )
+
+
+    ANGSTROM = __fix_str( ANGSTROM )
+    FLUX_UNITS = __fix_str( FLUX_UNITS )
+    BETA = __fix_str( BETA )
+    GAMMA = __fix_str( GAMMA )
+    PM = __fix_str( PM )
+    CHI = __fix_str( CHI )

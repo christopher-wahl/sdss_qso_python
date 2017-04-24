@@ -355,8 +355,8 @@ class Spectrum( dict ):
         scalar = scaleflux / self.aveFlux( scaleWL, radius )
         if scalar == 1.0: return self
         for wl in self:
-            self[ wl ][ 0 ] *= scalar
-            self[ wl ][ 1 ] *= scalar
+            flux, err = self[ wl ]
+            self[ wl ] = (flux * scalar, err * scalar)
         return self
 
     def trim( self, wlLow: float = None, wlHigh: float = None ) -> None:

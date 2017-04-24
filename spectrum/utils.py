@@ -1,4 +1,4 @@
-from typing import Iterable, List, Tuple, Union
+from typing import Iterable, List, Tuple
 
 from common.constants import DEFAULT_SCALE_RADIUS, DEFAULT_SCALE_WL
 from spectrum import Spectrum
@@ -14,9 +14,13 @@ def align_wavelengths( s0: Iterable, s1: Iterable, wl_low: float = None, wl_high
     comparison operators ( -, <=, >= ) can be conducted.
 
     :param s0: first Iterable of values 
-    :param s1: second Iterable of values 
+    :type s0: Iterable
+    :param s1: second Iterable of values
+    :type s1: Iterable
     :param wl_low: Minimum wavelength values.  Defaults to None.
+    :type wl_low: float
     :param wl_high: Maximum wavelength values  Defaults to None.
+    :type wl_high: float
     :return: Set of values contained in both iterables, limited to wl_low / wl_high as applicable
     :rtype: set
     """
@@ -67,47 +71,13 @@ def compose_speclist( speclist: List[ Spectrum ], namestring: str = "" ) -> Spec
     return composite
 
 
-def scale_enmasse( primary_spectrum: Spectrum, speclist: List[ Spectrum ], scale_wl: float = None,
-                   scale_radius: float = None ) -> Union[ List[ Spectrum ] or Spectrum ]:
-    """
-    Directly modifies the spectrum arguments when are passed as *speclist to scale them to primary_spectrum
-
-    Nonkwargs passed after primary_spectrum will be handled as *args; i.e. passed as members of speclist
-
-    :param primary_spectrum: Primary spectrum to scale to
-    :param speclist: List of spectrum to scale
-    :param scale_wl: Central scaling wavelength; defaults to common.constants.DEFAULT_SCALE_WL
-    :param scale_radius: Radius to use for average flux determination; defaults to common.constants.DEFAULT_SCALE_RADIUS
-    :type primary_spectrum: Spectrum
-    :type speclist: list
-    :type scale_wl: float
-    :type scale_radius: float
-    :return: speclist
-    :rtype: List[ Spectrum ] or Spectrum
-    """
-    if scale_wl is None:
-        from common.constants import DEFAULT_SCALE_WL
-        scale_wl = DEFAULT_SCALE_WL
-    if scale_radius is None:
-        from common.constants import DEFAULT_SCALE_RADIUS
-        scale_radius = DEFAULT_SCALE_RADIUS
-
-    scaleflx = primary_spectrum.aveFlux( scale_wl, scale_radius )
-    for spec in speclist:
-        spec.scale( scaleWL=scale_wl, scaleflux=scaleflx, radius=scale_radius )
-
-    if (len( speclist )) == 1:
-        return speclist[ 0 ]
-    return list( speclist )
-
-
 def find_nearest_wavelength( sorted_wavelengths: List[ float ], wavelength: float ) -> float:
     """
     Finds the value of the nearest wavelength in the sorted list sorted_wavelengths.
 
     :param sorted_wavelengths: List of wavelengths to parse
-    :param wavelength: Value of interest
     :type sorted_wavelengths: list
+    :param wavelength: Value of interest
     :type wavelength: float
     :return: Nearest value to wavelength contained withiin sorted_wavelengths
     :rtype: float
@@ -127,8 +97,23 @@ def find_nearest_wavelength( sorted_wavelengths: List[ float ], wavelength: floa
         return before
 
 
-def mutli_scale( primary: Spectrum, speclist: List[ Spectrum ], scale_wl: float = DEFAULT_SCALE_WL,
+def mutli_scale( primary: Spectrum, speclist: Iterable[ Spectrum ], scale_wl: float = DEFAULT_SCALE_WL,
                  scale_radius=DEFAULT_SCALE_RADIUS ) -> List[ Spectrum ]:
+    """
+    Multiprocessing Spectrum.scale() method.  Scales speclist members to that of the primary Spectrum, returning a
+    list in the same order as it was provided.
+    
+    :param primary: Spectrum object to scale all speclist memebers to
+    :type primary: Spectrum
+    :param speclist: Iterable of Spectrum objects to scale to primary
+    :type speclist: Iterable
+    :param scale_wl: Wavelength at which to determine scale factor.  Defaults to DEFAULT_SCALE_WL in common.constants
+    :type scale_wl: float
+    :param scale_radius: Radius at which to determine scale factor.  Defaults to DEFAULT_SCALE_RADIUS
+    :type scale_radius: float
+    :return: List of scaled Spectrum objects
+    :rtype: list
+    """
     from tools.async_tools import generic_ordered_multiprocesser
 
     scale_flux = primary.aveFlux( central_wl=scale_wl, radius=scale_radius )
@@ -161,9 +146,19 @@ def reduce_speclist( namelist: Iterable[ str ], speclist: List[ Spectrum ] ) -> 
 
 
 def flux_from_AB( ABmag: float, wavelength: float = DEFAULT_SCALE_WL ) -> float:
+    """
+    Determine the flux density at wavelength which corresponds to a given AB Magnitude
+    
+    :param ABmag: AB Magnitude of interest
+    :type ABmag: float
+    :param wavelength: Wavelength at which to determine the flux density
+    :type wavelength: float
+    :return: flux density corresponding to the given AB magnitude
+    :rtype: float
+    """
     # Convert AB magntiude to flux_frequency
     exponent = (8.9 - ABmag) / 2.5
     f_v = pow( 10, exponent )
 
-    # Conert flux_frequency to flux_wavelength, and put into SDSS units
+    # Convert flux_frequency to flux_wavelength, and put into SDSS units
     return f_v / (3.34E4 * 1E-17 * pow( wavelength, 2 ))

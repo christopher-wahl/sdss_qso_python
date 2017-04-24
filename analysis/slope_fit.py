@@ -14,6 +14,11 @@ def __quad_func( x: float, a: float, b: float, c: float ) -> float:
     return a * (x ** 2) + b * x + c
 
 
+def __log10_fit( x: float, a: float, b: float ) -> float:
+    from numpy import log10
+    return a * log10( x ) + b
+
+
 def generic_fit( fit_function: Callable, x_data: Iterable[ float ], y_data: Iterable[ float ],
                  get_uncertainty: bool = False ) -> tuple:
     """
@@ -37,7 +42,6 @@ def generic_fit( fit_function: Callable, x_data: Iterable[ float ], y_data: Iter
     uncert = sqrt( diag( pcov ) )
     return tuple( coeff ) if not get_uncertainty else (tuple( coeff ), tuple( uncert ))
 
-
 def generic_linear_fit( x_data: Iterable[ float ], y_data: Iterable[ float ], get_uncertainty: bool = False ) -> Union[
     Tuple[ float, float ], Tuple[ Tuple[ float, float ], Tuple[ float, float ] ] ]:
     """
@@ -59,6 +63,27 @@ def generic_linear_fit( x_data: Iterable[ float ], y_data: Iterable[ float ], ge
     """
     return generic_fit( __linear_func, x_data, y_data, get_uncertainty )
 
+
+def generic_log10_fit( x_data: Iterable[ float ], y_data: Iterable[ float ], get_uncertainty: bool = False ) -> Union[
+    Tuple[ float, float ], Tuple[ Tuple[ float, float ], Tuple[ float, float ] ] ]:
+    """
+    Performs a generic log10 fit to x and y data. for the form a * log10( x ) + b   
+
+    returns a tuple of ( a, b )
+
+    If get_uncertainty is True, will return the uncertainties of the fit values as well.  The returned value will be
+    ( ( a, b ), ( uncertainty of a, uncertainty of b ) )
+
+    :param x_data: 
+    :type x_data: Iterable
+    :param y_data: 
+    :type y_data: Iterable
+    :param get_uncertainty:
+    :type get_uncertainty: bool
+    :return:
+    :rtype: tuple
+    """
+    return generic_fit( __log10_fit, x_data, y_data, get_uncertainty )
 
 def generic_quad_fit( x_data: Iterable[ float ], y_data: Iterable[ float ], get_uncertainty: bool = False ) -> Union[
     Tuple[ float, float, float ], Tuple[ Tuple[ float, float, float ], Tuple[ float, float, float ] ] ]:
