@@ -1,0 +1,229 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+
+    <title>analysis.chi &#8212; 1D Spectrum QSO Library 2.0a documentation</title>
+
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css"/>
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css"/>
+
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '2.0a',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html"/>
+    <link rel="search" title="Search" href="../../search.html"/>
+
+    <link rel="stylesheet" href="../../_static/custom.css" type="text/css"/>
+
+
+    <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9"/>
+
+</head>
+<body role="document">
+
+
+<div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="body" role="main">
+
+                <h1>Source code for analysis.chi</h1>
+                <div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">typing</span> <span class="k">import</span> <span class="n">Dict</span>
+
+<span class="kn">from</span> <span class="nn">spectrum</span> <span class="k">import</span> <span
+                        class="n">Iterable</span><span class="p">,</span> <span class="n">Spectrum</span><span
+                        class="p">,</span> <span class="n">Tuple</span>
+
+
+<span class="k">def</span> <span class="nf">__chi_value</span><span class="p">(</span> <span
+                        class="n">prime_point</span><span class="p">:</span> <span class="n">Tuple</span><span
+                        class="p">[</span> <span class="nb">float</span><span class="p">,</span> <span
+                        class="nb">float</span> <span class="p">],</span> <span class="n">sec_point</span><span
+                        class="p">:</span> <span class="n">Tuple</span><span class="p">[</span> <span
+                        class="nb">float</span><span class="p">,</span> <span class="nb">float</span> <span
+                        class="p">],</span> <span class="n">n_sigma</span><span class="p">:</span> <span class="nb">float</span> <span
+                        class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span
+                        class="p">:</span>
+    <span class="n">err</span> <span class="o">=</span> <span class="p">(</span><span class="n">prime_point</span><span
+                        class="p">[</span> <span class="mi">1</span> <span class="p">]</span> <span
+                        class="o">+</span> <span class="n">sec_point</span><span class="p">[</span> <span
+                        class="mi">1</span> <span class="p">])</span> <span class="o">*</span> <span
+                        class="n">n_sigma</span>
+    <span class="n">diff</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span> <span
+                        class="n">prime_point</span><span class="p">[</span> <span class="mi">0</span> <span
+                        class="p">]</span> <span class="o">-</span> <span class="n">sec_point</span><span
+                        class="p">[</span> <span class="mi">0</span> <span class="p">]</span> <span class="p">)</span>
+    <span class="k">return</span> <span class="nb">pow</span><span class="p">(</span> <span class="n">diff</span><span
+                        class="p">,</span> <span class="mi">2</span> <span class="p">)</span> <span
+                        class="o">/</span> <span class="n">prime_point</span><span class="p">[</span> <span
+                        class="mi">0</span> <span class="p">]</span> <span class="k">if</span> <span
+                        class="n">err</span> <span class="o">&gt;</span> <span class="n">diff</span> <span class="k">else</span> <span
+                        class="mi">0</span>
+
+
+<div class="viewcode-block" id="chi"><a class="viewcode-back" href="../../index.html#analysis.chi.chi">[docs]</a><span
+        class="k">def</span> <span class="nf">chi</span><span class="p">(</span> <span class="n">primary</span><span
+        class="p">:</span> <span class="n">Spectrum</span><span class="p">,</span> <span class="n">secondary</span><span
+        class="p">:</span> <span class="n">Spectrum</span><span class="p">,</span> <span class="n">wl_low</span><span
+        class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="kc">None</span><span
+        class="p">,</span> <span class="n">wl_high</span><span class="p">:</span> <span class="nb">float</span> <span
+        class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">n_sigma</span><span
+        class="o">=</span><span class="mi">1</span> <span class="p">)</span> <span class="o">-&gt;</span> <span
+        class="nb">float</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Simple chi^2 matching system.  This method does make any modifications to the Spectrum objects passed in.  Note that</span>
+<span class="sd">    if no wavelegnth limitations are given, the bounds of the objects will be used.</span>
+
+<span class="sd">    :param primary: Primary spectrum to be checked against </span>
+<span class="sd">    :type primary: Spectrum</span>
+<span class="sd">    :param secondary: Secondary spectrum to be checked against</span>
+<span class="sd">    :type secondary: Spectrum</span>
+<span class="sd">    :param wl_low: Minimum wavelength to begin checking at.  Defaults to None</span>
+<span class="sd">    :type wl_low: float</span>
+<span class="sd">    :param wl_high: Maximum wavelegnth at which to end checking.  Defaults to None</span>
+<span class="sd">    :type wl_high: float</span>
+<span class="sd">    :param n_sigma: Error bound multiplier in which to define the overlap range where chi value is zero.  Defaults to 1.</span>
+<span class="sd">    :type n_sigma: float</span>
+<span class="sd">    :return: Chi^2 value over the two spectra</span>
+<span class="sd">    :rtype: float</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">spectrum.utils</span> <span class="k">import</span> <span class="n">align_wavelengths</span>
+    <span class="n">wls</span> <span class="o">=</span> <span class="n">align_wavelengths</span><span class="p">(</span> <span
+            class="n">primary</span><span class="p">,</span> <span class="n">secondary</span><span
+            class="p">,</span> <span class="n">wl_low</span><span class="p">,</span> <span
+            class="n">wl_high</span> <span class="p">)</span>
+    <span class="k">return</span> <span class="nb">sum</span><span class="p">(</span> <span class="p">[</span> <span
+            class="n">__chi_value</span><span class="p">(</span> <span class="n">primary</span><span class="p">[</span> <span
+            class="n">wl</span> <span class="p">],</span> <span class="n">secondary</span><span class="p">[</span> <span
+            class="n">wl</span> <span class="p">],</span> <span class="n">n_sigma</span> <span class="p">)</span> <span
+            class="k">for</span> <span class="n">wl</span> <span class="ow">in</span> <span class="n">wls</span> <span
+            class="p">]</span> <span class="p">)</span></div>
+
+
+<span class="k">def</span> <span class="nf">__multi_chi_wrapper</span><span class="p">(</span> <span
+                        class="n">inputV</span><span class="p">:</span> <span class="n">Tuple</span><span
+                        class="p">[</span> <span class="n">Spectrum</span><span class="p">,</span> <span class="n">Spectrum</span><span
+                        class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span
+                        class="nb">float</span><span class="p">,</span> <span class="nb">float</span> <span
+                        class="p">]</span> <span class="p">)</span> <span class="o">-&gt;</span> <span
+                        class="n">Tuple</span><span class="p">[</span> <span class="nb">str</span><span
+                        class="p">,</span> <span class="nb">float</span> <span class="p">]:</span>
+    <span class="n">primary</span><span class="p">,</span> <span class="n">secondary</span><span
+                        class="p">,</span> <span class="n">wl_low</span><span class="p">,</span> <span
+                        class="n">wl_high</span><span class="p">,</span> <span class="n">n_sigma</span> <span class="o">=</span> <span
+                        class="n">inputV</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">secondary</span><span class="o">.</span><span
+                        class="n">getNS</span><span class="p">(),</span> <span class="n">chi</span><span
+                        class="p">(</span> <span class="n">primary</span><span class="p">,</span> <span class="n">secondary</span><span
+                        class="p">,</span> <span class="n">wl_low</span><span class="p">,</span> <span
+                        class="n">wl_high</span><span class="p">,</span> <span class="n">n_sigma</span> <span class="p">))</span>
+
+
+<div class="viewcode-block" id="multi_chi_analysis"><a class="viewcode-back"
+                                                       href="../../index.html#analysis.chi.multi_chi_analysis">[docs]</a><span
+        class="k">def</span> <span class="nf">multi_chi_analysis</span><span class="p">(</span> <span
+        class="n">primary</span><span class="p">:</span> <span class="n">Spectrum</span><span class="p">,</span> <span
+        class="n">speclist</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span> <span
+        class="n">Spectrum</span> <span class="p">],</span> <span class="n">wl_low</span><span class="p">:</span> <span
+        class="nb">float</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span
+        class="n">wl_high</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span
+        class="kc">None</span><span class="p">,</span>
+                        <span class="n">n_sigma</span><span class="p">:</span> <span class="nb">float</span> <span
+            class="o">=</span> <span class="mi">1</span> <span class="p">)</span> <span class="o">-&gt;</span> <span
+            class="n">Dict</span><span class="p">[</span> <span class="nb">str</span><span class="p">,</span> <span
+            class="nb">float</span> <span class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A multiprocessing invoking method for a mass chi^2 analysis.  Given a primary spectrum and a wavelength range,</span>
+<span class="sd">    run a Chi^2 check against every spectrum in the passed speclist.  Chi^2 process is handed by the analysis.chi method</span>
+<span class="sd">    in this package.</span>
+<span class="sd">    </span>
+<span class="sd">    :param primary: Spectrum to be matched against</span>
+<span class="sd">    :type primary: Spectrum</span>
+<span class="sd">    :param speclist: Iterable of type Spectrum to be matched to primary</span>
+<span class="sd">    :type speclist: Iterable</span>
+<span class="sd">    :param wl_low:  Minimum wavelength to be used.  Defaults to None and thus will use individual object bounds if not passed.</span>
+<span class="sd">    :type wl_low: float</span>
+<span class="sd">    :param wl_high: Maximium wavelength to be used.  Same case as wl_low in default to None</span>
+<span class="sd">    :type wl_high: float</span>
+<span class="sd">    :param n_sigma: Error bound multiplier for defining the &#39;0&#39; range of the chi^2 process.  Defaults to 1.</span>
+<span class="sd">    :type n_sigma: float</span>
+<span class="sd">    :return: Namestring dictionary of { spectrum.getNS() : chi^2 value }</span>
+<span class="sd">    :rtype: dict</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">tools.async_tools</span> <span class="k">import</span> <span
+            class="n">generic_unordered_multiprocesser</span>
+
+    <span class="n">results</span> <span class="o">=</span> <span class="p">[</span> <span class="p">]</span>
+    <span class="n">input_values</span> <span class="o">=</span> <span class="p">[</span> <span class="p">(</span><span
+            class="n">primary</span><span class="p">,</span> <span class="n">spec</span><span class="p">,</span> <span
+            class="n">wl_low</span><span class="p">,</span> <span class="n">wl_high</span><span class="p">,</span> <span
+            class="n">n_sigma</span><span class="p">)</span> <span class="k">for</span> <span
+            class="n">spec</span> <span class="ow">in</span> <span class="n">speclist</span> <span class="p">]</span>
+    <span class="n">generic_unordered_multiprocesser</span><span class="p">(</span> <span
+            class="n">input_values</span><span class="p">,</span> <span class="n">__multi_chi_wrapper</span><span
+            class="p">,</span> <span class="n">results</span> <span class="p">)</span>
+    <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span> <span
+            class="n">results</span> <span class="p">)</span></div>
+</pre>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <div class="relations">
+                <h3>Related Topics</h3>
+                <ul>
+                    <li><a href="../../index.html">Documentation overview</a>
+                        <ul>
+                            <li><a href="../index.html">Module code</a>
+                                <ul>
+                                </ul>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+            <div id="searchbox" style="display: none" role="search">
+                <h3>Quick search</h3>
+                <form class="search" action="../../search.html" method="get">
+                    <div><input type="text" name="q"/></div>
+                    <div><input type="submit" value="Go"/></div>
+                    <input type="hidden" name="check_keywords" value="yes"/>
+                    <input type="hidden" name="area" value="default"/>
+                </form>
+            </div>
+            <script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+    </div>
+    <div class="clearer"></div>
+</div>
+<div class="footer">
+    &copy;2017, Christopher Wahl.
+
+    |
+    Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.4</a>
+    &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+
+</div>
+
+
+</body>
+</html>

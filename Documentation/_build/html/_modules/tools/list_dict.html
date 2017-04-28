@@ -1,0 +1,211 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+
+    <title>tools.list_dict &#8212; 1D Spectrum QSO Library 2.0a documentation</title>
+
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css"/>
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css"/>
+
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '2.0a',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html"/>
+    <link rel="search" title="Search" href="../../search.html"/>
+
+    <link rel="stylesheet" href="../../_static/custom.css" type="text/css"/>
+
+
+    <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9"/>
+
+</head>
+<body role="document">
+
+
+<div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="body" role="main">
+
+                <h1>Source code for tools.list_dict</h1>
+                <div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">typing</span> <span class="k">import</span> <span class="n">List</span><span
+                        class="p">,</span> <span class="n">Tuple</span>
+
+<span class="kn">from</span> <span class="nn">spectrum</span> <span class="k">import</span> <span
+                        class="n">Iterable</span>
+
+
+<div class="viewcode-block" id="paired_list_to_dict"><a class="viewcode-back"
+                                                        href="../../index.html#tools.list_dict.paired_list_to_dict">[docs]</a><span
+        class="k">def</span> <span class="nf">paired_list_to_dict</span><span class="p">(</span> <span class="n">paired_list</span><span
+        class="p">:</span> <span class="n">Iterable</span><span class="p">[</span> <span class="n">Tuple</span> <span
+        class="p">]</span> <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span
+        class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Converts a list of [ ( a, b ), ( c, d ) ... ] or [ { a : b }, { c : d } ... ]</span>
+<span class="sd">    to a dictionary: {  a : b, c : d ... }</span>
+
+<span class="sd">    If the entires of paired_list are not either a dictionary or a tuple/list of length 2, raises Attribute Error</span>
+
+<span class="sd">    :param paired_list: Tupled list</span>
+<span class="sd">    :type paired_list: Iterable</span>
+<span class="sd">    :return: dictionary k,v based on tupled pair</span>
+<span class="sd">    :rtype: dict</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__err</span><span class="p">(</span> <span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="s2">&quot;paired_list_to_dict: paired_list entries must be either dict or have a length of 2</span><span
+            class="se">\n</span><span class="s2">First entry: </span><span class="si">%s</span><span
+            class="s2">&quot;</span> <span class="o">%</span>
+                <span class="n">paired_list</span><span class="p">[</span> <span class="mi">0</span> <span
+            class="p">]</span> <span class="p">)</span>
+
+    <span class="n">out_dict</span> <span class="o">=</span> <span class="p">{</span> <span class="p">}</span>
+    <span class="k">for</span> <span class="n">point</span> <span class="ow">in</span> <span
+            class="n">paired_list</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span> <span
+            class="n">point</span> <span class="p">)</span> <span class="o">==</span> <span class="nb">dict</span><span
+            class="p">:</span>
+            <span class="n">out_dict</span><span class="o">.</span><span class="n">update</span><span class="p">(</span> <span
+            class="n">point</span> <span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span> <span
+            class="n">paired_list</span><span class="p">[</span> <span class="mi">0</span> <span
+            class="p">]</span> <span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span
+            class="p">:</span>
+            <span class="n">out_dict</span><span class="o">.</span><span class="n">update</span><span class="p">(</span> <span
+            class="p">{</span> <span class="n">point</span><span class="p">[</span> <span class="mi">0</span> <span
+            class="p">]:</span> <span class="n">point</span><span class="p">[</span> <span class="mi">1</span> <span
+            class="p">]</span> <span class="p">}</span> <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">__err</span><span class="p">(</span> <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">out_dict</span></div>
+
+
+<div class="viewcode-block" id="paired_tuple_list_to_two_lists"><a class="viewcode-back"
+                                                                   href="../../index.html#tools.list_dict.paired_tuple_list_to_two_lists">[docs]</a><span
+        class="k">def</span> <span class="nf">paired_tuple_list_to_two_lists</span><span class="p">(</span> <span
+        class="n">inlist</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span> <span
+        class="n">Tuple</span> <span class="p">]</span> <span class="p">)</span> <span class="o">-&gt;</span> <span
+        class="n">Tuple</span><span class="p">[</span> <span class="n">List</span><span class="p">,</span> <span
+        class="n">List</span> <span class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Splits a list of the form [ ( value1_1, value1_2 ), ( value 2_1, value2_2 ), ... ]</span>
+<span class="sd">    and returns two lists containing values split by indices:</span>
+<span class="sd">    </span>
+<span class="sd">    [ value1_1, value2_1, ... ]</span>
+<span class="sd">    [ value1_2, value2_2, ... ]</span>
+<span class="sd">    </span>
+<span class="sd">    :param inlist: Paired tuple list</span>
+<span class="sd">    :type inlist: Iterable</span>
+<span class="sd">    :return: Tuple of two lists</span>
+<span class="sd">    :rtype: tuple</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">xlist</span><span class="p">,</span> <span class="n">ylist</span> <span class="o">=</span> <span
+            class="nb">zip</span><span class="p">(</span> <span class="o">*</span><span class="n">inlist</span> <span
+            class="p">)</span>
+    <span class="k">return</span> <span class="nb">list</span><span class="p">(</span> <span
+            class="n">xlist</span> <span class="p">),</span> <span class="nb">list</span><span class="p">(</span> <span
+            class="n">ylist</span> <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="dict_to_paired_list"><a class="viewcode-back"
+                                                        href="../../index.html#tools.list_dict.dict_to_paired_list">[docs]</a><span
+        class="k">def</span> <span class="nf">dict_to_paired_list</span><span class="p">(</span> <span
+        class="n">in_dict</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span
+        class="n">sort</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span
+        class="kc">False</span><span class="p">,</span> <span class="n">reverse</span><span class="p">:</span> <span
+        class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span> <span class="p">)</span> <span
+        class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span> <span class="n">Tuple</span> <span
+        class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Simple method to take a dictionary of { key : value } and return a list of tuples of ( key, value ).</span>
+<span class="sd">    </span>
+<span class="sd">    If sort = True is passed, the list will attempt to be sorted by ascending value.  If reverse = True, the list will </span>
+<span class="sd">    be sorted by descending value.</span>
+<span class="sd">    </span>
+<span class="sd">    :param in_dict:</span>
+<span class="sd">    :param sort: If True, will sort by the value of the dictionary</span>
+<span class="sd">    :param reverse: Used in conjunction with sort, if True, sorts the value in descending order.</span>
+<span class="sd">    :type in_dict: dict</span>
+<span class="sd">    :type sort: bool</span>
+<span class="sd">    :type reverse: bool</span>
+<span class="sd">    :return: List of ( key, value ) tuple pairs</span>
+<span class="sd">    :rtype: list</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">outlist</span> <span class="o">=</span> <span class="p">[</span> <span class="p">(</span><span
+            class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span
+            class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span
+            class="n">in_dict</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span
+            class="p">]</span>
+    <span class="k">if</span> <span class="n">sort</span><span class="p">:</span>
+        <span class="n">outlist</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span> <span
+            class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span
+            class="p">:</span> <span class="n">x</span><span class="p">[</span> <span class="mi">1</span> <span
+            class="p">],</span> <span class="n">reverse</span><span class="o">=</span><span
+            class="n">reverse</span> <span class="p">)</span>
+    <span class="k">return</span> <span class="n">outlist</span></div>
+</pre>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <div class="relations">
+                <h3>Related Topics</h3>
+                <ul>
+                    <li><a href="../../index.html">Documentation overview</a>
+                        <ul>
+                            <li><a href="../index.html">Module code</a>
+                                <ul>
+                                </ul>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+            <div id="searchbox" style="display: none" role="search">
+                <h3>Quick search</h3>
+                <form class="search" action="../../search.html" method="get">
+                    <div><input type="text" name="q"/></div>
+                    <div><input type="submit" value="Go"/></div>
+                    <input type="hidden" name="check_keywords" value="yes"/>
+                    <input type="hidden" name="area" value="default"/>
+                </form>
+            </div>
+            <script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+    </div>
+    <div class="clearer"></div>
+</div>
+<div class="footer">
+    &copy;2017, Christopher Wahl.
+
+    |
+    Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.4</a>
+    &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+
+</div>
+
+
+</body>
+</html>

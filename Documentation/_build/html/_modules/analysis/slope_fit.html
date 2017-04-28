@@ -1,0 +1,343 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+
+    <title>analysis.slope_fit &#8212; 1D Spectrum QSO Library 2.0a documentation</title>
+
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css"/>
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css"/>
+
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '2.0a',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html"/>
+    <link rel="search" title="Search" href="../../search.html"/>
+
+    <link rel="stylesheet" href="../../_static/custom.css" type="text/css"/>
+
+
+    <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9"/>
+
+</head>
+<body role="document">
+
+
+<div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="body" role="main">
+
+                <h1>Source code for analysis.slope_fit</h1>
+                <div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">typing</span> <span class="k">import</span> <span class="n">Callable</span><span
+                        class="p">,</span> <span class="n">Union</span>
+
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span
+                        class="n">diag</span><span class="p">,</span> <span class="n">sqrt</span>
+<span class="kn">from</span> <span class="nn">scipy.optimize</span> <span class="k">import</span> <span class="n">curve_fit</span>
+
+<span class="kn">from</span> <span class="nn">spectrum</span> <span class="k">import</span> <span
+                        class="n">Iterable</span><span class="p">,</span> <span class="n">Spectrum</span><span
+                        class="p">,</span> <span class="n">Tuple</span>
+
+
+<span class="k">def</span> <span class="nf">__linear_func</span><span class="p">(</span> <span class="n">x</span><span
+                        class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span
+                        class="n">m</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span
+                        class="n">b</span><span class="p">:</span> <span class="nb">float</span> <span
+                        class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span
+                        class="p">:</span>
+    <span class="k">return</span> <span class="n">m</span> <span class="o">*</span> <span class="n">x</span> <span
+                        class="o">+</span> <span class="n">b</span>
+
+
+<span class="k">def</span> <span class="nf">__quad_func</span><span class="p">(</span> <span class="n">x</span><span
+                        class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span
+                        class="n">a</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span
+                        class="n">b</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span
+                        class="n">c</span><span class="p">:</span> <span class="nb">float</span> <span
+                        class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span
+                        class="p">:</span>
+    <span class="k">return</span> <span class="n">a</span> <span class="o">*</span> <span class="p">(</span><span
+                        class="n">x</span> <span class="o">**</span> <span class="mi">2</span><span
+                        class="p">)</span> <span class="o">+</span> <span class="n">b</span> <span
+                        class="o">*</span> <span class="n">x</span> <span class="o">+</span> <span class="n">c</span>
+
+
+<span class="k">def</span> <span class="nf">__log10_fit</span><span class="p">(</span> <span class="n">x</span><span
+                        class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span
+                        class="n">a</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span
+                        class="n">b</span><span class="p">:</span> <span class="nb">float</span> <span
+                        class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span
+                        class="p">:</span>
+    <span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span
+                        class="n">log10</span>
+    <span class="k">return</span> <span class="n">a</span> <span class="o">*</span> <span class="n">log10</span><span
+                        class="p">(</span> <span class="n">x</span> <span class="p">)</span> <span
+                        class="o">+</span> <span class="n">b</span>
+
+
+<div class="viewcode-block" id="generic_fit"><a class="viewcode-back"
+                                                href="../../index.html#analysis.slope_fit.generic_fit">[docs]</a><span
+        class="k">def</span> <span class="nf">generic_fit</span><span class="p">(</span> <span
+        class="n">fit_function</span><span class="p">:</span> <span class="n">Callable</span><span
+        class="p">,</span> <span class="n">x_data</span><span class="p">:</span> <span class="n">Iterable</span><span
+        class="p">[</span> <span class="nb">float</span> <span class="p">],</span> <span class="n">y_data</span><span
+        class="p">:</span> <span class="n">Iterable</span><span class="p">[</span> <span class="nb">float</span> <span
+        class="p">],</span>
+                 <span class="n">get_uncertainty</span><span class="p">:</span> <span class="nb">bool</span> <span
+            class="o">=</span> <span class="kc">False</span> <span class="p">)</span> <span class="o">-&gt;</span> <span
+            class="nb">tuple</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Attempts a fit to whatever callable fit_function is passed.  The function must be of the form f( x, ... ).  Returned</span>
+<span class="sd">    tuple will be in the order of constants in the method header after the first, x, value.</span>
+<span class="sd">    </span>
+<span class="sd">    If get_uncertainty is passed, returns a tuple of ( fit values, uncertainty of fit values )</span>
+<span class="sd">    </span>
+<span class="sd">    :param fit_function: </span>
+<span class="sd">    :type fit_function: Callable</span>
+<span class="sd">    :param x_data: </span>
+<span class="sd">    :type x_data: Iterable</span>
+<span class="sd">    :param y_data: </span>
+<span class="sd">    :type y_data: Iterable</span>
+<span class="sd">    :param get_uncertainty:</span>
+<span class="sd">    :type get_uncertainty: bool</span>
+<span class="sd">    :return:</span>
+<span class="sd">    :rtype: tuple</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">coeff</span><span class="p">,</span> <span class="n">pcov</span> <span class="o">=</span> <span
+            class="n">curve_fit</span><span class="p">(</span> <span class="n">fit_function</span><span
+            class="p">,</span> <span class="n">x_data</span><span class="p">,</span> <span class="n">y_data</span> <span
+            class="p">)</span>
+    <span class="n">uncert</span> <span class="o">=</span> <span class="n">sqrt</span><span class="p">(</span> <span
+            class="n">diag</span><span class="p">(</span> <span class="n">pcov</span> <span class="p">)</span> <span
+            class="p">)</span>
+    <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span> <span
+            class="n">coeff</span> <span class="p">)</span> <span class="k">if</span> <span class="ow">not</span> <span
+            class="n">get_uncertainty</span> <span class="k">else</span> <span class="p">(</span><span
+            class="nb">tuple</span><span class="p">(</span> <span class="n">coeff</span> <span class="p">),</span> <span
+            class="nb">tuple</span><span class="p">(</span> <span class="n">uncert</span> <span
+            class="p">))</span></div>
+
+
+<div class="viewcode-block" id="generic_linear_fit"><a class="viewcode-back"
+                                                       href="../../index.html#analysis.slope_fit.generic_linear_fit">[docs]</a><span
+        class="k">def</span> <span class="nf">generic_linear_fit</span><span class="p">(</span> <span
+        class="n">x_data</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span> <span
+        class="nb">float</span> <span class="p">],</span> <span class="n">y_data</span><span class="p">:</span> <span
+        class="n">Iterable</span><span class="p">[</span> <span class="nb">float</span> <span class="p">],</span> <span
+        class="n">get_uncertainty</span><span class="p">:</span> <span class="nb">bool</span> <span
+        class="o">=</span> <span class="kc">False</span> <span class="p">)</span> <span class="o">-&gt;</span> <span
+        class="n">Union</span><span class="p">[</span>
+    <span class="n">Tuple</span><span class="p">[</span> <span class="nb">float</span><span class="p">,</span> <span
+            class="nb">float</span> <span class="p">],</span> <span class="n">Tuple</span><span class="p">[</span> <span
+            class="n">Tuple</span><span class="p">[</span> <span class="nb">float</span><span class="p">,</span> <span
+            class="nb">float</span> <span class="p">],</span> <span class="n">Tuple</span><span class="p">[</span> <span
+            class="nb">float</span><span class="p">,</span> <span class="nb">float</span> <span class="p">]</span> <span
+            class="p">]</span> <span class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Performs a generic linear fit to x and y data.  </span>
+<span class="sd">    </span>
+<span class="sd">    returns a tuple of ( m, b )</span>
+<span class="sd">    </span>
+<span class="sd">    If get_uncertainty is True, will return the uncertainties of the fit values as well.  The returned value will be</span>
+<span class="sd">    ( ( m, b ), ( uncertainty of m, uncertainty of b ) )</span>
+<span class="sd">    </span>
+<span class="sd">    :param x_data: </span>
+<span class="sd">    :type x_data: Iterable</span>
+<span class="sd">    :param y_data: </span>
+<span class="sd">    :type y_data: Iterable</span>
+<span class="sd">    :param get_uncertainty:</span>
+<span class="sd">    :type get_uncertainty: bool</span>
+<span class="sd">    :return:</span>
+<span class="sd">    :rtype: tuple</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">generic_fit</span><span class="p">(</span> <span class="n">__linear_func</span><span
+            class="p">,</span> <span class="n">x_data</span><span class="p">,</span> <span class="n">y_data</span><span
+            class="p">,</span> <span class="n">get_uncertainty</span> <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="generic_log10_fit"><a class="viewcode-back"
+                                                      href="../../index.html#analysis.slope_fit.generic_log10_fit">[docs]</a><span
+        class="k">def</span> <span class="nf">generic_log10_fit</span><span class="p">(</span> <span
+        class="n">x_data</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span> <span
+        class="nb">float</span> <span class="p">],</span> <span class="n">y_data</span><span class="p">:</span> <span
+        class="n">Iterable</span><span class="p">[</span> <span class="nb">float</span> <span class="p">],</span> <span
+        class="n">get_uncertainty</span><span class="p">:</span> <span class="nb">bool</span> <span
+        class="o">=</span> <span class="kc">False</span> <span class="p">)</span> <span class="o">-&gt;</span> <span
+        class="n">Union</span><span class="p">[</span>
+    <span class="n">Tuple</span><span class="p">[</span> <span class="nb">float</span><span class="p">,</span> <span
+            class="nb">float</span> <span class="p">],</span> <span class="n">Tuple</span><span class="p">[</span> <span
+            class="n">Tuple</span><span class="p">[</span> <span class="nb">float</span><span class="p">,</span> <span
+            class="nb">float</span> <span class="p">],</span> <span class="n">Tuple</span><span class="p">[</span> <span
+            class="nb">float</span><span class="p">,</span> <span class="nb">float</span> <span class="p">]</span> <span
+            class="p">]</span> <span class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Performs a generic log10 fit to x and y data. for the form a * log10( x ) + b   </span>
+
+<span class="sd">    returns a tuple of ( a, b )</span>
+
+<span class="sd">    If get_uncertainty is True, will return the uncertainties of the fit values as well.  The returned value will be</span>
+<span class="sd">    ( ( a, b ), ( uncertainty of a, uncertainty of b ) )</span>
+
+<span class="sd">    :param x_data: </span>
+<span class="sd">    :type x_data: Iterable</span>
+<span class="sd">    :param y_data: </span>
+<span class="sd">    :type y_data: Iterable</span>
+<span class="sd">    :param get_uncertainty:</span>
+<span class="sd">    :type get_uncertainty: bool</span>
+<span class="sd">    :return:</span>
+<span class="sd">    :rtype: tuple</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">generic_fit</span><span class="p">(</span> <span
+            class="n">__log10_fit</span><span class="p">,</span> <span class="n">x_data</span><span
+            class="p">,</span> <span class="n">y_data</span><span class="p">,</span> <span
+            class="n">get_uncertainty</span> <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="generic_quad_fit"><a class="viewcode-back"
+                                                     href="../../index.html#analysis.slope_fit.generic_quad_fit">[docs]</a><span
+        class="k">def</span> <span class="nf">generic_quad_fit</span><span class="p">(</span> <span
+        class="n">x_data</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span> <span
+        class="nb">float</span> <span class="p">],</span> <span class="n">y_data</span><span class="p">:</span> <span
+        class="n">Iterable</span><span class="p">[</span> <span class="nb">float</span> <span class="p">],</span> <span
+        class="n">get_uncertainty</span><span class="p">:</span> <span class="nb">bool</span> <span
+        class="o">=</span> <span class="kc">False</span> <span class="p">)</span> <span class="o">-&gt;</span> <span
+        class="n">Union</span><span class="p">[</span>
+    <span class="n">Tuple</span><span class="p">[</span> <span class="nb">float</span><span class="p">,</span> <span
+            class="nb">float</span><span class="p">,</span> <span class="nb">float</span> <span
+            class="p">],</span> <span class="n">Tuple</span><span class="p">[</span> <span class="n">Tuple</span><span
+            class="p">[</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span
+            class="p">,</span> <span class="nb">float</span> <span class="p">],</span> <span class="n">Tuple</span><span
+            class="p">[</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span
+            class="p">,</span> <span class="nb">float</span> <span class="p">]</span> <span class="p">]</span> <span
+            class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Performs a generic quadaratic fit to x and y data.  Returns a tuple of ( a, b, c ) for ax^2 + bx + c</span>
+<span class="sd">     </span>
+<span class="sd">    If get_uncertainty is True, will return the uncertainties of the fit values as well.  The returned value will be</span>
+<span class="sd">    ( ( a, b, c ), ( uncertainty of a, uncertainty of b, uncertainty of c ) )</span>
+<span class="sd">    </span>
+<span class="sd">    :param x_data: </span>
+<span class="sd">    :type x_data: Iterable</span>
+<span class="sd">    :param y_data: </span>
+<span class="sd">    :type y_data: Iterable</span>
+<span class="sd">    :param get_uncertainty:</span>
+<span class="sd">    :type get_uncertainty: bool</span>
+<span class="sd">    :return:</span>
+<span class="sd">    :rtype: tuple</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">generic_fit</span><span class="p">(</span> <span
+            class="n">__quad_func</span><span class="p">,</span> <span class="n">x_data</span><span
+            class="p">,</span> <span class="n">y_data</span><span class="p">,</span> <span
+            class="n">get_uncertainty</span> <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="spectrum_linear_fit"><a class="viewcode-back"
+                                                        href="../../index.html#analysis.slope_fit.spectrum_linear_fit">[docs]</a><span
+        class="k">def</span> <span class="nf">spectrum_linear_fit</span><span class="p">(</span> <span
+        class="n">spec</span><span class="p">:</span> <span class="n">Spectrum</span><span class="p">,</span> <span
+        class="n">wl_low</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span
+        class="kc">None</span><span class="p">,</span> <span class="n">wl_high</span><span class="p">:</span> <span
+        class="nb">float</span> <span class="o">=</span> <span class="kc">None</span> <span class="p">)</span> <span
+        class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span> <span class="nb">float</span><span
+        class="p">,</span> <span class="nb">float</span> <span class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Applies a linear fit to a Specturm over the specified wavelength range.  If no wl_ values are passed,</span>
+<span class="sd">    the entirely of the spectrum range is used.</span>
+<span class="sd">    </span>
+<span class="sd">    Returns a tuple of ( m, b ) for:</span>
+<span class="sd">    </span>
+<span class="sd">    Flux Density = m * Wavelength + b</span>
+<span class="sd">    </span>
+<span class="sd">    :param spec: Spectrum to slope fit</span>
+<span class="sd">    :type spec: Spectrum</span>
+<span class="sd">    :param wl_low: Low limit of wavelength range.  Defaults to None</span>
+<span class="sd">    :type wl_low: float</span>
+<span class="sd">    :param wl_high: Upper limit of wavelength range.  Defaults to None</span>
+<span class="sd">    :type wl_high: float</span>
+<span class="sd">    :return: ( m, b ) </span>
+<span class="sd">    :rtype: tuple</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">wls</span> <span class="o">=</span> <span class="n">spec</span><span class="o">.</span><span
+            class="n">getWavelengths</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">wl_low</span> <span class="ow">is</span> <span class="ow">not</span> <span
+            class="kc">None</span><span class="p">:</span>
+        <span class="n">wls</span> <span class="o">=</span> <span class="nb">filter</span><span class="p">(</span> <span
+            class="k">lambda</span> <span class="n">wl</span><span class="p">:</span> <span class="n">wl</span> <span
+            class="o">&gt;=</span> <span class="n">wl_low</span><span class="p">,</span> <span
+            class="n">wls</span> <span class="p">)</span>
+    <span class="k">if</span> <span class="n">wl_high</span> <span class="ow">is</span> <span
+            class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">wls</span> <span class="o">=</span> <span class="nb">filter</span><span class="p">(</span> <span
+            class="k">lambda</span> <span class="n">wl</span><span class="p">:</span> <span class="n">wl</span> <span
+            class="o">&lt;=</span> <span class="n">wl_high</span><span class="p">,</span> <span
+            class="n">wls</span> <span class="p">)</span>
+    <span class="n">fluxdata</span> <span class="o">=</span> <span class="p">[</span> <span class="n">spec</span><span
+            class="o">.</span><span class="n">getFlux</span><span class="p">(</span> <span class="n">wl</span> <span
+            class="p">)</span> <span class="k">for</span> <span class="n">wl</span> <span class="ow">in</span> <span
+            class="n">wls</span> <span class="p">]</span>  <span class="c1"># Can&#39;t use .getFluxlist here in clase wavelength limits used</span>
+    <span class="k">return</span> <span class="n">generic_linear_fit</span><span class="p">(</span> <span
+            class="n">wls</span><span class="p">,</span> <span class="n">fluxdata</span> <span class="p">)</span></div>
+</pre>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <div class="relations">
+                <h3>Related Topics</h3>
+                <ul>
+                    <li><a href="../../index.html">Documentation overview</a>
+                        <ul>
+                            <li><a href="../index.html">Module code</a>
+                                <ul>
+                                </ul>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+            <div id="searchbox" style="display: none" role="search">
+                <h3>Quick search</h3>
+                <form class="search" action="../../search.html" method="get">
+                    <div><input type="text" name="q"/></div>
+                    <div><input type="submit" value="Go"/></div>
+                    <input type="hidden" name="check_keywords" value="yes"/>
+                    <input type="hidden" name="area" value="default"/>
+                </form>
+            </div>
+            <script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+    </div>
+    <div class="clearer"></div>
+</div>
+<div class="footer">
+    &copy;2017, Christopher Wahl.
+
+    |
+    Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.4</a>
+    &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+
+</div>
+
+
+</body>
+</html>

@@ -1,0 +1,357 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+
+    <title>fileio.utils &#8212; 1D Spectrum QSO Library 2.0a documentation</title>
+
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css"/>
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css"/>
+
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '2.0a',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html"/>
+    <link rel="search" title="Search" href="../../search.html"/>
+
+    <link rel="stylesheet" href="../../_static/custom.css" type="text/css"/>
+
+
+    <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9"/>
+
+</head>
+<body role="document">
+
+
+<div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="body" role="main">
+
+                <h1>Source code for fileio.utils</h1>
+                <div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">re</span> <span class="k">import</span> <span class="n">search</span>
+
+<span class="kn">from</span> <span class="nn">typing</span> <span class="k">import</span> <span
+                        class="n">List</span><span class="p">,</span> <span class="n">Union</span>
+
+<span class="kn">from</span> <span class="nn">common.constants</span> <span class="k">import</span> <span class="n">abspath</span><span
+                        class="p">,</span> <span class="n">join</span><span class="p">,</span> <span class="n">os</span>
+
+
+<div class="viewcode-block" id="dirCheck"><a class="viewcode-back"
+                                             href="../../index.html#fileio.utils.dirCheck">[docs]</a><span
+        class="k">def</span> <span class="nf">dirCheck</span><span class="p">(</span> <span class="o">*</span><span
+        class="n">args</span> <span class="p">:</span> <span class="n">Union</span><span class="p">[</span> <span
+        class="nb">list</span> <span class="ow">or</span> <span class="nb">str</span> <span class="p">]</span> <span
+        class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Checks if a given path exists.  If not, creates the folders to it.</span>
+
+<span class="sd">    join( *args ) will be called on all passed parameters before checking</span>
+
+<span class="sd">    :param args: string list of /path/to/dir</span>
+<span class="sd">    :type args: list or str</span>
+<span class="sd">    :return: None</span>
+<span class="sd">    :rtype: None</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="n">join</span><span class="p">(</span> <span
+            class="o">*</span><span class="n">args</span> <span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span
+            class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span> <span
+            class="n">path</span> <span class="p">):</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span> <span
+            class="n">path</span> <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="extCheck"><a class="viewcode-back"
+                                             href="../../index.html#fileio.utils.extCheck">[docs]</a><span
+        class="k">def</span> <span class="nf">extCheck</span><span class="p">(</span> <span
+        class="n">extention</span><span class="p">:</span> <span class="nb">str</span> <span class="p">)</span> <span
+        class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Ensures a file extention includes the leading &#39;.&#39;</span>
+<span class="sd">    This is just used to error trap the lazy programmer who wrote it.</span>
+
+<span class="sd">    :param extention: file extention</span>
+<span class="sd">    :type extention: str</span>
+<span class="sd">    :return: Properly formatted file extention</span>
+<span class="sd">    :rtype: str</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">extention</span><span class="p">[</span> <span class="mi">0</span> <span
+            class="p">]</span> <span class="o">!=</span> <span class="s1">&#39;.&#39;</span><span class="p">:</span>
+        <span class="n">extention</span> <span class="o">=</span> <span class="s1">&#39;.&#39;</span> <span
+            class="o">+</span> <span class="n">extention</span>
+    <span class="k">return</span> <span class="n">extention</span></div>
+
+
+<div class="viewcode-block" id="fileCheck"><a class="viewcode-back" href="../../index.html#fileio.utils.fileCheck">[docs]</a><span
+        class="k">def</span> <span class="nf">fileCheck</span><span class="p">(</span> <span class="n">path</span><span
+        class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">filename</span><span
+        class="p">:</span> <span class="nb">str</span> <span class="p">)</span> <span class="o">-&gt;</span> <span
+        class="kc">None</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Checks if a file exists.  If not, raises FileNotFound error</span>
+
+<span class="sd">    :param path: /path/to/file</span>
+<span class="sd">    :param filename: file.name</span>
+<span class="sd">    :type path: str</span>
+<span class="sd">    :type filename: str</span>
+<span class="sd">    :rtype: None</span>
+<span class="sd">    :raises: FileNotFoundError</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span
+            class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span> <span
+            class="n">abspath</span><span class="p">(</span> <span class="n">join</span><span class="p">(</span> <span
+            class="n">path</span><span class="p">,</span> <span class="n">filename</span> <span class="p">)</span> <span
+            class="p">)</span> <span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span> <span
+            class="n">f</span><span class="s2">&quot;{join( path, filename )}&quot;</span> <span
+            class="p">)</span></div>
+
+
+<div class="viewcode-block" id="findNamestring"><a class="viewcode-back"
+                                                   href="../../index.html#fileio.utils.findNamestring">[docs]</a><span
+        class="k">def</span> <span class="nf">findNamestring</span><span class="p">(</span> <span
+        class="n">inputString</span><span class="p">:</span> <span class="nb">str</span> <span class="p">)</span> <span
+        class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Uses regular expressions to find MJD-Plate-Fiber string.</span>
+
+<span class="sd">    If none is found, raises a ValueError</span>
+
+<span class="sd">    :param inputString: given string containing a namestring</span>
+<span class="sd">    :type inputString: str</span>
+<span class="sd">    :rtype: str</span>
+<span class="sd">    :return: First instance of namestring format</span>
+<span class="sd">    :raises: ValueError</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">search</span><span class="p">(</span> <span
+            class="sa">r</span><span class="s1">&#39;\d</span><span class="si">{5}</span><span
+            class="s1">-\d</span><span class="si">{4}</span><span class="s1">-\d</span><span class="si">{3}</span><span
+            class="s1">&#39;</span><span class="p">,</span> <span class="n">inputString</span> <span
+            class="p">)</span><span class="o">.</span><span class="n">group</span><span class="p">(</span> <span
+            class="mi">0</span> <span class="p">)</span>
+    <span class="k">except</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span> <span class="s2">&quot;Unable to find namestring in the given inputString.</span><span
+            class="se">\n</span><span class="s2">inputString: </span><span class="si">%s</span><span
+            class="s2">&quot;</span> <span class="o">%</span> <span class="n">inputString</span> <span
+            class="p">)</span></div>
+
+
+<div class="viewcode-block" id="fns"><a class="viewcode-back" href="../../index.html#fileio.utils.fns">[docs]</a><span
+        class="k">def</span> <span class="nf">fns</span><span class="p">(</span> <span class="n">inputString</span><span
+        class="p">:</span> <span class="nb">str</span> <span class="p">)</span> <span class="o">-&gt;</span> <span
+        class="nb">str</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Shortcut call to utils.findNamestring( inputString )</span>
+
+<span class="sd">    :param inputString: String to be seached for namestring format</span>
+<span class="sd">    :type inputString: str</span>
+<span class="sd">    :return: Namestring</span>
+<span class="sd">    :rtype: str</span>
+<span class="sd">    :raises: ValueError</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">findNamestring</span><span class="p">(</span> <span class="n">inputString</span> <span
+            class="p">)</span></div>
+
+
+<div class="viewcode-block" id="getFiles"><a class="viewcode-back"
+                                             href="../../index.html#fileio.utils.getFiles">[docs]</a><span
+        class="k">def</span> <span class="nf">getFiles</span><span class="p">(</span> <span class="n">path</span><span
+        class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">extention</span><span
+        class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span> <span
+        class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span> <span
+        class="nb">str</span> <span class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns a list of all files within the given path.</span>
+
+<span class="sd">    If extention is specified, will only return files with said extention</span>
+
+<span class="sd">    :param path: /path/to/directory/of/interest</span>
+<span class="sd">    :param extention: File extention of interest.  If not specified, all files in directory are returned</span>
+<span class="sd">    :type path: str</span>
+<span class="sd">    :type extention: str</span>
+<span class="sd">    :return: List of str() files in directory.  If extention is specified, only those files with that file extention are returned.</span>
+<span class="sd">            Note that this list will NOT include the /path/to/ in the file names - merely the names themselves</span>
+<span class="sd">    :rtype: list</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">extention</span> <span class="o">=</span> <span class="n">extCheck</span> <span
+            class="p">(</span> <span class="n">extention</span> <span class="p">)</span> <span class="k">if</span> <span
+            class="n">extention</span> <span class="ow">is</span> <span class="ow">not</span> <span
+            class="kc">None</span> <span class="k">else</span> <span class="s1">&#39;&#39;</span>
+    <span class="k">return</span><span class="p">[</span> <span class="n">f</span> <span class="k">for</span> <span
+            class="n">f</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span
+            class="n">listdir</span><span class="p">(</span> <span class="n">path</span> <span class="p">)</span> <span
+            class="k">if</span> <span class="p">(</span> <span class="n">os</span><span class="o">.</span><span
+            class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span> <span
+            class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span
+            class="n">join</span><span class="p">(</span> <span class="n">path</span><span class="p">,</span> <span
+            class="n">f</span> <span class="p">)</span> <span class="p">)</span> <span class="ow">and</span> <span
+            class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span
+            class="o">.</span><span class="n">splitext</span><span class="p">(</span> <span class="n">f</span> <span
+            class="p">)[</span> <span class="mi">1</span> <span class="p">]</span><span class="o">.</span><span
+            class="n">endswith</span><span class="p">(</span> <span class="n">extention</span> <span
+            class="p">)))</span> <span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="object_loader"><a class="viewcode-back"
+                                                  href="../../index.html#fileio.utils.object_loader">[docs]</a><span
+        class="k">def</span> <span class="nf">object_loader</span><span class="p">(</span> <span
+        class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span
+        class="n">filename</span><span class="p">:</span> <span class="nb">str</span> <span class="p">)</span> <span
+        class="o">-&gt;</span> <span class="nb">object</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Simple serialized data reader</span>
+<span class="sd">    </span>
+<span class="sd">    :param path: /path/to/input file </span>
+<span class="sd">    :param filename: input file name</span>
+<span class="sd">    :type path: str</span>
+<span class="sd">    :type filename: str</span>
+<span class="sd">    :return: object</span>
+<span class="sd">    :rtype: object</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">import</span> <span class="nn">pickle</span>
+    <span class="n">fileCheck</span><span class="p">(</span> <span class="n">path</span><span class="p">,</span> <span
+            class="n">filename</span> <span class="p">)</span>
+    <span class="k">return</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span
+            class="p">(</span> <span class="nb">open</span><span class="p">(</span> <span class="n">join</span><span
+            class="p">(</span> <span class="n">path</span><span class="p">,</span> <span class="n">filename</span> <span
+            class="p">),</span> <span class="s1">&#39;rb&#39;</span> <span class="p">)</span> <span
+            class="p">)</span></div>
+
+
+<div class="viewcode-block" id="object_writer"><a class="viewcode-back"
+                                                  href="../../index.html#fileio.utils.object_writer">[docs]</a><span
+        class="k">def</span> <span class="nf">object_writer</span><span class="p">(</span> <span
+        class="n">obj</span><span class="p">:</span> <span class="nb">object</span><span class="p">,</span> <span
+        class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span
+        class="n">filename</span><span class="p">:</span> <span class="nb">str</span> <span class="p">)</span> <span
+        class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Simple serialized data writer.</span>
+<span class="sd">    </span>
+<span class="sd">    :param obj: Object to write </span>
+<span class="sd">    :param path: /path/to/output file</span>
+<span class="sd">    :param filename: output file name</span>
+<span class="sd">    :type obj: object</span>
+<span class="sd">    :type path: str</span>
+<span class="sd">    :type filename: str</span>
+<span class="sd">    :return: None</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">import</span> <span class="nn">pickle</span>
+    <span class="n">dirCheck</span><span class="p">(</span> <span class="n">path</span> <span class="p">)</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span> <span class="n">join</span><span
+            class="p">(</span> <span class="n">path</span><span class="p">,</span> <span class="n">filename</span> <span
+            class="p">),</span> <span class="s1">&#39;wb&#39;</span> <span class="p">)</span> <span class="k">as</span> <span
+            class="n">outfile</span><span class="p">:</span>
+        <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span> <span
+            class="n">obj</span><span class="p">,</span> <span class="n">outfile</span><span class="p">,</span> <span
+            class="n">protocol</span><span class="o">=</span><span class="n">pickle</span><span class="o">.</span><span
+            class="n">HIGHEST_PROTOCOL</span> <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ns2f"><a class="viewcode-back" href="../../index.html#fileio.utils.ns2f">[docs]</a><span
+        class="k">def</span> <span class="nf">ns2f</span><span class="p">(</span> <span class="n">namestring</span><span
+        class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">extention</span><span
+        class="p">:</span> <span class="nb">str</span> <span class="p">)</span> <span class="o">-&gt;</span> <span
+        class="nb">str</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Shortcut call for utils.namestringToFilename( namestring, extention ).  See that method&#39;s documentation</span>
+<span class="sd">    for more information.</span>
+
+<span class="sd">    :param namestring: leading filename</span>
+<span class="sd">    :param extention:  file extention</span>
+<span class="sd">    :type namestring: str</span>
+<span class="sd">    :type str</span>
+<span class="sd">    :return: concatated filename</span>
+<span class="sd">    :rtype str</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">namestringToFilename</span><span class="p">(</span> <span class="n">namestring</span><span
+            class="p">,</span> <span class="n">extention</span> <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="namestringToFilename"><a class="viewcode-back"
+                                                         href="../../index.html#fileio.utils.namestringToFilename">[docs]</a><span
+        class="k">def</span> <span class="nf">namestringToFilename</span><span class="p">(</span> <span class="n">namestring</span><span
+        class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">extention</span><span
+        class="p">:</span> <span class="nb">str</span> <span class="p">)</span> <span class="o">-&gt;</span> <span
+        class="nb">str</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Concatates namestring &amp; extention, passing extention through extCheck first.</span>
+<span class="sd">    </span>
+<span class="sd">    Note:  This is leftover of a function from when filenames were maintained with the leading &quot;spSpec-&quot;</span>
+<span class="sd">    as used by Sloan.  However, in the move to serialized Spectrum files, it was decided to leave that practice</span>
+<span class="sd">    behind.</span>
+
+<span class="sd">    :param namestring: leading filename</span>
+<span class="sd">    :type namestring: str</span>
+<span class="sd">    :param extention:  file extention</span>
+<span class="sd">    :type extention: str</span>
+<span class="sd">    :return: concatated filename</span>
+<span class="sd">    :rtype: str</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">namestring</span> <span class="o">+</span> <span
+            class="n">extCheck</span><span class="p">(</span> <span class="n">extention</span> <span class="p">)</span></div>
+</pre>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <div class="relations">
+                <h3>Related Topics</h3>
+                <ul>
+                    <li><a href="../../index.html">Documentation overview</a>
+                        <ul>
+                            <li><a href="../index.html">Module code</a>
+                                <ul>
+                                </ul>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+            <div id="searchbox" style="display: none" role="search">
+                <h3>Quick search</h3>
+                <form class="search" action="../../search.html" method="get">
+                    <div><input type="text" name="q"/></div>
+                    <div><input type="submit" value="Go"/></div>
+                    <input type="hidden" name="check_keywords" value="yes"/>
+                    <input type="hidden" name="area" value="default"/>
+                </form>
+            </div>
+            <script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+    </div>
+    <div class="clearer"></div>
+</div>
+<div class="footer">
+    &copy;2017, Christopher Wahl.
+
+    |
+    Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.4</a>
+    &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+
+</div>
+
+
+</body>
+</html>

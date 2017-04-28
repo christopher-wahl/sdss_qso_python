@@ -1,5 +1,4 @@
 from re import search
-
 from typing import List, Union
 
 from common.constants import abspath, join, os
@@ -158,10 +157,10 @@ def namestringToFilename( namestring: str, extention: str ) -> str:
     behind.
 
     :param namestring: leading filename
-    :param extention:  file extention
     :type namestring: str
-    :type str
+    :param extention:  file extention
+    :type extention: str
     :return: concatated filename
-    :rtype str
+    :rtype: str
     """
     return namestring + extCheck( extention )

@@ -188,8 +188,7 @@ def chi_pipeline_function( input_value: Tuple[ Spectrum, Spectrum, float, float,
     """
     Wrapper for the analysis.chi method for use in an analysis_pipeline.
     
-    :param input_value: tuple of ( primary_spectrum, secondary_spectrum, wl_low_lit, wl_high_limit, n_sigma ) to be passed
-    to chi() method, in that order.
+    :param input_value: tuple of ( primary_spectrum, secondary_spectrum, wl_low_lit, wl_high_limit, n_sigma ) to be passed to chi() method, in that order.
     :type input_value: tuple
     :return: tuple of ( seconday_spectrum.getNS(), float )
     :rtype: tuple

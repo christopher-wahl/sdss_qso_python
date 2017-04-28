@@ -1,0 +1,206 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+
+    <title>common.messaging &#8212; 1D Spectrum QSO Library 2.0a documentation</title>
+
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css"/>
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css"/>
+
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '2.0a',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html"/>
+    <link rel="search" title="Search" href="../../search.html"/>
+
+    <link rel="stylesheet" href="../../_static/custom.css" type="text/css"/>
+
+
+    <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9"/>
+
+</head>
+<body role="document">
+
+
+<div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="body" role="main">
+
+                <h1>Source code for common.messaging</h1>
+                <div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Simple messaging methods for better console output formatting</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+
+
+<div class="viewcode-block" id="tab_print"><a class="viewcode-back" href="../../index.html#common.messaging.tab_print">[docs]</a><span
+        class="k">def</span> <span class="nf">tab_print</span><span class="p">(</span> <span class="n">s</span><span
+        class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">new_line</span><span
+        class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span> <span
+        class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Adds an intent to s before printing it.  If new_line = False, the line will not have a carriage return after printing.</span>
+<span class="sd">    </span>
+<span class="sd">    :param s: String to print</span>
+<span class="sd">    :type s: str</span>
+<span class="sd">    :param new_line: Whether or not to append a carriage return.  Defaults to True</span>
+<span class="sd">    :type new_line: bool</span>
+<span class="sd">    :return:</span>
+<span class="sd">    :rtype: None</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">new_line</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span> <span class="n">f</span><span
+            class="s2">&quot;       </span><span class="si">{s}</span><span class="s2">&quot;</span> <span
+            class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span> <span class="n">f</span><span
+            class="s2">&quot;       </span><span class="si">{s}</span><span class="s2">&quot;</span><span
+            class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span
+            class="p">,</span> <span class="n">end</span><span class="o">=</span><span
+            class="s1">&#39;&#39;</span> <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="unfinished_print"><a class="viewcode-back"
+                                                     href="../../index.html#common.messaging.unfinished_print">[docs]</a><span
+        class="k">def</span> <span class="nf">unfinished_print</span><span class="p">(</span> <span
+        class="n">printline</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span
+        class="s2">&quot;&quot;</span> <span class="p">)</span> <span class="o">-&gt;</span> <span
+        class="kc">None</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Prints a line without appending a carriage return.  Usually followed by calling done() after work is</span>
+<span class="sd">    complete.</span>
+<span class="sd">    </span>
+<span class="sd">    :param printline: string to print </span>
+<span class="sd">    :type printline: str</span>
+<span class="sd">    :return:</span>
+<span class="sd">    :rtype: None</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="nb">print</span><span class="p">(</span> <span class="n">printline</span><span class="p">,</span> <span
+            class="n">end</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span
+            class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span> <span
+            class="p">)</span></div>
+
+
+<div class="viewcode-block" id="done"><a class="viewcode-back"
+                                         href="../../index.html#common.messaging.done">[docs]</a><span
+        class="k">def</span> <span class="nf">done</span><span class="p">()</span> <span class="o">-&gt;</span> <span
+        class="kc">None</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Intended to be used following unfinished_print() so that an action can be printed as started.  Afterwards, call</span>
+<span class="sd">    done() and have &quot; Done.&quot; printed and the carriage return appended.</span>
+<span class="sd">    </span>
+<span class="sd">    i.e.:</span>
+<span class="sd">    </span>
+<span class="sd">    Scaling spectra... Done.</span>
+<span class="sd">    </span>
+<span class="sd">    :return:</span>
+<span class="sd">    :rtype: None</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="nb">print</span><span class="p">(</span> <span class="s2">&quot; Done.&quot;</span><span
+            class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="n">linesep</span><span
+            class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span> <span
+            class="p">)</span></div>
+
+
+<span class="sd">&quot;&quot;&quot; CHARACTERS &quot;&quot;&quot;</span>
+<span class="n">ANGSTROM</span> <span class="o">=</span> <span class="sa">r</span><span class="s2">&quot;‎Å&quot;</span>
+<span class="n">FLUX_UNITS</span> <span class="o">=</span> <span class="sa">r</span><span class="s2">&quot;10^{-17} egs s^{-1} cm^{-2} </span><span
+                        class="si">%s</span><span class="s2">^{-1}&quot;</span> <span class="o">%</span> <span
+                        class="n">ANGSTROM</span>
+<span class="n">SQUARE</span> <span class="o">=</span> <span class="s2">&quot;²&quot;</span>
+<span class="n">BETA</span> <span class="o">=</span> <span class="s2">&quot;β&quot;</span>
+<span class="n">GAMMA</span> <span class="o">=</span> <span class="s2">&quot;γ&quot;</span>
+<span class="n">linesep</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span
+                        class="n">linesep</span>
+<span class="n">PM</span> <span class="o">=</span> <span class="s2">&quot;±&quot;</span>
+<span class="n">CHI</span> <span class="o">=</span> <span class="s2">&quot;χ²&quot;</span>
+
+<span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">platform</span> <span
+                        class="o">==</span> <span class="s2">&quot;win32&quot;</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">__fix_str</span><span class="p">(</span> <span class="n">s</span><span
+                        class="p">:</span> <span class="nb">str</span> <span class="p">)</span> <span
+                        class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">s</span><span class="o">.</span><span class="n">encode</span><span
+                        class="p">(</span> <span class="s1">&#39;cp1252&#39;</span><span class="p">,</span> <span
+                        class="n">errors</span><span class="o">=</span><span class="s1">&#39;replace&#39;</span> <span
+                        class="p">)</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span> <span
+                        class="s1">&#39;cp1252&#39;</span> <span class="p">)</span>
+
+
+    <span class="n">ANGSTROM</span> <span class="o">=</span> <span class="n">__fix_str</span><span
+                        class="p">(</span> <span class="n">ANGSTROM</span> <span class="p">)</span>
+    <span class="n">FLUX_UNITS</span> <span class="o">=</span> <span class="n">__fix_str</span><span class="p">(</span> <span
+                        class="n">FLUX_UNITS</span> <span class="p">)</span>
+    <span class="n">BETA</span> <span class="o">=</span> <span class="n">__fix_str</span><span class="p">(</span> <span
+                        class="n">BETA</span> <span class="p">)</span>
+    <span class="n">GAMMA</span> <span class="o">=</span> <span class="n">__fix_str</span><span class="p">(</span> <span
+                        class="n">GAMMA</span> <span class="p">)</span>
+    <span class="n">PM</span> <span class="o">=</span> <span class="n">__fix_str</span><span class="p">(</span> <span
+                        class="n">PM</span> <span class="p">)</span>
+    <span class="n">CHI</span> <span class="o">=</span> <span class="n">__fix_str</span><span class="p">(</span> <span
+                        class="n">CHI</span> <span class="p">)</span>
+</pre>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <div class="relations">
+                <h3>Related Topics</h3>
+                <ul>
+                    <li><a href="../../index.html">Documentation overview</a>
+                        <ul>
+                            <li><a href="../index.html">Module code</a>
+                                <ul>
+                                </ul>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+            <div id="searchbox" style="display: none" role="search">
+                <h3>Quick search</h3>
+                <form class="search" action="../../search.html" method="get">
+                    <div><input type="text" name="q"/></div>
+                    <div><input type="submit" value="Go"/></div>
+                    <input type="hidden" name="check_keywords" value="yes"/>
+                    <input type="hidden" name="area" value="default"/>
+                </form>
+            </div>
+            <script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+    </div>
+    <div class="clearer"></div>
+</div>
+<div class="footer">
+    &copy;2017, Christopher Wahl.
+
+    |
+    Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.4</a>
+    &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+
+</div>
+
+
+</body>
+</html>

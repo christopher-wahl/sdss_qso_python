@@ -1,0 +1,837 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+
+    <title>tools.plot &#8212; 1D Spectrum QSO Library 2.0a documentation</title>
+
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css"/>
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css"/>
+
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '2.0a',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html"/>
+    <link rel="search" title="Search" href="../../search.html"/>
+
+    <link rel="stylesheet" href="../../_static/custom.css" type="text/css"/>
+
+
+    <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9"/>
+
+</head>
+<body role="document">
+
+
+<div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="body" role="main">
+
+                <h1>Source code for tools.plot</h1>
+                <div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">typing</span> <span class="k">import</span> <span class="n">Callable</span><span
+                        class="p">,</span> <span class="n">List</span><span class="p">,</span> <span
+                        class="n">Union</span>
+
+<span class="kn">import</span> <span class="nn">Gnuplot</span>
+
+<span class="kn">from</span> <span class="nn">spectrum</span> <span class="k">import</span> <span
+                        class="n">Iterable</span><span class="p">,</span> <span class="n">Spectrum</span>
+
+
+<span class="k">def</span> <span class="nf">__fix_outpath</span><span class="p">(</span> <span
+                        class="n">path</span><span class="p">:</span> <span class="nb">str</span><span
+                        class="p">,</span> <span class="n">filename</span><span class="p">:</span> <span
+                        class="nb">str</span> <span class="o">=</span> <span class="kc">None</span> <span
+                        class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span
+                        class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Simple wrapper to ensure that the output path sent to Gnuplot is properly formatted.</span>
+<span class="sd">    The path returned works in both Linux and Windows systems.  It&#39;s the result of not just passing a path to an</span>
+<span class="sd">    open/close operation, but passing a string to a method to a wrapper to a pipe to Gnuplot.  Automatically inserts</span>
+<span class="sd">    the quotations around the &quot;filename&quot; in the string.</span>
+<span class="sd">    </span>
+<span class="sd">    i.e. the gnuplot command is sent properly as</span>
+<span class="sd">    </span>
+<span class="sd">    set output &quot;/path/to/file name&quot;</span>
+<span class="sd">    </span>
+<span class="sd">    which takes a few extra backslashes so that the string doesn&#39;t just see escape characters the whole way.</span>
+<span class="sd">    </span>
+<span class="sd">    :param path: /path/to/filename</span>
+<span class="sd">    :type path: str</span>
+<span class="sd">    :param filename: output file name</span>
+<span class="sd">    :type filename: str</span>
+<span class="sd">    :return: File path formatted in a way that Gnuplot.py will properly find the correct file</span>
+<span class="sd">    :rtype: str</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">fileio.utils</span> <span class="k">import</span> <span
+                        class="n">join</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="n">join</span><span class="p">(</span> <span
+                        class="n">path</span><span class="p">,</span> <span class="n">filename</span> <span
+                        class="p">)</span> <span class="k">if</span> <span class="n">filename</span> <span
+                        class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span
+                        class="n">path</span>
+    <span class="k">return</span> <span class="s1">&#39;&quot;&#39;</span> <span class="o">+</span> <span class="s1">&#39;&#39;</span><span
+                        class="o">.</span><span class="n">join</span><span class="p">(</span> <span
+                        class="p">[</span> <span class="sa">r</span><span class="s2">&quot;</span><span
+                        class="se">\\</span><span class="s2">&quot;</span> <span class="k">if</span> <span class="n">char</span> <span
+                        class="o">==</span> <span class="s2">&quot;</span><span class="se">\\</span><span class="s2">&quot;</span> <span
+                        class="k">else</span> <span class="n">char</span> <span class="k">for</span> <span class="n">char</span> <span
+                        class="ow">in</span> <span class="n">path</span> <span class="p">]</span> <span
+                        class="p">)</span> <span class="o">+</span> <span class="s1">&#39;&quot;&#39;</span>
+
+
+<div class="viewcode-block" id="make_points_plotitem"><a class="viewcode-back"
+                                                         href="../../index.html#tools.plot.make_points_plotitem">[docs]</a><span
+        class="k">def</span> <span class="nf">make_points_plotitem</span><span class="p">(</span> <span
+        class="n">x_data</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">,</span> <span
+        class="n">y_data</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">,</span> <span
+        class="n">error_data</span><span class="p">:</span> <span class="n">Iterable</span> <span
+        class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">title</span><span
+        class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span
+        class="s2">&quot;&quot;</span><span class="p">,</span>
+                          <span class="n">point_type</span><span class="p">:</span> <span class="nb">int</span> <span
+            class="o">=</span> <span class="mi">7</span><span class="p">,</span> <span class="n">point_size</span><span
+            class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span
+            class="p">,</span> <span class="n">color</span><span class="p">:</span> <span class="nb">str</span> <span
+            class="o">=</span> <span class="kc">None</span> <span class="p">)</span> <span class="o">-&gt;</span> <span
+            class="n">Gnuplot</span><span class="o">.</span><span class="n">Data</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Takes two iterables of x and y data (order paired) and returns an XY scatter plot object in Gnuplot.Data format</span>
+<span class="sd">    </span>
+<span class="sd">    :param x_data: </span>
+<span class="sd">    :type x_data: Iterable</span>
+<span class="sd">    :param y_data: </span>
+<span class="sd">    :type y_data: Iterable</span>
+<span class="sd">    :param error_data: </span>
+<span class="sd">    :type error_data: Iterable</span>
+<span class="sd">    :param title: Plot object title - what will be displayed in the key</span>
+<span class="sd">    :type title: str</span>
+<span class="sd">    :param point_type: Gnuplot point type number.</span>
+<span class="sd">    :type point_type: int</span>
+<span class="sd">    :param point_size: </span>
+<span class="sd">    :type pont_size: int</span>
+<span class="sd">    :param color: Gnuplot compatible color for the plot item.</span>
+<span class="sd">    :type color: str</span>
+<span class="sd">    :return: Gnuplot plotable data</span>
+<span class="sd">    :rtype: Gnuplot.Data</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">with_</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">error_data</span> <span class="ow">is</span> <span
+            class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">with_</span> <span class="o">=</span> <span class="s2">&quot;yerrorbars&quot;</span>
+
+    <span class="n">with_</span> <span class="o">=</span> <span class="n">f</span><span class="s2">&quot;</span><span
+            class="si">{with_}</span><span class="s2"> pt </span><span class="si">{point_type}</span><span class="s2"> ps </span><span
+            class="si">{point_size}</span><span class="s2">&quot;</span>
+
+    <span class="k">if</span> <span class="n">color</span> <span class="ow">is</span> <span class="ow">not</span> <span
+            class="kc">None</span><span class="p">:</span>
+        <span class="n">with_</span> <span class="o">=</span> <span class="n">f</span><span
+            class="s2">&quot;</span><span class="si">{with_}</span><span class="s2"> lc </span><span
+            class="se">\&quot;</span><span class="si">{color}</span><span class="se">\&quot;</span><span class="s2">&quot;</span>
+
+    <span class="k">if</span> <span class="n">error_data</span> <span class="ow">is</span> <span
+            class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span
+            class="n">array</span>
+        <span class="k">return</span> <span class="n">Gnuplot</span><span class="o">.</span><span
+            class="n">Data</span><span class="p">(</span> <span class="n">array</span><span class="p">(</span> <span
+            class="p">[</span> <span class="o">*</span><span class="nb">zip</span><span class="p">(</span> <span
+            class="n">x_data</span><span class="p">,</span> <span class="n">y_data</span><span class="p">,</span> <span
+            class="n">error_data</span> <span class="p">)</span> <span class="p">]</span> <span
+            class="p">),</span> <span class="n">with_</span><span class="o">=</span><span class="n">with_</span><span
+            class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="n">title</span> <span
+            class="p">)</span>
+
+    <span class="k">return</span> <span class="n">Gnuplot</span><span class="o">.</span><span class="n">Data</span><span
+            class="p">(</span> <span class="n">x_data</span><span class="p">,</span> <span class="n">y_data</span><span
+            class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="n">title</span><span
+            class="p">,</span> <span class="n">with_</span><span class="o">=</span><span class="n">with_</span> <span
+            class="p">)</span></div>
+
+
+<div class="viewcode-block" id="make_line_plotitem"><a class="viewcode-back"
+                                                       href="../../index.html#tools.plot.make_line_plotitem">[docs]</a><span
+        class="k">def</span> <span class="nf">make_line_plotitem</span><span class="p">(</span> <span
+        class="n">x_data</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">,</span> <span
+        class="n">y_data</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">,</span> <span
+        class="n">title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span
+        class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">with_</span><span
+        class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span
+        class="s2">&quot;&quot;</span><span class="p">,</span>
+                        <span class="n">color</span><span class="p">:</span> <span class="nb">str</span> <span
+            class="o">=</span> <span class="kc">None</span> <span class="p">)</span> <span class="o">-&gt;</span> <span
+            class="n">Gnuplot</span><span class="o">.</span><span class="n">Data</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Takes two iterables of x and y data (order paired) and returns a line plot object in Gnuplot.Data format. </span>
+<span class="sd">    </span>
+<span class="sd">    :param x_data: </span>
+<span class="sd">    :type x_data: Iterable</span>
+<span class="sd">    :param y_data: </span>
+<span class="sd">    :type y_data: Iterable</span>
+<span class="sd">    :param title:  Plot object title - what will be displayed in the key</span>
+<span class="sd">    :type title: str</span>
+<span class="sd">    :param with_: Customizable &quot;with ...&quot; string.  Will be concatenated with &quot;... lc &#39;color&#39;&quot; if a color is passed.</span>
+<span class="sd">    :type with_: str</span>
+<span class="sd">    :param color: Gnuplot compatible color for the plot item.</span>
+<span class="sd">    :type color: str</span>
+<span class="sd">    :return: Gnuplot plotable data</span>
+<span class="sd">    :rtype: Gnuplot.Data</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">with_</span> <span class="o">=</span> <span class="s2">&quot;lines &quot;</span> <span
+            class="o">+</span> <span class="n">with_</span>
+    <span class="k">if</span> <span class="n">color</span> <span class="ow">is</span> <span class="ow">not</span> <span
+            class="kc">None</span><span class="p">:</span>
+        <span class="n">with_</span> <span class="o">=</span> <span class="n">f</span><span
+            class="s2">&quot;</span><span class="si">{with_}</span><span class="s2"> lc </span><span
+            class="se">\&quot;</span><span class="si">{color}</span><span class="se">\&quot;</span><span class="s2">&quot;</span>
+
+    <span class="k">return</span> <span class="n">Gnuplot</span><span class="o">.</span><span class="n">Data</span><span
+            class="p">(</span> <span class="n">x_data</span><span class="p">,</span> <span class="n">y_data</span><span
+            class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="n">title</span><span
+            class="p">,</span> <span class="n">with_</span><span class="o">=</span><span class="n">with_</span> <span
+            class="p">)</span></div>
+
+
+<div class="viewcode-block" id="make_spectrum_plotitem"><a class="viewcode-back"
+                                                           href="../../index.html#tools.plot.make_spectrum_plotitem">[docs]</a><span
+        class="k">def</span> <span class="nf">make_spectrum_plotitem</span><span class="p">(</span> <span
+        class="n">spec</span><span class="p">:</span> <span class="n">Spectrum</span><span class="p">,</span> <span
+        class="n">color</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span
+        class="kc">None</span> <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Gnuplot</span><span
+        class="o">.</span><span class="n">Data</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Takes in a Spectrum class and returns Gnuplot.Data format for plotting using the data within the Spectrum object</span>
+<span class="sd">     </span>
+<span class="sd">    :param spec:</span>
+<span class="sd">    :type spec: Spectrum</span>
+<span class="sd">    :param color: </span>
+<span class="sd">    :type color: str</span>
+<span class="sd">    :return: </span>
+<span class="sd">    :rtype: Gnuplot.Data</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">color</span> <span class="ow">is</span> <span class="ow">not</span> <span
+            class="kc">None</span><span class="p">:</span>
+        <span class="n">_with</span> <span class="o">=</span> <span class="n">f</span><span
+            class="s1">&#39; lc &quot;</span><span class="si">{color}</span><span class="s1">&quot;&#39;</span>
+    <span class="k">return</span> <span class="n">make_line_plotitem</span><span class="p">(</span> <span
+            class="n">spec</span><span class="o">.</span><span class="n">getWavelengths</span><span class="p">(),</span> <span
+            class="n">spec</span><span class="o">.</span><span class="n">getFluxlist</span><span
+            class="p">(),</span> <span class="n">title</span><span class="o">=</span><span class="n">spec</span><span
+            class="o">.</span><span class="n">getNS</span><span class="p">(),</span> <span class="n">with_</span><span
+            class="o">=</span><span class="n">_with</span> <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="four_panel_multiplot"><a class="viewcode-back"
+                                                         href="../../index.html#tools.plot.four_panel_multiplot">[docs]</a><span
+        class="k">def</span> <span class="nf">four_panel_multiplot</span><span class="p">(</span> <span
+        class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span
+        class="n">filename</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span
+        class="n">prime</span><span class="p">:</span> <span class="n">Spectrum</span><span class="p">,</span> <span
+        class="n">speclist</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span> <span
+        class="n">Union</span><span class="p">[</span> <span class="n">Spectrum</span><span class="p">,</span> <span
+        class="nb">str</span> <span class="p">]</span> <span class="p">],</span>
+                          <span class="n">plotTitle</span><span class="p">:</span> <span class="nb">str</span> <span
+            class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">debug</span><span
+            class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span> <span
+            class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Creates a 4 panel plot of two overlaid spectra.  The prime Spectrum object will be plot in royalblue, overlaid</span>
+<span class="sd">    in independent panels with each Spectrum in speclist.  Uses Gnuplot PDF terminal.  Key labels will be generated from</span>
+<span class="sd">    Spectrum.getNS().</span>
+<span class="sd">    </span>
+<span class="sd">    This method plots the order found in speclist and makes no attempt to scale the spectra to prime.  Scaling/ordering</span>
+<span class="sd">    should be applied before calling this method if those are desired.</span>
+<span class="sd">    </span>
+<span class="sd">    :param path: /path/to/output file</span>
+<span class="sd">    :type path: str</span>
+<span class="sd">    :param filename: output filename </span>
+<span class="sd">    :param prime: Primary Spectrum to plot against</span>
+<span class="sd">    :type prime: Spectrum</span>
+<span class="sd">    :param speclist: Iterable of Spectrum to plot against prime</span>
+<span class="sd">    :type speclist: Iterable</span>
+<span class="sd">    :param plotTitle: Title to place at the top of every plot</span>
+<span class="sd">    :type plotTitle: str</span>
+<span class="sd">    :param debug: If True, no output will be written and persist will be passed to Gnuplot.  Defaults to False</span>
+<span class="sd">    :type debug: bool</span>
+<span class="sd">    :return:</span>
+<span class="sd">    :rtype: None</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">common.messaging</span> <span class="k">import</span> <span class="n">ANGSTROM</span><span
+            class="p">,</span> <span class="n">FLUX_UNITS</span>
+    <span class="kn">from</span> <span class="nn">fileio.spec_load_write</span> <span class="k">import</span> <span
+            class="n">rspecLoader</span>
+    <span class="kn">from</span> <span class="nn">fileio.utils</span> <span class="k">import</span> <span
+            class="n">fns</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span
+            class="p">(</span> <span class="n">speclist</span><span class="p">,</span> <span
+            class="nb">list</span> <span class="p">):</span>
+        <span class="n">speclist</span> <span class="o">=</span> <span class="nb">list</span><span
+            class="p">(</span> <span class="n">speclist</span> <span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span
+            class="p">(</span> <span class="nb">len</span><span class="p">(</span> <span class="n">speclist</span> <span
+            class="p">)</span> <span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span> <span
+            class="n">speclist</span><span class="p">[</span> <span class="n">i</span> <span class="p">],</span> <span
+            class="n">Spectrum</span> <span class="p">):</span>
+            <span class="n">speclist</span><span class="p">[</span> <span class="n">i</span> <span
+            class="p">]</span> <span class="o">=</span> <span class="n">rspecLoader</span><span class="p">(</span> <span
+            class="n">fns</span><span class="p">(</span> <span class="n">speclist</span><span class="p">[</span> <span
+            class="n">i</span> <span class="p">]</span> <span class="p">)</span> <span class="p">)</span>
+
+    <span class="n">primeData</span> <span class="o">=</span> <span class="n">make_spectrum_plotitem</span><span
+            class="p">(</span> <span class="n">prime</span><span class="p">,</span> <span class="n">color</span><span
+            class="o">=</span><span class="s2">&quot;royalblue&quot;</span> <span class="p">)</span>
+    <span class="n">coSpecs</span> <span class="o">=</span> <span class="p">[</span> <span class="n">make_spectrum_plotitem</span><span
+            class="p">(</span> <span class="n">spec</span><span class="p">,</span> <span class="n">color</span><span
+            class="o">=</span><span class="s2">&quot;black&quot;</span> <span class="p">)</span> <span
+            class="k">for</span> <span class="n">spec</span> <span class="ow">in</span> <span class="n">speclist</span> <span
+            class="p">]</span>
+
+    <span class="n">g</span> <span class="o">=</span> <span class="n">Gnuplot</span><span class="o">.</span><span
+            class="n">Gnuplot</span><span class="p">(</span> <span class="n">persist</span><span class="o">=</span><span
+            class="n">debug</span> <span class="p">)</span>
+    <span class="n">g</span><span class="p">(</span> <span class="s1">&#39;set grid&#39;</span> <span class="p">)</span>
+    <span class="n">g</span><span class="p">(</span> <span class="s1">&#39;set key opaque box&#39;</span> <span
+            class="p">)</span>
+    <span class="n">g</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span> <span
+            class="sa">u</span><span class="s1">&#39;Wavelength </span><span class="si">%s</span><span
+            class="s1">&#39;</span> <span class="o">%</span> <span class="n">ANGSTROM</span> <span class="p">)</span>
+    <span class="n">g</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span> <span
+            class="sa">u</span><span class="s1">&#39;Flux Density </span><span class="si">%s</span><span class="s1">&#39;</span> <span
+            class="o">%</span> <span class="n">FLUX_UNITS</span> <span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">debug</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">filename</span><span
+            class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span
+            class="n">endswith</span><span class="p">(</span> <span class="s2">&quot;.pdf&quot;</span> <span class="p">):</span> <span
+            class="n">filename</span> <span class="o">+=</span> <span class="s2">&quot;.pdf&quot;</span>
+        <span class="n">g</span><span class="p">(</span> <span class="s2">&quot;set terminal pdf enhanced color size 11, 8.5&quot;</span> <span
+            class="p">)</span>
+        <span class="n">g</span><span class="p">(</span> <span class="n">f</span><span class="s2">&quot;set output {__fix_outpath( path, filename )}&quot;</span> <span
+            class="p">)</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span
+            class="p">(</span> <span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span
+            class="p">(</span> <span class="n">coSpecs</span> <span class="p">),</span> <span class="mi">4</span> <span
+            class="p">):</span>
+        <span class="n">g</span><span class="p">(</span> <span class="n">f</span><span class="s1">&#39;set multiplot layout 2,2 title &quot;</span><span
+            class="si">{plotTitle}</span><span class="s1">&quot;&#39;</span> <span class="p">)</span>
+        <span class="k">for</span> <span class="n">coSpec</span> <span class="ow">in</span> <span
+            class="n">coSpecs</span><span class="p">[</span> <span class="n">i</span><span class="p">:</span> <span
+            class="n">i</span> <span class="o">+</span> <span class="mi">4</span> <span class="p">]:</span>
+            <span class="n">g</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span> <span
+            class="n">coSpec</span><span class="p">,</span> <span class="n">primeData</span> <span class="p">)</span>
+        <span class="n">g</span><span class="p">(</span> <span class="s1">&#39;unset multiplot&#39;</span> <span
+            class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">debug</span><span class="p">:</span>
+        <span class="n">g</span><span class="p">(</span> <span class="s1">&#39;set output&#39;</span> <span
+            class="p">)</span>
+        <span class="n">g</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="ab_z_plot"><a class="viewcode-back"
+                                              href="../../index.html#tools.plot.ab_z_plot">[docs]</a><span
+        class="k">def</span> <span class="nf">ab_z_plot</span><span class="p">(</span> <span class="n">path</span><span
+        class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">filename</span><span
+        class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">points</span><span
+        class="p">:</span> <span class="n">Union</span><span class="p">[</span> <span class="nb">dict</span><span
+        class="p">,</span> <span class="n">List</span><span class="p">[</span> <span class="nb">str</span> <span
+        class="p">],</span> <span class="n">List</span><span class="p">[</span> <span class="n">Spectrum</span> <span
+        class="p">]</span> <span class="p">],</span>
+               <span class="n">primary</span><span class="p">:</span> <span class="n">Union</span><span
+            class="p">[</span> <span class="nb">str</span> <span class="ow">or</span> <span
+            class="n">Spectrum</span> <span class="p">]</span> <span class="o">=</span> <span
+            class="kc">None</span><span class="p">,</span> <span class="n">plotTitle</span><span
+            class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span
+            class="p">,</span> <span class="n">n_sigma</span><span class="p">:</span> <span
+            class="nb">float</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+               <span class="n">rs_fit_func</span><span class="p">:</span> <span class="n">Callable</span><span
+            class="p">[</span> <span class="p">[</span> <span class="nb">float</span> <span class="p">],</span> <span
+            class="nb">float</span> <span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span
+            class="p">,</span> <span class="n">rs_fit_title</span><span class="p">:</span> <span
+            class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span
+            class="n">png</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span
+            class="kc">False</span><span class="p">,</span>
+               <span class="n">debug</span><span class="p">:</span> <span class="nb">bool</span> <span
+            class="o">=</span> <span class="kc">False</span> <span class="p">)</span> <span class="o">-&gt;</span> <span
+            class="kc">None</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Make an AB magnitude vs Redshift plot.</span>
+<span class="sd">    </span>
+<span class="sd">    The input values can vary from Spectrum to namestrings, or in the case of points, even a results_pipeline.  All data</span>
+<span class="sd">    used for plotting is pulled out of shenCat, so if a Spectrum carries different information, it will be lost.</span>
+<span class="sd">    </span>
+<span class="sd">    If primary is not passed, this will simply make a scatter plot.  If it IS passed, this will generate a magnitude</span>
+<span class="sd">    evolution line using tools.cosmo and will highlight that primary point in dark-red with n_sigma as the multiplier</span>
+<span class="sd">    of evolution error</span>
+<span class="sd">    </span>
+<span class="sd">    The rs_fit_func can be used to provide a fit line a to the points data.  This will not fit the data - it should </span>
+<span class="sd">    already be fit to the data.  This will simply call it over the redshift range ( 0.46, 0.82 ) to generate a line on</span>
+<span class="sd">    the plot and so should only take one value: rs_fit_func( z ).  A specific title for the key can be provided in </span>
+<span class="sd">    rs_fit_title.  Otherwise it will be labeled simply &quot;Fit function.&quot;</span>
+<span class="sd">    </span>
+<span class="sd">    If png = True is passed, png terminal will be used to plot output rather than the default PDF terminal.  The</span>
+<span class="sd">    filename extension will be adjusted accordingly.</span>
+<span class="sd">    </span>
+<span class="sd">    :param path: /path/to/output file</span>
+<span class="sd">    :type path: str</span>
+<span class="sd">    :param filename: output filename</span>
+<span class="sd">    :type filename: str</span>
+<span class="sd">    :param points:  list[ string ] or [ Spectrum ], dict{ namestring : otherdata }, or resutls_pipeline of data to plot</span>
+<span class="sd">    :type points: list or dict or results_pipeline</span>
+<span class="sd">    :param primary: Primary point to highlight / generate evolution from</span>
+<span class="sd">    :type primary: Spectrum or str</span>
+<span class="sd">    :param plotTitle: Title of plot</span>
+<span class="sd">    :type plotTitle: str</span>
+<span class="sd">    :param n_sigma: Magnitude evolution uncertainty multiplier</span>
+<span class="sd">    :type n_sigma: float</span>
+<span class="sd">    :param rs_fit_func: Callable.  Takes one input:  redshift over range ( 0.46, 0.82 ).  Returns one output: float</span>
+<span class="sd">    :type rs_fit_func: Callable</span>
+<span class="sd">    :param rs_fit_title: Title of rs_fit_function for key</span>
+<span class="sd">    :type rs_fit_title: str</span>
+<span class="sd">    :param png: Use PNG terminal rather than PDF terminal.  Not as pretty, but quicker to scroll between when visually parsing data</span>
+<span class="sd">    :type png: bool</span>
+<span class="sd">    :param debug: Don&#39;t output to a file, call Gnuplot with persist = True.</span>
+<span class="sd">    :type debug: bool</span>
+<span class="sd">    :return: </span>
+<span class="sd">    :rtype: None</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">tools.cosmo</span> <span class="k">import</span> <span class="n">magnitude_evolution</span>
+    <span class="kn">from</span> <span class="nn">catalog</span> <span class="k">import</span> <span
+            class="n">shenCat</span>
+
+    <span class="sd">&quot;&quot;&quot; Make AB vs Z points data &quot;&quot;&quot;</span>
+    <span class="n">z_data</span> <span class="o">=</span> <span class="p">[</span> <span class="p">]</span>
+    <span class="n">ab_data</span> <span class="o">=</span> <span class="p">[</span> <span class="p">]</span>
+    <span class="n">ab_err</span> <span class="o">=</span> <span class="p">[</span> <span class="p">]</span>
+    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span> <span class="n">points</span> <span
+            class="p">)</span> <span class="ow">is</span> <span class="nb">list</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span> <span
+            class="n">points</span><span class="p">[</span> <span class="mi">0</span> <span class="p">]</span> <span
+            class="p">)</span> <span class="ow">is</span> <span class="nb">str</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">ns</span> <span class="ow">in</span> <span
+            class="n">points</span><span class="p">:</span>
+                <span class="n">z_data</span><span class="o">.</span><span class="n">append</span><span
+            class="p">(</span> <span class="n">shenCat</span><span class="o">.</span><span class="n">subkey</span><span
+            class="p">(</span> <span class="n">ns</span><span class="p">,</span> <span
+            class="s1">&#39;z&#39;</span> <span class="p">)</span> <span class="p">)</span>
+                <span class="n">ab_data</span><span class="o">.</span><span class="n">append</span><span
+            class="p">(</span> <span class="n">shenCat</span><span class="o">.</span><span class="n">subkey</span><span
+            class="p">(</span> <span class="n">ns</span><span class="p">,</span> <span
+            class="s1">&#39;ab&#39;</span> <span class="p">)</span> <span class="p">)</span>
+                <span class="n">ab_err</span><span class="o">.</span><span class="n">append</span><span
+            class="p">(</span> <span class="n">n_sigma</span> <span class="o">*</span> <span
+            class="n">shenCat</span><span class="o">.</span><span class="n">subkey</span><span class="p">(</span> <span
+            class="n">ns</span><span class="p">,</span> <span class="s1">&#39;ab_err&#39;</span> <span
+            class="p">)</span> <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">spec</span> <span class="ow">in</span> <span
+            class="n">points</span><span class="p">:</span>
+                <span class="n">z_data</span><span class="o">.</span><span class="n">append</span><span
+            class="p">(</span> <span class="n">shenCat</span><span class="o">.</span><span class="n">subkey</span><span
+            class="p">(</span> <span class="n">spec</span><span class="o">.</span><span class="n">getNS</span><span
+            class="p">(),</span> <span class="s1">&#39;z&#39;</span> <span class="p">)</span> <span class="p">)</span>
+                <span class="n">ab_data</span><span class="o">.</span><span class="n">append</span><span
+            class="p">(</span> <span class="n">shenCat</span><span class="o">.</span><span class="n">subkey</span><span
+            class="p">(</span> <span class="n">spec</span><span class="o">.</span><span class="n">getNS</span><span
+            class="p">(),</span> <span class="s1">&#39;ab&#39;</span> <span class="p">)</span> <span class="p">)</span>
+                <span class="n">ab_err</span><span class="o">.</span><span class="n">append</span><span
+            class="p">(</span> <span class="n">n_sigma</span> <span class="o">*</span> <span
+            class="n">shenCat</span><span class="o">.</span><span class="n">subkey</span><span class="p">(</span> <span
+            class="n">spec</span><span class="o">.</span><span class="n">getNS</span><span class="p">(),</span> <span
+            class="s1">&#39;ab_err&#39;</span> <span class="p">)</span> <span class="p">)</span>
+    <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span> <span class="n">points</span> <span
+            class="p">)</span> <span class="ow">is</span> <span class="nb">dict</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">ns</span> <span class="ow">in</span> <span
+            class="n">points</span><span class="p">:</span>
+            <span class="n">z_data</span><span class="o">.</span><span class="n">append</span><span
+            class="p">(</span> <span class="n">shenCat</span><span class="o">.</span><span class="n">subkey</span><span
+            class="p">(</span> <span class="n">ns</span><span class="p">,</span> <span
+            class="s1">&#39;z&#39;</span> <span class="p">)</span> <span class="p">)</span>
+            <span class="n">ab_data</span><span class="o">.</span><span class="n">append</span><span class="p">(</span> <span
+            class="n">shenCat</span><span class="o">.</span><span class="n">subkey</span><span class="p">(</span> <span
+            class="n">ns</span><span class="p">,</span> <span class="s1">&#39;ab&#39;</span> <span
+            class="p">)</span> <span class="p">)</span>
+            <span class="n">ab_err</span><span class="o">.</span><span class="n">append</span><span
+            class="p">(</span> <span class="n">n_sigma</span> <span class="o">*</span> <span
+            class="n">shenCat</span><span class="o">.</span><span class="n">subkey</span><span class="p">(</span> <span
+            class="n">ns</span><span class="p">,</span> <span class="s1">&#39;ab_err&#39;</span> <span
+            class="p">)</span> <span class="p">)</span>
+
+    <span class="n">plot_points</span> <span class="o">=</span> <span class="n">make_points_plotitem</span><span
+            class="p">(</span> <span class="n">z_data</span><span class="p">,</span> <span class="n">ab_data</span><span
+            class="p">,</span> <span class="n">ab_err</span><span class="p">,</span> <span class="n">color</span><span
+            class="o">=</span><span class="s2">&quot;royalblue&quot;</span> <span class="p">)</span>
+    <span class="n">plotlist</span> <span class="o">=</span> <span class="p">[</span> <span class="n">plot_points</span> <span
+            class="p">]</span>
+
+    <span class="sd">&quot;&quot;&quot; If there is a primary value to identify, make that data &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">primary</span> <span class="ow">is</span> <span
+            class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span> <span
+            class="n">primary</span> <span class="p">)</span> <span class="ow">is</span> <span class="n">Spectrum</span><span
+            class="p">:</span>
+            <span class="k">if</span> <span class="n">primary</span><span class="o">.</span><span class="n">getNS</span><span
+            class="p">()</span> <span class="ow">in</span> <span class="n">shenCat</span><span class="p">:</span>
+                <span class="n">p_z</span><span class="p">,</span> <span class="n">p_ab</span><span
+            class="p">,</span> <span class="n">p_ab_err</span> <span class="o">=</span> <span
+            class="n">shenCat</span><span class="o">.</span><span class="n">subkey</span><span class="p">(</span> <span
+            class="n">primary</span><span class="o">.</span><span class="n">getNS</span><span class="p">(),</span> <span
+            class="s1">&#39;z&#39;</span><span class="p">,</span> <span class="s1">&#39;ab&#39;</span><span
+            class="p">,</span> <span class="s1">&#39;ab_err&#39;</span> <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">p_z</span><span class="p">,</span> <span class="n">p_ab</span><span
+            class="p">,</span> <span class="n">p_ab_err</span> <span class="o">=</span> <span
+            class="n">primary</span><span class="o">.</span><span class="n">getRS</span><span class="p">(),</span> <span
+            class="n">primary</span><span class="o">.</span><span class="n">magAB</span><span class="p">(),</span> <span
+            class="n">primary</span><span class="o">.</span><span class="n">abErr</span><span class="p">()</span>
+            <span class="n">primary</span> <span class="o">=</span> <span class="n">primary</span><span
+            class="o">.</span><span class="n">getNS</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">p_z</span><span class="p">,</span> <span class="n">p_ab</span><span class="p">,</span> <span
+            class="n">p_ab_err</span> <span class="o">=</span> <span class="n">shenCat</span><span
+            class="o">.</span><span class="n">subkey</span><span class="p">(</span> <span class="n">primary</span><span
+            class="p">,</span> <span class="s1">&#39;z&#39;</span><span class="p">,</span> <span
+            class="s1">&#39;ab&#39;</span><span class="p">,</span> <span class="s1">&#39;ab_err&#39;</span> <span
+            class="p">)</span>
+
+        <span class="sd">&quot;&quot;&quot; Make Magnitude Evolutiion Data &quot;&quot;&quot;</span>
+        <span class="n">p_ab_err</span> <span class="o">*=</span> <span class="n">n_sigma</span>
+        <span class="n">prime_upper_plot</span> <span class="o">=</span> <span class="n">make_line_plotitem</span><span
+            class="p">(</span> <span class="o">*</span><span class="n">magnitude_evolution</span><span
+            class="p">(</span> <span class="n">p_ab</span> <span class="o">+</span> <span class="n">p_ab_err</span><span
+            class="p">,</span> <span class="n">p_z</span><span class="p">,</span> <span class="n">splitLists</span><span
+            class="o">=</span><span class="kc">True</span> <span class="p">)[</span> <span class="p">:</span><span
+            class="mi">2</span> <span class="p">],</span>
+                                               <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Upper / Lower Bounds of Expected Evolution&quot;</span><span
+            class="p">,</span> <span class="n">color</span><span class="o">=</span><span
+            class="s2">&quot;grey&quot;</span> <span class="p">)</span>
+        <span class="n">prime_lower_plot</span> <span class="o">=</span> <span class="n">make_line_plotitem</span><span
+            class="p">(</span> <span class="o">*</span><span class="n">magnitude_evolution</span><span
+            class="p">(</span> <span class="n">p_ab</span> <span class="o">-</span> <span class="n">p_ab_err</span><span
+            class="p">,</span> <span class="n">p_z</span><span class="p">,</span> <span class="n">splitLists</span><span
+            class="o">=</span><span class="kc">True</span> <span class="p">)[</span> <span class="p">:</span><span
+            class="mi">2</span> <span class="p">],</span>
+                                               <span class="n">title</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span
+            class="p">,</span> <span class="n">color</span><span class="o">=</span><span
+            class="s2">&quot;grey&quot;</span> <span class="p">)</span>
+        <span class="n">prime_plot</span> <span class="o">=</span> <span class="n">make_line_plotitem</span><span
+            class="p">(</span> <span class="o">*</span><span class="n">magnitude_evolution</span><span
+            class="p">(</span> <span class="n">p_ab</span><span class="p">,</span> <span class="n">p_z</span><span
+            class="p">,</span> <span class="n">splitLists</span><span class="o">=</span><span
+            class="kc">True</span> <span class="p">)[</span> <span class="p">:</span><span class="mi">2</span> <span
+            class="p">],</span>
+                                         <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Expected Evolution&quot;</span><span
+            class="p">,</span> <span class="n">color</span><span class="o">=</span><span
+            class="s2">&quot;black&quot;</span> <span class="p">)</span>
+        <span class="n">prime_point</span> <span class="o">=</span> <span class="n">make_points_plotitem</span><span
+            class="p">(</span> <span class="p">[</span> <span class="n">p_z</span> <span class="p">],</span> <span
+            class="p">[</span> <span class="n">p_ab</span> <span class="p">],</span> <span
+            class="n">error_data</span><span class="o">=</span><span class="p">[</span> <span class="n">p_ab_err</span> <span
+            class="p">],</span> <span class="n">title</span><span class="o">=</span><span class="n">f</span><span
+            class="s2">&quot;</span><span class="si">{primary}</span><span class="s2">&quot;</span><span
+            class="p">,</span>
+                                            <span class="n">color</span><span class="o">=</span><span class="s2">&quot;dark-red&quot;</span> <span
+            class="p">)</span>
+        <span class="n">plotlist</span><span class="o">.</span><span class="n">extend</span><span
+            class="p">(</span> <span class="p">[</span> <span class="n">prime_plot</span><span class="p">,</span> <span
+            class="n">prime_upper_plot</span><span class="p">,</span> <span class="n">prime_lower_plot</span><span
+            class="p">,</span> <span class="n">prime_point</span> <span class="p">]</span> <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">rs_fit_func</span> <span class="ow">is</span> <span class="ow">not</span> <span
+            class="kc">None</span><span class="p">:</span>
+        <span class="n">fitx</span> <span class="o">=</span> <span class="p">[</span> <span class="p">(</span><span
+            class="n">z</span> <span class="o">/</span> <span class="mi">100</span><span class="p">)</span> <span
+            class="k">for</span> <span class="n">z</span> <span class="ow">in</span> <span class="nb">range</span><span
+            class="p">(</span> <span class="mi">46</span><span class="p">,</span> <span class="mi">83</span> <span
+            class="p">)</span> <span class="p">]</span>
+        <span class="n">fity</span> <span class="o">=</span> <span class="p">[</span> <span class="n">rs_fit_func</span><span
+            class="p">(</span> <span class="n">z</span> <span class="p">)</span> <span class="k">for</span> <span
+            class="n">z</span> <span class="ow">in</span> <span class="n">fitx</span> <span class="p">]</span>
+        <span class="n">fitplot</span> <span class="o">=</span> <span class="n">make_line_plotitem</span><span
+            class="p">(</span> <span class="n">fitx</span><span class="p">,</span> <span class="n">fity</span><span
+            class="p">,</span> <span class="s2">&quot;Fit Function&quot;</span> <span class="k">if</span> <span
+            class="n">rs_fit_title</span> <span class="ow">is</span> <span class="kc">None</span> <span
+            class="k">else</span> <span class="n">rs_fit_title</span><span class="p">,</span>
+                                      <span class="n">with_</span><span class="o">=</span><span class="s2">&quot; dt &#39;-&#39;&quot;</span><span
+            class="p">,</span> <span class="n">color</span><span class="o">=</span><span
+            class="s2">&quot;grey50&quot;</span> <span class="p">)</span>
+        <span class="n">plotlist</span><span class="o">.</span><span class="n">append</span><span
+            class="p">(</span> <span class="n">fitplot</span> <span class="p">)</span>
+
+    <span class="sd">&quot;&quot;&quot; Data has been formed.  Make actual plot &quot;&quot;&quot;</span>
+    <span class="n">g</span> <span class="o">=</span> <span class="n">Gnuplot</span><span class="o">.</span><span
+            class="n">Gnuplot</span><span class="p">(</span> <span class="n">persist</span><span class="o">=</span><span
+            class="n">debug</span> <span class="p">)</span>
+    <span class="n">g</span><span class="o">.</span><span class="n">title</span><span class="p">(</span> <span
+            class="sa">r</span><span class="s2">&quot;</span><span class="si">%s</span><span
+            class="s2">&quot;</span> <span class="o">%</span> <span class="n">plotTitle</span> <span class="p">)</span>
+    <span class="n">g</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span> <span
+            class="s2">&quot;Redshift&quot;</span> <span class="p">)</span>
+    <span class="n">g</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span> <span
+            class="s2">&quot;AB Magnitude&quot;</span> <span class="p">)</span>
+    <span class="n">g</span><span class="p">(</span> <span class="s2">&quot;set key bottom right opaque box&quot;</span> <span
+            class="p">)</span>
+    <span class="n">g</span><span class="p">(</span> <span class="s2">&quot;set grid&quot;</span> <span
+            class="p">)</span>
+    <span class="n">g</span><span class="p">(</span> <span class="s2">&quot;set xrange [0.46:0.82]&quot;</span> <span
+            class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">debug</span><span class="p">:</span>
+        <span class="kn">from</span> <span class="nn">fileio.utils</span> <span class="k">import</span> <span class="n">dirCheck</span><span
+            class="p">,</span> <span class="n">join</span>
+        <span class="n">dirCheck</span><span class="p">(</span> <span class="n">path</span> <span class="p">)</span>
+        <span class="k">if</span> <span class="n">png</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">filename</span><span
+            class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span
+            class="n">endswith</span><span class="p">(</span> <span class="s2">&quot;.png&quot;</span> <span class="p">):</span> <span
+            class="n">filename</span> <span class="o">+=</span> <span class="s2">&quot;.png&quot;</span>
+            <span class="n">g</span><span class="p">(</span> <span class="s1">&#39;set terminal png enhanced size 800, 600&#39;</span> <span
+            class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">filename</span><span
+            class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span
+            class="n">endswith</span><span class="p">(</span> <span class="s2">&quot;.pdf&quot;</span> <span class="p">):</span> <span
+            class="n">filename</span> <span class="o">+=</span> <span class="s2">&quot;.pdf&quot;</span>
+            <span class="n">g</span><span class="p">(</span> <span class="s1">&#39;set terminal pdf enhanced size 9,6&#39;</span> <span
+            class="p">)</span>
+        <span class="n">g</span><span class="p">(</span> <span class="n">f</span><span class="s1">&#39;set output {__fix_outpath( path, filename ) }&#39;</span> <span
+            class="p">)</span>
+
+    <span class="n">g</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span> <span class="o">*</span><span
+            class="n">plotlist</span> <span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">debug</span><span class="p">:</span>
+        <span class="n">g</span><span class="p">(</span> <span class="s1">&#39;set output&#39;</span> <span
+            class="p">)</span>
+        <span class="n">g</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="spectrum_plot"><a class="viewcode-back"
+                                                  href="../../index.html#tools.plot.spectrum_plot">[docs]</a><span
+        class="k">def</span> <span class="nf">spectrum_plot</span><span class="p">(</span> <span
+        class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span
+        class="n">filename</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span
+        class="n">spec</span><span class="p">:</span> <span class="n">Spectrum</span><span class="p">,</span> <span
+        class="n">color</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span
+        class="s2">&quot;royalblue&quot;</span><span class="p">,</span> <span class="n">debug</span><span
+        class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span> <span
+        class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Simple spectrum plotter.  Passes values to Gnuplot.py.  Plots in PDF format.</span>
+<span class="sd">    </span>
+<span class="sd">    If debug = True, no values will be written to the disk and Gnuplot will be initialized with persist = True and</span>
+<span class="sd">    the path/filename values should be passed as empty strings &quot;&quot; to avoid an error.</span>
+<span class="sd">    </span>
+<span class="sd">    :param spec: Spectrum to be plot</span>
+<span class="sd">    :type spec: Spectrum</span>
+<span class="sd">    :param path: /path/to/output/file</span>
+<span class="sd">    :type path: str</span>
+<span class="sd">    :param filename: output file name</span>
+<span class="sd">    :type filename: str</span>
+<span class="sd">    :param color: Color to make the spectrum line.  Defaults to &quot;royalblue.&quot;  Must be a color acceptable to Gnuplot</span>
+<span class="sd">    :type color: str</span>
+<span class="sd">    :param debug: Use the debug process, print outputs on the screen</span>
+<span class="sd">    :type debug: bool</span>
+<span class="sd">    :rtype: None</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">common.messaging</span> <span class="k">import</span> <span class="n">ANGSTROM</span><span
+            class="p">,</span> <span class="n">FLUX_UNITS</span>
+    <span class="kn">from</span> <span class="nn">fileio.utils</span> <span class="k">import</span> <span class="n">dirCheck</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">debug</span><span class="p">:</span> <span
+            class="n">dirCheck</span><span class="p">(</span> <span class="n">path</span> <span class="p">)</span>
+    <span class="n">g</span> <span class="o">=</span> <span class="n">Gnuplot</span><span class="o">.</span><span
+            class="n">Gnuplot</span><span class="p">(</span> <span class="n">persist</span><span class="o">=</span><span
+            class="n">debug</span> <span class="p">)</span>
+    <span class="n">g</span><span class="o">.</span><span class="n">title</span><span class="p">(</span> <span
+            class="n">spec</span><span class="o">.</span><span class="n">getNS</span><span class="p">()</span> <span
+            class="p">)</span>
+    <span class="n">g</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span> <span
+            class="n">f</span><span class="s2">&quot;Wavelength (</span><span class="si">{ANGSTROM}</span><span
+            class="s2">)&quot;</span> <span class="p">)</span>
+    <span class="n">g</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span> <span
+            class="n">f</span><span class="s2">&quot;Flux Density (</span><span class="si">{FLUX_UNITS}</span><span
+            class="s2">)&quot;</span> <span class="p">)</span>
+    <span class="n">g</span><span class="p">(</span> <span class="s1">&#39;set key top right&#39;</span> <span
+            class="p">)</span>
+    <span class="n">g</span><span class="p">(</span> <span class="s1">&#39;set grid&#39;</span> <span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">debug</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">filename</span><span
+            class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span
+            class="n">endswith</span><span class="p">(</span> <span class="s2">&quot;.pdf&quot;</span> <span class="p">):</span> <span
+            class="n">filename</span> <span class="o">+=</span> <span class="s2">&quot;.pdf&quot;</span>
+        <span class="n">g</span><span class="p">(</span> <span class="s1">&#39;set terminal pdf color enhanced size 9,6&#39;</span> <span
+            class="p">)</span>
+        <span class="n">g</span><span class="p">(</span> <span class="n">f</span><span class="s1">&#39;set output {__fix_outpath( path, &quot;</span><span
+            class="si">%s</span><span class="s1">&quot; </span><span class="si">% f</span><span class="s1">ilename )}&#39;</span> <span
+            class="p">)</span>
+
+    <span class="n">g</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span> <span class="n">make_spectrum_plotitem</span><span
+            class="p">(</span> <span class="n">spec</span><span class="p">,</span> <span class="n">color</span><span
+            class="o">=</span><span class="n">color</span> <span class="p">)</span> <span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">debug</span><span class="p">:</span>
+        <span class="n">g</span><span class="p">(</span> <span class="s1">&#39;set output&#39;</span> <span
+            class="p">)</span>
+        <span class="n">g</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="xy_scatterplot"><a class="viewcode-back"
+                                                   href="../../index.html#tools.plot.xy_scatterplot">[docs]</a><span
+        class="k">def</span> <span class="nf">xy_scatterplot</span><span class="p">(</span> <span
+        class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span
+        class="n">filename</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span
+        class="n">x_data</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">,</span> <span
+        class="n">y_data</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">,</span> <span
+        class="n">y_error_bars</span><span class="p">:</span> <span class="n">Iterable</span> <span
+        class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                    <span class="n">dataTitle</span><span class="p">:</span> <span class="nb">str</span> <span
+            class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span
+            class="n">plotTitle</span><span class="p">:</span> <span class="nb">str</span> <span
+            class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">x_label</span><span
+            class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span
+            class="p">,</span> <span class="n">y_label</span><span class="p">:</span> <span class="nb">str</span> <span
+            class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                    <span class="n">plotcolor</span><span class="p">:</span> <span class="nb">str</span> <span
+            class="o">=</span> <span class="s2">&quot;royalblue&quot;</span><span class="p">,</span> <span class="n">debug</span><span
+            class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span> <span
+            class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Simple XY scatterplot production.  Plots using PDF terminal.  If passing debug=True, no file will be written to </span>
+<span class="sd">    disk.  To avoid typing errors, it is desirable to pass &quot;&quot; for path and filename variables.</span>
+<span class="sd">    </span>
+<span class="sd">    :param path: /path/to/output file</span>
+<span class="sd">    :type path: str</span>
+<span class="sd">    :param filename: output file name</span>
+<span class="sd">    :type filename: str</span>
+<span class="sd">    :param x_data: </span>
+<span class="sd">    :type x_data: Iterable</span>
+<span class="sd">    :param y_data: </span>
+<span class="sd">    :type y_data: Iterable</span>
+<span class="sd">    :param y_error_bars:</span>
+<span class="sd">    :type y_error_bars: Iterable</span>
+<span class="sd">    :param dataTitle: Title of the xy data that will be displayed in the key.  If not passed, key will be removed from the plot.</span>
+<span class="sd">    :type dataTitle: str</span>
+<span class="sd">    :param plotTitle: </span>
+<span class="sd">    :type plotTitle: str</span>
+<span class="sd">    :param x_label: X-axis label</span>
+<span class="sd">    :type x_label: str</span>
+<span class="sd">    :param y_label: Y-axis label</span>
+<span class="sd">    :type y_label: str</span>
+<span class="sd">    :param plotcolor: Color of plot points.  Must be a Gnupot compatible colorname such as &quot;dark-red&quot; </span>
+<span class="sd">    :type plotcolor: str</span>
+<span class="sd">    :param debug: </span>
+<span class="sd">    :type debug: bool</span>
+<span class="sd">    :return: </span>
+<span class="sd">    :rtype: None</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">fileio.utils</span> <span class="k">import</span> <span class="n">dirCheck</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">debug</span><span class="p">:</span> <span
+            class="n">dirCheck</span><span class="p">(</span> <span class="n">path</span> <span class="p">)</span>
+    <span class="n">g</span> <span class="o">=</span> <span class="n">Gnuplot</span><span class="o">.</span><span
+            class="n">Gnuplot</span><span class="p">(</span> <span class="n">persist</span><span class="o">=</span><span
+            class="n">debug</span> <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">plotTitle</span> <span class="ow">is</span> <span
+            class="ow">not</span> <span class="kc">None</span><span class="p">:</span> <span class="n">g</span><span
+            class="o">.</span><span class="n">title</span><span class="p">(</span> <span
+            class="n">plotTitle</span> <span class="p">)</span>
+    <span class="k">if</span> <span class="n">x_label</span> <span class="ow">is</span> <span
+            class="ow">not</span> <span class="kc">None</span><span class="p">:</span> <span class="n">g</span><span
+            class="o">.</span><span class="n">xlabel</span><span class="p">(</span> <span class="n">x_label</span> <span
+            class="p">)</span>
+    <span class="k">if</span> <span class="n">y_data</span> <span class="ow">is</span> <span class="ow">not</span> <span
+            class="kc">None</span><span class="p">:</span> <span class="n">g</span><span class="o">.</span><span
+            class="n">ylabel</span><span class="p">(</span> <span class="n">y_label</span> <span class="p">)</span>
+    <span class="n">g</span><span class="p">(</span> <span class="s1">&#39;set grid&#39;</span> <span class="p">)</span>
+    <span class="k">if</span> <span class="n">dataTitle</span> <span class="ow">is</span> <span
+            class="kc">None</span><span class="p">:</span>
+        <span class="n">g</span><span class="p">(</span> <span class="s2">&quot;unset key&quot;</span> <span
+            class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">debug</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">filename</span><span
+            class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span
+            class="n">endswith</span><span class="p">(</span> <span class="s2">&quot;.pdf&quot;</span> <span class="p">):</span> <span
+            class="n">filename</span> <span class="o">+=</span> <span class="s2">&quot;.pdf&quot;</span>
+        <span class="n">g</span><span class="p">(</span> <span class="s1">&#39;set terminal pdf color enhanced size 9,6&#39;</span> <span
+            class="p">)</span>
+        <span class="n">g</span><span class="p">(</span> <span class="n">f</span><span class="s1">&#39;set output {__fix_outpath( path, &quot;</span><span
+            class="si">%s</span><span class="s1">&quot; </span><span class="si">% f</span><span class="s1">ilename )}&#39;</span> <span
+            class="p">)</span>
+    <span class="n">g</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span> <span class="n">make_points_plotitem</span><span
+            class="p">(</span> <span class="n">x_data</span><span class="p">,</span> <span class="n">y_data</span><span
+            class="p">,</span> <span class="n">y_error_bars</span><span class="p">,</span> <span
+            class="n">title</span><span class="o">=</span><span class="n">dataTitle</span><span class="p">,</span> <span
+            class="n">color</span><span class="o">=</span><span class="n">plotcolor</span> <span
+            class="p">)</span> <span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">debug</span><span class="p">:</span>
+        <span class="n">g</span><span class="p">(</span> <span class="s1">&#39;set output&#39;</span> <span
+            class="p">)</span>
+        <span class="n">g</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+</pre>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <div class="relations">
+                <h3>Related Topics</h3>
+                <ul>
+                    <li><a href="../../index.html">Documentation overview</a>
+                        <ul>
+                            <li><a href="../index.html">Module code</a>
+                                <ul>
+                                </ul>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+            <div id="searchbox" style="display: none" role="search">
+                <h3>Quick search</h3>
+                <form class="search" action="../../search.html" method="get">
+                    <div><input type="text" name="q"/></div>
+                    <div><input type="submit" value="Go"/></div>
+                    <input type="hidden" name="check_keywords" value="yes"/>
+                    <input type="hidden" name="area" value="default"/>
+                </form>
+            </div>
+            <script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+    </div>
+    <div class="clearer"></div>
+</div>
+<div class="footer">
+    &copy;2017, Christopher Wahl.
+
+    |
+    Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.4</a>
+    &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+
+</div>
+
+
+</body>
+</html>

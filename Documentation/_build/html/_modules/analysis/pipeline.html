@@ -1,0 +1,431 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+
+    <title>analysis.pipeline &#8212; 1D Spectrum QSO Library 2.0a documentation</title>
+
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css"/>
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css"/>
+
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '2.0a',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html"/>
+    <link rel="search" title="Search" href="../../search.html"/>
+
+    <link rel="stylesheet" href="../../_static/custom.css" type="text/css"/>
+
+
+    <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9"/>
+
+</head>
+<body role="document">
+
+
+<div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="body" role="main">
+
+                <h1>Source code for analysis.pipeline</h1>
+                <div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">typing</span> <span class="k">import</span> <span class="n">Callable</span><span
+                        class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span
+                        class="n">Iterable</span><span class="p">,</span> <span class="n">Optional</span><span
+                        class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span
+                        class="n">Union</span>
+
+<span class="kn">from</span> <span class="nn">common.constants</span> <span class="k">import</span> <span class="n">CHI_BASE_MAG</span>
+<span class="kn">from</span> <span class="nn">spectrum</span> <span class="k">import</span> <span
+                        class="n">Spectrum</span><span class="p">,</span> <span class="n">flux_from_AB</span>
+
+
+<div class="viewcode-block" id="analysis_pipeline"><a class="viewcode-back"
+                                                      href="../../index.html#analysis.pipeline.analysis_pipeline">[docs]</a><span
+        class="k">class</span> <span class="nc">analysis_pipeline</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Simplified anaylsis pipe for comparing one Spectrum to a list of others via some function.</span>
+<span class="sd">    </span>
+<span class="sd">    This analysis function must take in a single item - a tuple of objects which will be unpacked within the function</span>
+<span class="sd">    itself - perform the action, and return a tuple of ( unique identifier, value ).  Generally, this will be  a </span>
+<span class="sd">    ( namestring, float ).  These values will be joined to form a dictionary of { unique identifier : value } and stored</span>
+<span class="sd">    in the results.  This process is begun by calling .do_analysis()</span>
+<span class="sd">    </span>
+<span class="sd">    These results will be the complete result set for every point in the input_values list.  They may be reduced to the</span>
+<span class="sd">    provided range_limits passed at initialization by calling reduce_results().  Alternatively, a custom reduction</span>
+<span class="sd">    reduction method may be applied by calling .reduce_results( reduction_function ).</span>
+<span class="sd">    </span>
+<span class="sd">    This custom reduction method must take in a tuple which will correspond to the ( key, value ) tuple iterated from</span>
+<span class="sd">    the results.items() dictionary, and return a boolean-identifiable value. If True, the  key : value will be kept.</span>
+<span class="sd">    Elsewise, it will be dropped.</span>
+<span class="sd">       </span>
+<span class="sd">    Both before and after reduce_results() is called, get_results() can be called and the results dictionary will be</span>
+<span class="sd">    returned.  If do_analysis() has not yet been called, both of these methods will raise an AssertionError. </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">__input_list</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">__range_limits</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">__analysis_function</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">__results</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span> <span
+            class="bp">self</span><span class="p">,</span> <span class="n">input_list</span><span
+            class="p">:</span> <span class="n">Iterable</span><span class="p">,</span>
+                  <span class="n">analysis_function</span><span class="p">:</span> <span class="n">Callable</span><span
+            class="p">[</span> <span class="p">[</span> <span class="nb">object</span> <span class="p">],</span> <span
+            class="n">Tuple</span><span class="p">[</span> <span class="nb">str</span><span class="p">,</span> <span
+            class="nb">float</span> <span class="p">]</span> <span class="p">],</span>
+                  <span class="n">range_limits</span><span class="p">:</span> <span class="n">Tuple</span><span
+            class="p">[</span> <span class="n">Optional</span><span class="p">[</span> <span
+            class="nb">float</span> <span class="p">],</span> <span class="n">Optional</span><span
+            class="p">[</span> <span class="nb">float</span> <span class="p">]</span> <span class="p">]</span> <span
+            class="o">=</span> <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span
+            class="kc">None</span><span class="p">)</span> <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        analysis_pipeline initializer.  See class comments for further information.</span>
+<span class="sd">        </span>
+<span class="sd">        The input_list should be a list of tuples.  Each tuple will be passed to the analysis_function via the</span>
+<span class="sd">        generic_unordered_multiprocessor method in tools.async_tools.</span>
+<span class="sd">        </span>
+<span class="sd">        The analysis_function should accept one arugment; a tuple of all the arguments being passed.  It should unpack</span>
+<span class="sd">        this tuple within the function, perform the operation and provide an output in the form of ( namestring, float ).</span>
+<span class="sd">        </span>
+<span class="sd">        do_analysis() will perform the actual anaylsis, calling this analysis_fucntion and formingt the results</span>
+<span class="sd">        dictionary.</span>
+<span class="sd">        </span>
+<span class="sd">        These values will be transformed into a dictionary of { namestring : float }, which will be stored as the set</span>
+<span class="sd">        of results.</span>
+<span class="sd">        </span>
+<span class="sd">        :param input_list: Values to be passed to analysis_function.</span>
+<span class="sd">        :type input_list: Iterable</span>
+<span class="sd">        :param analysis_function: Method which accepts a single tuple from input_list, returns a tuple of ( str, float )</span>
+<span class="sd">        :type analysis_pipeline: Callable</span>
+<span class="sd">        :param range_limits: ( Min, Max ) limitations to be used of the float returned value from analysis_function when</span>
+<span class="sd">        reduce_results() is called.</span>
+<span class="sd">        :type range_limits: tuple</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__input_list</span> <span class="o">=</span> <span
+            class="n">input_list</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__range_limits</span> <span
+            class="o">=</span> <span class="n">range_limits</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__analysis_function</span> <span
+            class="o">=</span> <span class="n">analysis_function</span>
+
+<div class="viewcode-block" id="analysis_pipeline.do_analysis"><a class="viewcode-back"
+                                                                  href="../../index.html#analysis.pipeline.analysis_pipeline.do_analysis">[docs]</a>    <span
+        class="k">def</span> <span class="nf">do_analysis</span><span class="p">(</span> <span
+        class="bp">self</span> <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Start the analysis_function processing.</span>
+<span class="sd">        :return: </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">__primeSpec</span> <span class="ow">is</span> <span class="ow">not</span> <span
+            class="kc">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">__input_list</span> <span class="ow">is</span> <span class="ow">not</span> <span
+            class="kc">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">__analysis_function</span> <span class="ow">is</span> <span class="ow">not</span> <span
+            class="kc">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">__range_limits</span> <span class="ow">is</span> <span class="ow">not</span> <span
+            class="kc">None</span>
+        <span class="kn">from</span> <span class="nn">tools.async_tools</span> <span class="k">import</span> <span
+            class="n">generic_unordered_multiprocesser</span>
+        <span class="kn">from</span> <span class="nn">tools.list_dict</span> <span class="k">import</span> <span
+            class="n">paired_list_to_dict</span>
+
+        <span class="n">results</span> <span class="o">=</span> <span class="p">[</span> <span class="p">]</span>
+        <span class="n">generic_unordered_multiprocesser</span><span class="p">(</span> <span
+            class="n">input_values</span><span class="o">=</span><span class="bp">self</span><span
+            class="o">.</span><span class="n">__input_list</span><span class="p">,</span> <span
+            class="n">multi_function</span><span class="o">=</span><span class="bp">self</span><span
+            class="o">.</span><span class="n">__analysis_function</span><span class="p">,</span>
+                                          <span class="n">output_values</span><span class="o">=</span><span class="n">results</span> <span
+            class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__results</span> <span
+            class="o">=</span> <span class="n">paired_list_to_dict</span><span class="p">(</span> <span class="n">results</span> <span
+            class="p">)</span></div>
+
+<div class="viewcode-block" id="analysis_pipeline.reduce_results"><a class="viewcode-back"
+                                                                     href="../../index.html#analysis.pipeline.analysis_pipeline.reduce_results">[docs]</a>    <span
+        class="k">def</span> <span class="nf">reduce_results</span><span class="p">(</span> <span class="bp">self</span><span
+        class="p">,</span> <span class="n">reduction_fuction</span><span class="p">:</span> <span
+        class="n">Optional</span><span class="p">[</span> <span class="n">Callable</span><span class="p">[</span> <span
+        class="p">[</span> <span class="n">Tuple</span><span class="p">[</span> <span class="nb">str</span><span
+        class="p">,</span> <span class="nb">float</span> <span class="p">]</span> <span class="p">],</span> <span
+        class="nb">bool</span> <span class="p">]</span> <span class="p">]</span> <span class="o">=</span> <span
+        class="kc">None</span> <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span
+        class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Reduces the results after the do_analysis() process has been completed.  The values will be both returned at the</span>
+<span class="sd">        completion of this method, as well as stored, overwriting the previous results from do_analysis().</span>
+<span class="sd">        </span>
+<span class="sd">        The stored results value are accessible from the .get_results() method.  If reduce_results() has not been run,</span>
+<span class="sd">        the unreduced results from do_analysis() will be returned.</span>
+<span class="sd">        </span>
+<span class="sd">        If reduction_function is not passed, the limitations provided to the object at initialization will be used.</span>
+<span class="sd">        </span>
+<span class="sd">        Otherwise, can make use of a custom reduction function.  Custom method must take in a tuple( str, float ), as it</span>
+<span class="sd">        will be called by filter() and passed the values iterated from the results.items() dictionary.  This method must</span>
+<span class="sd">        return a boolean-interpretable value.  True-returning values will keep the item, False will remove it.</span>
+<span class="sd">        </span>
+<span class="sd">        Note that any limiting values must be imposed by this reduction function.</span>
+<span class="sd">        </span>
+<span class="sd">        :param reduction_fuction: Custom method to determine reduction of results.  Must accept a tuple of ( str, float )</span>
+<span class="sd">        :type reduction_fuction: Callable</span>
+<span class="sd">        :return: reduced results</span>
+<span class="sd">        :rtype: dict</span>
+<span class="sd">        :raises: AssertionError</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span> <span class="bp">self</span><span
+            class="o">.</span><span class="n">__results</span><span class="p">,</span> <span
+            class="nb">dict</span> <span class="p">)</span>
+        <span class="k">except</span> <span class="ne">AssertionError</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">AssertionError</span><span class="p">(</span>
+                    <span class="s2">&quot;pipeline:  Results dictonary has not been assigned a value.  Has do_analysis() been called?&quot;</span> <span
+            class="p">)</span>
+
+        <span class="k">if</span> <span class="n">reduction_fuction</span> <span class="ow">is</span> <span class="ow">not</span> <span
+            class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__results</span> <span
+            class="o">=</span> <span class="nb">dict</span><span class="p">(</span> <span class="nb">filter</span><span
+            class="p">(</span> <span class="n">reduction_fuction</span><span class="p">,</span> <span
+            class="bp">self</span><span class="o">.</span><span class="n">__results</span><span class="o">.</span><span
+            class="n">items</span><span class="p">()</span> <span class="p">)</span> <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">low_limit</span><span class="p">,</span> <span class="n">high_limit</span> <span
+            class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__range_limits</span>
+            <span class="k">if</span> <span class="n">low_limit</span> <span class="ow">is</span> <span
+            class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">__results</span> <span
+            class="o">=</span> <span class="nb">filter</span><span class="p">(</span> <span
+            class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span
+            class="p">[</span> <span class="mi">1</span> <span class="p">]</span> <span class="o">&gt;=</span> <span
+            class="n">low_limit</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">__results</span><span class="o">.</span><span class="n">items</span><span
+            class="p">()</span> <span class="p">)</span>
+            <span class="k">if</span> <span class="n">high_limit</span> <span class="ow">is</span> <span
+            class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">__results</span> <span
+            class="o">=</span> <span class="nb">filter</span><span class="p">(</span> <span
+            class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span
+            class="p">[</span> <span class="mi">1</span> <span class="p">]</span> <span class="o">&lt;=</span> <span
+            class="n">high_limit</span><span class="p">,</span>
+                                         <span class="bp">self</span><span class="o">.</span><span
+            class="n">__results</span><span class="o">.</span><span class="n">items</span><span
+            class="p">()</span> <span class="k">if</span> <span class="nb">isinstance</span><span
+            class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">__results</span><span
+            class="p">,</span>
+                                                                               <span class="nb">dict</span> <span
+            class="p">)</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">__results</span> <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__results</span> <span
+            class="o">=</span> <span class="nb">dict</span><span class="p">(</span> <span class="bp">self</span><span
+            class="o">.</span><span class="n">__results</span> <span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">__results</span></div>
+
+<div class="viewcode-block" id="analysis_pipeline.get_results"><a class="viewcode-back"
+                                                                  href="../../index.html#analysis.pipeline.analysis_pipeline.get_results">[docs]</a>    <span
+        class="k">def</span> <span class="nf">get_results</span><span class="p">(</span> <span
+        class="bp">self</span> <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span
+        class="p">[</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">float</span> <span
+        class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns the stored results from do_analysis() or reduce_results().  If reduce_results() has been been run, the</span>
+<span class="sd">        full result dictionary from do_analysis() is returned.  Otherwise, only the reduced result dictionary will</span>
+<span class="sd">        be accessible.</span>
+<span class="sd">        </span>
+<span class="sd">        :return: Analysis/Reduced analysis results</span>
+<span class="sd">        :rtype: dict</span>
+<span class="sd">        :raises: AssertionError</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span> <span class="bp">self</span><span
+            class="o">.</span><span class="n">__results</span><span class="p">,</span> <span
+            class="nb">dict</span> <span class="p">)</span>
+        <span class="k">except</span> <span class="ne">AssertionError</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">AssertionError</span><span class="p">(</span>
+                    <span class="s2">&quot;pipeline:  Results dictonary has not been assigned a value.  Has do_analysis() been called?&quot;</span> <span
+            class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">__results</span></div></div>
+
+
+<div class="viewcode-block" id="get_chi_analysis_pipeline"><a class="viewcode-back"
+                                                              href="../../index.html#analysis.pipeline.get_chi_analysis_pipeline">[docs]</a><span
+        class="k">def</span> <span class="nf">get_chi_analysis_pipeline</span><span class="p">(</span> <span class="n">primary_spectrum</span><span
+        class="p">:</span> <span class="n">Union</span><span class="p">[</span> <span class="n">Spectrum</span><span
+        class="p">,</span> <span class="nb">str</span> <span class="p">],</span> <span class="n">speclist</span><span
+        class="p">:</span> <span class="n">Iterable</span><span class="p">[</span> <span class="n">Union</span><span
+        class="p">[</span> <span class="n">Spectrum</span><span class="p">,</span> <span class="nb">str</span> <span
+        class="p">]</span> <span class="p">],</span>
+                               <span class="n">wl_limits</span><span class="p">:</span> <span
+            class="n">Tuple</span><span class="p">[</span> <span class="nb">float</span><span class="p">,</span> <span
+            class="nb">float</span> <span class="p">],</span> <span class="n">maximum_chi_value</span><span
+            class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">n_sigma</span><span
+            class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">1</span><span
+            class="p">,</span>
+                               <span class="n">scale_AB_mag</span><span class="p">:</span> <span class="nb">float</span> <span
+            class="o">=</span> <span class="n">CHI_BASE_MAG</span> <span class="p">)</span> <span class="o">-&gt;</span> <span
+            class="n">analysis_pipeline</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Prebuilt method for forming a chi^2 analysis pipeline with the analysis_pipeline class.</span>
+<span class="sd">    </span>
+<span class="sd">    primary_spectrum and speclist iterable values may be passed as Spectrum objects or as namestrings (in which case</span>
+<span class="sd">    their rest frame spectra will be loaded from disk via fileio methods). WARNING:  Only the first value in speclist</span>
+<span class="sd">    will be checked for typing.  If str, the entire speclist will be passed to async_rspec_scaled for loading.  Else,</span>
+<span class="sd">    the entire speclist will be passed to multi_scale for scaling.  All spectra are scaled to the primary spectrum,</span>
+<span class="sd">    which is itself scaled to an AB magnitude of scale_AB_mag (which defaults to common.constants.CHI_BASE_MAG).</span>
+<span class="sd">    </span>
+<span class="sd">    The input_values is formed given the passed wl_limits and chi_pipeline_function is used as the analysis.chi wrapper.</span>
+<span class="sd">    </span>
+<span class="sd">    The pipeline object, prepared with range_limits of ( None, maximum_chi_value ) is returned.  No analysis is</span>
+<span class="sd">    performed; neither do_analysis() nor reduce_results() are called. </span>
+<span class="sd">    </span>
+<span class="sd">    :param primary_spectrum: Spectrum to perform chi^2 matching to.  May be a namestring or Spectrum object</span>
+<span class="sd">    :type primary_spectrum: str or Spectrum</span>
+<span class="sd">    :param speclist: Iterable of Spectrum or namestring objects to match to primary</span>
+<span class="sd">    :type speclist: Iterable</span>
+<span class="sd">    :param wl_limits: tuple of ( wl_low, wl_high ) range to match against.</span>
+<span class="sd">    :type wl_limits: tuple</span>
+<span class="sd">    :param maximum_chi_value: Maximum value of chi^2 result to be used in the event of calling reduce_results()</span>
+<span class="sd">    :type maximum_chi_value: float</span>
+<span class="sd">    :param n_sigma: Uncertainty multiplier to be passed to analysis.chi.  Defaults to 1.</span>
+<span class="sd">    :type n_sigma: float</span>
+<span class="sd">    :param scale_AB_mag: AB magnitude to scale all objects to.  Defaults to common.constants.CHI_BASE_MAG</span>
+<span class="sd">    :type scale_AB_mag: float</span>
+<span class="sd">    :return: Prepared chi^2 analysis pipeline.</span>
+<span class="sd">    :rtype: analysis_pipeline</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">fileio.spec_load_write</span> <span class="k">import</span> <span
+            class="n">async_rspec_scaled</span><span class="p">,</span> <span class="n">rspecLoader</span>
+    <span class="kn">from</span> <span class="nn">fileio.utils</span> <span class="k">import</span> <span
+            class="n">fns</span>
+
+    <span class="kn">from</span> <span class="nn">spectrum.utils</span> <span class="k">import</span> <span class="n">mutli_scale</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span> <span class="n">primary_spectrum</span><span
+            class="p">,</span> <span class="nb">str</span> <span class="p">):</span>
+        <span class="n">primary_spectrum</span> <span class="o">=</span> <span class="n">rspecLoader</span><span
+            class="p">(</span> <span class="n">fns</span><span class="p">(</span> <span
+            class="n">primary_spectrum</span> <span class="p">)</span> <span class="p">)</span>
+    <span class="n">primary_spectrum</span><span class="o">.</span><span class="n">scale</span><span class="p">(</span> <span
+            class="n">scaleflux</span><span class="o">=</span><span class="n">flux_from_AB</span><span
+            class="p">(</span> <span class="n">scale_AB_mag</span> <span class="p">)</span> <span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span
+            class="p">(</span> <span class="n">speclist</span><span class="p">,</span> <span
+            class="nb">list</span> <span class="p">):</span>
+        <span class="n">speclist</span> <span class="o">=</span> <span class="nb">list</span><span
+            class="p">(</span> <span class="n">speclist</span> <span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span
+            class="p">(</span> <span class="n">speclist</span><span class="p">[</span> <span class="mi">0</span> <span
+            class="p">],</span> <span class="n">Spectrum</span> <span class="p">):</span>
+        <span class="n">speclist</span> <span class="o">=</span> <span class="n">async_rspec_scaled</span><span
+            class="p">(</span> <span class="n">speclist</span><span class="p">,</span> <span
+            class="n">primary_spectrum</span> <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">speclist</span> <span class="o">=</span> <span class="n">mutli_scale</span><span
+            class="p">(</span> <span class="n">primary_spectrum</span><span class="p">,</span> <span
+            class="n">speclist</span> <span class="p">)</span>
+
+    <span class="n">input_values</span> <span class="o">=</span> <span class="p">[</span> <span class="p">(</span><span
+            class="n">primary_spectrum</span><span class="p">,</span> <span class="n">spec</span><span
+            class="p">,</span> <span class="n">wl_limits</span><span class="p">[</span> <span class="mi">0</span> <span
+            class="p">],</span> <span class="n">wl_limits</span><span class="p">[</span> <span class="mi">1</span> <span
+            class="p">],</span> <span class="n">n_sigma</span><span class="p">)</span> <span class="k">for</span> <span
+            class="n">spec</span> <span class="ow">in</span> <span class="n">speclist</span> <span class="p">]</span>
+    <span class="k">return</span> <span class="n">analysis_pipeline</span><span class="p">(</span> <span class="n">input_values</span><span
+            class="p">,</span> <span class="n">chi_pipeline_function</span><span class="p">,</span>
+                              <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span
+            class="n">maximum_chi_value</span><span class="p">)</span> <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="chi_pipeline_function"><a class="viewcode-back"
+                                                          href="../../index.html#analysis.pipeline.chi_pipeline_function">[docs]</a><span
+        class="k">def</span> <span class="nf">chi_pipeline_function</span><span class="p">(</span> <span class="n">input_value</span><span
+        class="p">:</span> <span class="n">Tuple</span><span class="p">[</span> <span class="n">Spectrum</span><span
+        class="p">,</span> <span class="n">Spectrum</span><span class="p">,</span> <span class="nb">float</span><span
+        class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span> <span
+        class="p">]</span> <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span
+        class="p">[</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">float</span> <span
+        class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Wrapper for the analysis.chi method for use in an analysis_pipeline.</span>
+<span class="sd">    </span>
+<span class="sd">    :param input_value: tuple of ( primary_spectrum, secondary_spectrum, wl_low_lit, wl_high_limit, n_sigma ) to be passed to chi() method, in that order.</span>
+<span class="sd">    :type input_value: tuple</span>
+<span class="sd">    :return: tuple of ( seconday_spectrum.getNS(), float )</span>
+<span class="sd">    :rtype: tuple</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">analysis.chi</span> <span class="k">import</span> <span
+            class="n">chi</span>
+    <span class="n">primary</span><span class="p">,</span> <span class="n">seconday</span><span class="p">,</span> <span
+            class="n">wl_low</span><span class="p">,</span> <span class="n">wl_high</span><span class="p">,</span> <span
+            class="n">n_sigma</span> <span class="o">=</span> <span class="n">input_value</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">seconday</span><span class="o">.</span><span
+            class="n">getNS</span><span class="p">(),</span> <span class="n">chi</span><span class="p">(</span> <span
+            class="n">primary</span><span class="p">,</span> <span class="n">seconday</span><span
+            class="p">,</span> <span class="n">wl_low</span><span class="p">,</span> <span class="n">wl_high</span><span
+            class="p">,</span> <span class="n">n_sigma</span> <span class="p">))</span></div>
+</pre>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <div class="relations">
+                <h3>Related Topics</h3>
+                <ul>
+                    <li><a href="../../index.html">Documentation overview</a>
+                        <ul>
+                            <li><a href="../index.html">Module code</a>
+                                <ul>
+                                </ul>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+            <div id="searchbox" style="display: none" role="search">
+                <h3>Quick search</h3>
+                <form class="search" action="../../search.html" method="get">
+                    <div><input type="text" name="q"/></div>
+                    <div><input type="submit" value="Go"/></div>
+                    <input type="hidden" name="check_keywords" value="yes"/>
+                    <input type="hidden" name="area" value="default"/>
+                </form>
+            </div>
+            <script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+    </div>
+    <div class="clearer"></div>
+</div>
+<div class="footer">
+    &copy;2017, Christopher Wahl.
+
+    |
+    Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.4</a>
+    &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+
+</div>
+
+
+</body>
+</html>

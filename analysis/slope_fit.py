@@ -1,9 +1,9 @@
-from typing import Callable
+from typing import Callable, Union
 
 from numpy import diag, sqrt
 from scipy.optimize import curve_fit
 
-from spectrum import Iterable, Spectrum, Tuple, Union
+from spectrum import Iterable, Spectrum, Tuple
 
 
 def __linear_func( x: float, m: float, b: float ) -> float:
@@ -41,6 +41,7 @@ def generic_fit( fit_function: Callable, x_data: Iterable[ float ], y_data: Iter
     coeff, pcov = curve_fit( fit_function, x_data, y_data )
     uncert = sqrt( diag( pcov ) )
     return tuple( coeff ) if not get_uncertainty else (tuple( coeff ), tuple( uncert ))
+
 
 def generic_linear_fit( x_data: Iterable[ float ], y_data: Iterable[ float ], get_uncertainty: bool = False ) -> Union[
     Tuple[ float, float ], Tuple[ Tuple[ float, float ], Tuple[ float, float ] ] ]:
@@ -84,6 +85,7 @@ def generic_log10_fit( x_data: Iterable[ float ], y_data: Iterable[ float ], get
     :rtype: tuple
     """
     return generic_fit( __log10_fit, x_data, y_data, get_uncertainty )
+
 
 def generic_quad_fit( x_data: Iterable[ float ], y_data: Iterable[ float ], get_uncertainty: bool = False ) -> Union[
     Tuple[ float, float, float ], Tuple[ Tuple[ float, float, float ], Tuple[ float, float, float ] ] ]:

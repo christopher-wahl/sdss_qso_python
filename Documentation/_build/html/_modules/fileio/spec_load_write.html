@@ -1,0 +1,584 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+
+    <title>fileio.spec_load_write &#8212; 1D Spectrum QSO Library 2.0a documentation</title>
+
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css"/>
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css"/>
+
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '2.0a',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html"/>
+    <link rel="search" title="Search" href="../../search.html"/>
+
+    <link rel="stylesheet" href="../../_static/custom.css" type="text/css"/>
+
+
+    <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9"/>
+
+</head>
+<body role="document">
+
+
+<div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="body" role="main">
+
+                <h1>Source code for fileio.spec_load_write</h1>
+                <div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">pickle</span>
+<span class="kn">from</span> <span class="nn">csv</span> <span class="k">import</span> <span class="n">DictReader</span><span
+                        class="p">,</span> <span class="n">DictWriter</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="k">import</span> <span
+                        class="n">List</span><span class="p">,</span> <span class="n">Union</span>
+
+<span class="kn">from</span> <span class="nn">common.constants</span> <span class="k">import</span> <span class="n">BINNED_SPEC_PATH</span><span
+                        class="p">,</span> <span class="n">REST_SPEC_PATH</span><span class="p">,</span> <span
+                        class="n">SOURCE_SPEC_PATH</span><span class="p">,</span> <span class="n">os</span>
+<span class="kn">from</span> <span class="nn">fileio.utils</span> <span class="k">import</span> <span
+                        class="n">dirCheck</span><span class="p">,</span> <span class="n">extCheck</span><span
+                        class="p">,</span> <span class="n">fileCheck</span><span class="p">,</span> <span
+                        class="n">fns</span><span class="p">,</span> <span class="n">join</span><span class="p">,</span> <span
+                        class="n">ns2f</span>
+<span class="kn">from</span> <span class="nn">spectrum</span> <span class="k">import</span> <span
+                        class="n">Iterable</span><span class="p">,</span> <span class="n">Spectrum</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">The methods contained here exist for the sole purpose of reading and writing Spectrum class files to/from the disk.</span>
+<span class="sd">Unless specified by the &quot;text_&quot; delineation in the method name, all methods write/load serialized objects using</span>
+<span class="sd">Python&#39;s pickle package.  All are written with the highest protocol.</span>
+
+<span class="sd">&quot;async_&quot; delineated methods make use of Python&#39;s asyncio package and common.async_tool&#39;s generic_async_wrapper method</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<div class="viewcode-block" id="text_load"><a class="viewcode-back"
+                                              href="../../index.html#fileio.spec_load_write.text_load">[docs]</a><span
+        class="k">def</span> <span class="nf">text_load</span><span class="p">(</span> <span class="n">path</span><span
+        class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">filename</span><span
+        class="p">:</span> <span class="nb">str</span> <span class="p">)</span> <span class="o">-&gt;</span> <span
+        class="n">Spectrum</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Loads the standardized ASCII format Spectrum file as written by text_write.</span>
+<span class="sd">    </span>
+<span class="sd">    Note: If for some reason, the redshift and/or gmag values cannot be converted to a float,</span>
+<span class="sd">    they will be assigned a value of -1</span>
+<span class="sd">    </span>
+<span class="sd">    :param path: /path/to/input file</span>
+<span class="sd">    :param filename: input file name</span>
+<span class="sd">    :type path: str</span>
+<span class="sd">    :type filename: str</span>
+<span class="sd">    :return: Loaded Spectrum</span>
+<span class="sd">    :rtype: Spectrum</span>
+<span class="sd">    :raises: FileNotFoundError</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">fileCheck</span><span class="p">(</span> <span class="n">path</span><span class="p">,</span> <span
+            class="n">filename</span> <span class="p">)</span>
+
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span> <span class="n">join</span><span
+            class="p">(</span> <span class="n">path</span><span class="p">,</span> <span class="n">filename</span> <span
+            class="p">),</span> <span class="s1">&#39;r&#39;</span> <span class="p">)</span> <span
+            class="k">as</span> <span class="n">infile</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot; Read header.</span>
+
+<span class="sd">        File format:</span>
+<span class="sd">            namestring=55555-4444-333,z=float(),gmag=float()</span>
+<span class="sd">            wavelength,flux density,error</span>
+
+<span class="sd">        Parse the first line, use the second as CSV reader input</span>
+<span class="sd">         &quot;&quot;&quot;</span>
+        <span class="n">header</span> <span class="o">=</span> <span class="n">infile</span><span
+            class="o">.</span><span class="n">readline</span><span class="p">(</span> <span class="p">)</span><span
+            class="o">.</span><span class="n">strip</span><span class="p">(</span> <span class="p">)</span><span
+            class="o">.</span><span class="n">split</span><span class="p">(</span> <span
+            class="s1">&#39;,&#39;</span> <span class="p">)</span>
+        <span class="n">namestring</span> <span class="o">=</span> <span class="n">fns</span><span
+            class="p">(</span> <span class="n">header</span><span class="p">[</span> <span class="mi">0</span> <span
+            class="p">]</span> <span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">z</span> <span class="o">=</span> <span class="nb">float</span><span
+            class="p">(</span> <span class="n">header</span><span class="p">[</span> <span class="mi">1</span> <span
+            class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span> <span
+            class="s2">&quot;z=&quot;</span> <span class="p">)</span> <span class="p">)</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+            <span class="n">z</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">gmag</span> <span class="o">=</span> <span class="nb">float</span><span
+            class="p">(</span> <span class="n">header</span><span class="p">[</span> <span class="mi">2</span> <span
+            class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span> <span
+            class="s2">&quot;gmag=&quot;</span> <span class="p">)</span> <span class="p">)</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+            <span class="n">gmag</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+
+        <span class="n">reader</span> <span class="o">=</span> <span class="n">DictReader</span><span class="p">(</span> <span
+            class="n">infile</span><span class="p">,</span> <span class="n">fieldnames</span><span
+            class="o">=</span><span class="n">infile</span><span class="o">.</span><span class="n">readline</span><span
+            class="p">(</span> <span class="p">)</span><span class="o">.</span><span class="n">strip</span><span
+            class="p">(</span> <span class="p">)</span><span class="o">.</span><span class="n">split</span><span
+            class="p">(</span> <span class="s1">&#39;,&#39;</span> <span class="p">)</span> <span class="p">)</span>
+        <span class="n">wls</span> <span class="o">=</span> <span class="p">[</span> <span class="p">]</span>
+        <span class="n">flux</span> <span class="o">=</span> <span class="p">[</span> <span class="p">]</span>
+        <span class="n">err</span> <span class="o">=</span> <span class="p">[</span> <span class="p">]</span>
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span
+            class="n">reader</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">wls</span><span class="o">.</span><span class="n">append</span><span class="p">(</span> <span
+            class="nb">int</span><span class="p">(</span> <span class="n">row</span><span class="p">[</span> <span
+            class="s1">&#39;wavelength&#39;</span> <span class="p">]</span> <span class="p">)</span> <span
+            class="p">)</span>
+            <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                <span class="n">wls</span><span class="o">.</span><span class="n">append</span><span class="p">(</span> <span
+            class="nb">float</span><span class="p">(</span> <span class="n">row</span><span class="p">[</span> <span
+            class="s1">&#39;wavelength&#39;</span> <span class="p">]</span> <span class="p">)</span> <span
+            class="p">)</span>
+            <span class="n">flux</span><span class="o">.</span><span class="n">append</span><span
+            class="p">(</span> <span class="nb">float</span><span class="p">(</span> <span class="n">row</span><span
+            class="p">[</span> <span class="s1">&#39;flux density&#39;</span> <span class="p">]</span> <span
+            class="p">)</span> <span class="p">)</span>
+            <span class="n">err</span><span class="o">.</span><span class="n">append</span><span
+            class="p">(</span> <span class="nb">float</span><span class="p">(</span> <span class="n">row</span><span
+            class="p">[</span> <span class="s1">&#39;error&#39;</span> <span class="p">]</span> <span class="p">)</span> <span
+            class="p">)</span>
+    <span class="n">spec</span> <span class="o">=</span> <span class="n">Spectrum</span><span class="p">(</span> <span
+            class="n">namestring</span><span class="o">=</span><span class="n">namestring</span><span class="p">,</span> <span
+            class="n">z</span><span class="o">=</span><span class="n">z</span><span class="p">,</span> <span class="n">gmag</span><span
+            class="o">=</span><span class="n">gmag</span> <span class="p">)</span>
+    <span class="n">spec</span><span class="o">.</span><span class="n">setDict</span><span class="p">(</span> <span
+            class="n">wls</span><span class="p">,</span> <span class="n">flux</span><span class="p">,</span> <span
+            class="n">err</span> <span class="p">)</span>
+    <span class="k">return</span> <span class="n">spec</span></div>
+
+
+<div class="viewcode-block" id="text_write"><a class="viewcode-back"
+                                               href="../../index.html#fileio.spec_load_write.text_write">[docs]</a><span
+        class="k">def</span> <span class="nf">text_write</span><span class="p">(</span> <span class="n">spec</span><span
+        class="p">:</span> <span class="n">Spectrum</span><span class="p">,</span> <span class="n">path</span><span
+        class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">filename</span><span
+        class="p">:</span> <span class="nb">str</span> <span class="p">)</span> <span class="o">-&gt;</span> <span
+        class="kc">None</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Writes an ASCII formatted spec file with appropriate header information.</span>
+
+<span class="sd">    Format can be read in by spec_load_write.text_load() method</span>
+
+
+<span class="sd">    :param spec: spectrum to be written</span>
+<span class="sd">    :param path: /path/to/write/</span>
+<span class="sd">    :param filename: filename to write in path</span>
+<span class="sd">    :type spec: Spectrum</span>
+<span class="sd">    :type path: str</span>
+<span class="sd">    :type filename: str</span>
+<span class="sd">    :return: None</span>
+<span class="sd">    :rtype: None</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">dirCheck</span><span class="p">(</span> <span class="n">path</span> <span class="p">)</span>
+
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span> <span class="n">join</span><span
+            class="p">(</span> <span class="n">path</span><span class="p">,</span> <span class="n">filename</span> <span
+            class="p">),</span> <span class="s1">&#39;w&#39;</span> <span class="p">)</span> <span
+            class="k">as</span> <span class="n">outfile</span><span class="p">:</span>
+        <span class="n">header</span> <span class="o">=</span> <span class="s2">&quot;namestring=</span><span
+            class="si">%s</span><span class="s2">,z=</span><span class="si">%f</span><span class="s2">,gmag=</span><span
+            class="si">%f%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span
+            class="n">spec</span><span class="o">.</span><span class="n">getNS</span><span class="p">(</span> <span
+            class="p">),</span> <span class="n">spec</span><span class="o">.</span><span class="n">getRS</span><span
+            class="p">(</span> <span class="p">),</span> <span class="n">spec</span><span class="o">.</span><span
+            class="n">getGmag</span><span class="p">(</span> <span class="p">),</span> <span class="n">os</span><span
+            class="o">.</span><span class="n">linesep</span><span class="p">)</span>
+        <span class="n">outfile</span><span class="o">.</span><span class="n">writelines</span><span class="p">(</span> <span
+            class="n">header</span> <span class="p">)</span>
+
+        <span class="n">fieldnames</span> <span class="o">=</span> <span class="p">[</span> <span class="s2">&quot;wavelength&quot;</span><span
+            class="p">,</span> <span class="s2">&quot;flux density&quot;</span><span class="p">,</span> <span
+            class="s2">&quot;error&quot;</span> <span class="p">]</span>
+        <span class="n">writer</span> <span class="o">=</span> <span class="n">DictWriter</span><span class="p">(</span> <span
+            class="n">outfile</span><span class="p">,</span> <span class="n">fieldnames</span><span
+            class="o">=</span><span class="n">fieldnames</span> <span class="p">)</span>
+        <span class="n">writer</span><span class="o">.</span><span class="n">writeheader</span><span class="p">(</span> <span
+            class="p">)</span>
+        <span class="n">writer</span><span class="o">.</span><span class="n">writerows</span><span
+            class="p">(</span> <span class="n">spec</span><span class="o">.</span><span
+            class="n">lineDictList</span><span class="p">(</span> <span class="p">)</span> <span
+            class="p">)</span></div>
+
+
+<div class="viewcode-block" id="load"><a class="viewcode-back" href="../../index.html#fileio.spec_load_write.load">[docs]</a><span
+        class="k">def</span> <span class="nf">load</span><span class="p">(</span> <span class="n">path</span><span
+        class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">filename</span><span
+        class="p">:</span> <span class="nb">str</span> <span class="p">)</span> <span class="o">-&gt;</span> <span
+        class="n">Spectrum</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Loads the serialized spectrum file at /path/filename</span>
+
+<span class="sd">    :param path: /path/to/filename</span>
+<span class="sd">    :param filename:  file name of spectrum to load</span>
+<span class="sd">    :type path: str</span>
+<span class="sd">    :type filename: str</span>
+<span class="sd">    :rtype: Spectrum</span>
+<span class="sd">    :raises: FileNotFoundError</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">fileCheck</span><span class="p">(</span> <span class="n">path</span><span class="p">,</span> <span
+            class="n">filename</span> <span class="p">)</span>
+    <span class="k">return</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span
+            class="p">(</span> <span class="nb">open</span><span class="p">(</span> <span class="n">join</span><span
+            class="p">(</span> <span class="n">path</span><span class="p">,</span> <span class="n">filename</span> <span
+            class="p">),</span> <span class="s1">&#39;rb&#39;</span> <span class="p">)</span> <span
+            class="p">)</span></div>
+
+
+<div class="viewcode-block" id="write"><a class="viewcode-back" href="../../index.html#fileio.spec_load_write.write">[docs]</a><span
+        class="k">def</span> <span class="nf">write</span><span class="p">(</span> <span class="n">spec</span><span
+        class="p">:</span> <span class="n">Spectrum</span><span class="p">,</span> <span class="n">path</span><span
+        class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">filename</span><span
+        class="p">:</span> <span class="nb">str</span> <span class="p">)</span> <span class="o">-&gt;</span> <span
+        class="kc">None</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Writes a serialized spectrum file at /path/filename</span>
+<span class="sd">    :param spec: spectrum to the written</span>
+<span class="sd">    :param path: /path/to/filename</span>
+<span class="sd">    :param filename: file name to be written to</span>
+<span class="sd">    :type spec: Spectrum</span>
+<span class="sd">    :type path: str</span>
+<span class="sd">    :type filename: str</span>
+<span class="sd">    :return: None</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">dirCheck</span><span class="p">(</span> <span class="n">path</span> <span class="p">)</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span> <span class="n">join</span><span
+            class="p">(</span> <span class="n">path</span><span class="p">,</span> <span class="n">filename</span> <span
+            class="p">),</span> <span class="s1">&#39;wb&#39;</span> <span class="p">)</span> <span class="k">as</span> <span
+            class="n">outfile</span><span class="p">:</span>
+        <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span> <span
+            class="n">spec</span><span class="p">,</span> <span class="n">outfile</span><span class="p">,</span> <span
+            class="n">protocol</span><span class="o">=</span><span class="n">pickle</span><span class="o">.</span><span
+            class="n">HIGHEST_PROTOCOL</span> <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="bspecLoader"><a class="viewcode-back"
+                                                href="../../index.html#fileio.spec_load_write.bspecLoader">[docs]</a><span
+        class="k">def</span> <span class="nf">bspecLoader</span><span class="p">(</span> <span
+        class="n">namestring</span><span class="p">:</span> <span class="nb">str</span> <span class="p">)</span> <span
+        class="o">-&gt;</span> <span class="n">Spectrum</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Loads a single Spectrum from BINNED_SPEC_PATH</span>
+<span class="sd">    </span>
+<span class="sd">    :param namestring: Namestring of desired spectrum</span>
+<span class="sd">    :type namestring: str</span>
+<span class="sd">    :rtype: Spectrum</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">load</span><span class="p">(</span> <span
+            class="n">BINNED_SPEC_PATH</span><span class="p">,</span> <span class="n">ns2f</span><span
+            class="p">(</span> <span class="n">namestring</span><span class="p">,</span> <span class="s2">&quot;.bspec&quot;</span> <span
+            class="p">)</span> <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="rspecLoader"><a class="viewcode-back"
+                                                href="../../index.html#fileio.spec_load_write.rspecLoader">[docs]</a><span
+        class="k">def</span> <span class="nf">rspecLoader</span><span class="p">(</span> <span
+        class="n">namestring</span><span class="p">:</span> <span class="nb">str</span> <span class="p">)</span> <span
+        class="o">-&gt;</span> <span class="n">Spectrum</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Loads a single Spectrum from REST_SPEC_PATH</span>
+
+<span class="sd">    :param namestring: Namestring of desired spectrum</span>
+<span class="sd">    :type namestring: str</span>
+<span class="sd">    :rtype: Spectrum</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">load</span><span class="p">(</span> <span
+            class="n">REST_SPEC_PATH</span><span class="p">,</span> <span class="n">ns2f</span><span class="p">(</span> <span
+            class="n">namestring</span><span class="p">,</span> <span class="s2">&quot;.rspec&quot;</span> <span
+            class="p">)</span> <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="sspecLoader"><a class="viewcode-back"
+                                                href="../../index.html#fileio.spec_load_write.sspecLoader">[docs]</a><span
+        class="k">def</span> <span class="nf">sspecLoader</span><span class="p">(</span> <span
+        class="n">namestring</span><span class="p">:</span> <span class="nb">str</span> <span class="p">)</span> <span
+        class="o">-&gt;</span> <span class="n">Spectrum</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Loads a single Spectrum from SOURCE_SPEC_PATH</span>
+
+<span class="sd">    :param namestring: Namestring of desired spectrum</span>
+<span class="sd">    :type namestring: str</span>
+<span class="sd">    :rtype: Spectrum</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">load</span><span class="p">(</span> <span
+            class="n">SOURCE_SPEC_PATH</span><span class="p">,</span> <span class="n">ns2f</span><span
+            class="p">(</span> <span class="n">namestring</span><span class="p">,</span> <span class="s2">&quot;.spec&quot;</span> <span
+            class="p">)</span> <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="async_bspec"><a class="viewcode-back"
+                                                href="../../index.html#fileio.spec_load_write.async_bspec">[docs]</a><span
+        class="k">def</span> <span class="nf">async_bspec</span><span class="p">(</span> <span class="n">namelist</span><span
+        class="p">:</span> <span class="n">List</span><span class="p">[</span> <span class="nb">str</span> <span
+        class="p">]</span> <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span
+        class="p">[</span> <span class="n">Spectrum</span> <span class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Loads all given binned, observed frame spectra from the BINNED_SPEC_PATH using async_load</span>
+
+<span class="sd">    :param namelist:  Iterable</span>
+<span class="sd">    :type namelist: Iterable[ str ]</span>
+<span class="sd">    :return: List of binned, observed frame spectra</span>
+<span class="sd">    :rtype: List[ Spectrum ]</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">async_load</span><span class="p">(</span> <span class="n">BINNED_SPEC_PATH</span><span
+            class="p">,</span> <span class="n">namelist</span><span class="p">,</span> <span class="s2">&quot;.bspec&quot;</span> <span
+            class="p">)</span></div>
+
+
+<div class="viewcode-block" id="async_rspec"><a class="viewcode-back"
+                                                href="../../index.html#fileio.spec_load_write.async_rspec">[docs]</a><span
+        class="k">def</span> <span class="nf">async_rspec</span><span class="p">(</span> <span class="n">namelist</span><span
+        class="p">:</span> <span class="n">Iterable</span><span class="p">[</span> <span class="nb">str</span> <span
+        class="p">]</span> <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span
+        class="p">[</span> <span class="n">Spectrum</span> <span class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Loads all given rest frame spectra from the REST_SPEC_PATH using async_load</span>
+<span class="sd">    </span>
+<span class="sd">    :param namelist:  Iterable</span>
+<span class="sd">    :type namelist: Iterable[ str ]</span>
+<span class="sd">    :return: List of rest frame spectra</span>
+<span class="sd">    :rtype: List[ Spectrum ]</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">async_load</span><span class="p">(</span> <span class="n">REST_SPEC_PATH</span><span
+            class="p">,</span> <span class="n">namelist</span><span class="p">,</span> <span class="s2">&quot;.rspec&quot;</span> <span
+            class="p">)</span></div>
+
+
+<div class="viewcode-block" id="async_load"><a class="viewcode-back"
+                                               href="../../index.html#fileio.spec_load_write.async_load">[docs]</a><span
+        class="k">def</span> <span class="nf">async_load</span><span class="p">(</span> <span class="n">path</span><span
+        class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">filelist</span><span
+        class="p">:</span> <span class="n">List</span><span class="p">[</span> <span class="nb">str</span> <span
+        class="p">],</span> <span class="n">extention</span><span class="p">:</span> <span class="nb">str</span> <span
+        class="o">=</span> <span class="kc">None</span> <span class="p">)</span> <span class="o">-&gt;</span> <span
+        class="n">List</span><span class="p">[</span> <span class="n">Spectrum</span> <span class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Uses asyncio to load serialized Spectrum from filelist ( list in [ str() ] form )</span>
+
+<span class="sd">    If extension is specified, each filename in filelist will be concactated with it.  Elsewise, ignored.</span>
+
+<span class="sd">    :param path: /path/to/directory</span>
+<span class="sd">    :param filelist: filenames of spectra to be loaded</span>
+<span class="sd">    :param extention: (optional) file extention to append to each filename before loading</span>
+<span class="sd">    :type path: str</span>
+<span class="sd">    :type filelist: list</span>
+<span class="sd">    :type extention: str</span>
+<span class="sd">    :return: list of loaded Spectrum type</span>
+<span class="sd">    :rtype: list</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">tools.async_tools</span> <span class="k">import</span> <span
+            class="n">generic_async_wrapper</span>
+    <span class="kn">import</span> <span class="nn">asyncio</span>
+
+    <span class="k">async</span> <span class="k">def</span> <span class="nf">__async_load_wrapper</span><span class="p">(</span> <span
+            class="n">path</span><span class="p">,</span> <span class="n">filename</span> <span class="p">):</span>
+        <span class="k">return</span> <span class="n">load</span><span class="p">(</span> <span
+            class="n">path</span><span class="p">,</span> <span class="n">filename</span> <span class="p">)</span>
+
+    <span class="n">output_list</span> <span class="o">=</span> <span class="p">[</span> <span class="p">]</span>
+    <span class="n">load_loop</span> <span class="o">=</span> <span class="n">asyncio</span><span
+            class="o">.</span><span class="n">new_event_loop</span><span class="p">(</span> <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">extention</span> <span class="ow">is</span> <span
+            class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">filelist</span> <span class="o">=</span> <span class="p">[</span> <span class="n">f</span> <span
+            class="o">+</span> <span class="n">extCheck</span><span class="p">(</span> <span class="n">extention</span> <span
+            class="p">)</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span
+            class="n">filelist</span> <span class="p">]</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">load_loop</span><span class="o">.</span><span class="n">run_until_complete</span><span
+            class="p">(</span>
+                <span class="n">generic_async_wrapper</span><span class="p">(</span> <span class="p">[</span> <span
+            class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">filename</span><span
+            class="p">)</span> <span class="k">for</span> <span class="n">filename</span> <span
+            class="ow">in</span> <span class="n">filelist</span> <span class="p">],</span> <span class="n">__async_load_wrapper</span><span
+            class="p">,</span>
+                                       <span class="n">output_list</span> <span class="p">)</span> <span
+            class="p">)</span>
+    <span class="k">finally</span><span class="p">:</span>
+        <span class="n">load_loop</span><span class="o">.</span><span class="n">close</span><span
+            class="p">(</span> <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">output_list</span></div>
+
+
+<div class="viewcode-block" id="async_write"><a class="viewcode-back"
+                                                href="../../index.html#fileio.spec_load_write.async_write">[docs]</a><span
+        class="k">def</span> <span class="nf">async_write</span><span class="p">(</span> <span
+        class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span
+        class="n">speclist</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span> <span
+        class="n">Spectrum</span> <span class="p">],</span> <span class="n">extention</span><span
+        class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span
+        class="s2">&quot;.spec&quot;</span> <span class="p">)</span> <span class="o">-&gt;</span> <span
+        class="kc">None</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Uses asyncio to write a list of Spectrum to the disk.</span>
+
+<span class="sd">    Will set filename from spectrum namestring.  If extention is not specificed, will default to &quot;.spec&quot;</span>
+
+<span class="sd">    :param path: /path/to/directory</span>
+<span class="sd">    :param speclist: list of spectrum to output</span>
+<span class="sd">    :param extention: desired file extention</span>
+<span class="sd">    :type path: str</span>
+<span class="sd">    :type speclist: list</span>
+<span class="sd">    :type extention: str</span>
+<span class="sd">    :rtype: None</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">tools.async_tools</span> <span class="k">import</span> <span
+            class="n">generic_async_wrapper</span>
+    <span class="kn">import</span> <span class="nn">asyncio</span>
+
+    <span class="k">async</span> <span class="k">def</span> <span class="nf">__async_write_wrapper</span><span
+            class="p">(</span> <span class="n">path</span><span class="p">,</span> <span class="n">spectrum</span><span
+            class="p">,</span> <span class="n">extention</span> <span class="p">):</span>
+        <span class="n">write</span><span class="p">(</span> <span class="n">spectrum</span><span
+            class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">ns2f</span><span
+            class="p">(</span> <span class="n">spectrum</span><span class="o">.</span><span class="n">getNS</span><span
+            class="p">(</span> <span class="p">),</span> <span class="n">extention</span> <span class="p">)</span> <span
+            class="p">)</span>
+
+    <span class="n">write_loop</span> <span class="o">=</span> <span class="n">asyncio</span><span
+            class="o">.</span><span class="n">new_event_loop</span><span class="p">(</span> <span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">write_loop</span><span class="o">.</span><span class="n">run_until_complete</span><span
+            class="p">(</span>
+                <span class="n">generic_async_wrapper</span><span class="p">(</span> <span class="p">[</span> <span
+            class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">spec</span><span
+            class="p">,</span> <span class="n">extention</span><span class="p">)</span> <span class="k">for</span> <span
+            class="n">spec</span> <span class="ow">in</span> <span class="n">speclist</span> <span
+            class="p">],</span> <span class="n">__async_write_wrapper</span> <span class="p">)</span> <span
+            class="p">)</span>
+    <span class="k">finally</span><span class="p">:</span>
+        <span class="n">write_loop</span><span class="o">.</span><span class="n">close</span><span
+            class="p">(</span> <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="async_rspec_scaled"><a class="viewcode-back"
+                                                       href="../../index.html#fileio.spec_load_write.async_rspec_scaled">[docs]</a><span
+        class="k">def</span> <span class="nf">async_rspec_scaled</span><span class="p">(</span> <span
+        class="n">namelist</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span> <span
+        class="nb">str</span> <span class="p">],</span> <span class="n">scale_to</span><span class="p">:</span> <span
+        class="n">Union</span><span class="p">[</span> <span class="nb">float</span><span class="p">,</span> <span
+        class="n">Spectrum</span> <span class="p">]</span> <span class="p">)</span> <span class="o">-&gt;</span> <span
+        class="n">List</span><span class="p">[</span> <span class="n">Spectrum</span> <span class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Uses the asyncio library to load the given namelist of Spectrum namestrings from the default rest frame spectra</span>
+<span class="sd">    folder REST_SPEC_PATH.  While spectra are loaded from the disk, they are scaled to the given value for the scale_to variable</span>
+<span class="sd">    centered on the DEFAULT_SCALE_WL constant in common.constants.</span>
+<span class="sd">    </span>
+<span class="sd">    scale_to can be either a floating point value (which is passed to the Spectrum.scale() method) or a Spectrum class,</span>
+<span class="sd">    in which case the average flux density around the DEF_SCALE_WL constant will be determined and passed.</span>
+<span class="sd">    </span>
+<span class="sd">    :param namelist: List of MJD-PLATE-FIBER namestrings.  The corresponding MJD-PLATE-FIBER.rspec must be present</span>
+<span class="sd">     in the REST_SPEC_PATH.</span>
+<span class="sd">    :param scale_to: float or Spectrum class which all loaded spectra will be scaled to.</span>
+<span class="sd">    :type namelist: Iterable</span>
+<span class="sd">    :type scale_to: Spectrum or float</span>
+<span class="sd">    :return: Scaled restframe speclist</span>
+<span class="sd">    :rtype: List[ Spectrum ]</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">tools.async_tools</span> <span class="k">import</span> <span
+            class="n">generic_async_wrapper</span>
+    <span class="kn">from</span> <span class="nn">common.constants</span> <span class="k">import</span> <span class="n">REST_SPEC_PATH</span>
+    <span class="kn">import</span> <span class="nn">asyncio</span>
+
+    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span> <span class="n">scale_to</span> <span
+            class="p">)</span> <span class="ow">is</span> <span class="n">Spectrum</span><span class="p">:</span>
+        <span class="n">scale_to</span> <span class="o">=</span> <span class="n">scale_to</span><span class="o">.</span><span
+            class="n">aveFlux</span><span class="p">(</span> <span class="p">)</span>
+
+    <span class="k">async</span> <span class="k">def</span> <span class="nf">__async_scaled_load_wrapper</span><span
+            class="p">(</span> <span class="n">path</span><span class="p">,</span> <span class="n">filename</span><span
+            class="p">,</span> <span class="n">scaleflx</span> <span class="p">):</span>
+        <span class="k">return</span> <span class="n">load</span><span class="p">(</span> <span
+            class="n">path</span><span class="p">,</span> <span class="n">filename</span> <span class="p">)</span><span
+            class="o">.</span><span class="n">scale</span><span class="p">(</span> <span class="n">scaleflux</span><span
+            class="o">=</span><span class="n">scaleflx</span> <span class="p">)</span>
+
+    <span class="n">output_list</span> <span class="o">=</span> <span class="p">[</span> <span class="p">]</span>
+    <span class="n">load_loop</span> <span class="o">=</span> <span class="n">asyncio</span><span
+            class="o">.</span><span class="n">new_event_loop</span><span class="p">(</span> <span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">load_loop</span><span class="o">.</span><span class="n">run_until_complete</span><span
+            class="p">(</span>
+                <span class="n">generic_async_wrapper</span><span class="p">(</span> <span class="p">[</span> <span
+            class="p">(</span><span class="n">REST_SPEC_PATH</span><span class="p">,</span> <span
+            class="n">f</span><span class="s2">&quot;</span><span class="si">{ns}</span><span
+            class="s2">.rspec&quot;</span><span class="p">,</span> <span class="n">scale_to</span><span
+            class="p">)</span> <span class="k">for</span> <span class="n">ns</span> <span class="ow">in</span> <span
+            class="n">namelist</span> <span class="p">],</span>
+                                       <span class="n">__async_scaled_load_wrapper</span><span class="p">,</span>
+                                       <span class="n">output_list</span> <span class="p">)</span> <span
+            class="p">)</span>
+    <span class="k">finally</span><span class="p">:</span>
+        <span class="n">load_loop</span><span class="o">.</span><span class="n">close</span><span
+            class="p">(</span> <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">output_list</span></div>
+</pre>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <div class="relations">
+                <h3>Related Topics</h3>
+                <ul>
+                    <li><a href="../../index.html">Documentation overview</a>
+                        <ul>
+                            <li><a href="../index.html">Module code</a>
+                                <ul>
+                                </ul>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+            <div id="searchbox" style="display: none" role="search">
+                <h3>Quick search</h3>
+                <form class="search" action="../../search.html" method="get">
+                    <div><input type="text" name="q"/></div>
+                    <div><input type="submit" value="Go"/></div>
+                    <input type="hidden" name="check_keywords" value="yes"/>
+                    <input type="hidden" name="area" value="default"/>
+                </form>
+            </div>
+            <script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+    </div>
+    <div class="clearer"></div>
+</div>
+<div class="footer">
+    &copy;2017, Christopher Wahl.
+
+    |
+    Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.4</a>
+    &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+
+</div>
+
+
+</body>
+</html>

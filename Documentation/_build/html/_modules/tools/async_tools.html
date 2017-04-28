@@ -1,0 +1,319 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+
+    <title>tools.async_tools &#8212; 1D Spectrum QSO Library 2.0a documentation</title>
+
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css"/>
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css"/>
+
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '2.0a',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html"/>
+    <link rel="search" title="Search" href="../../search.html"/>
+
+    <link rel="stylesheet" href="../../_static/custom.css" type="text/css"/>
+
+
+    <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9"/>
+
+</head>
+<body role="document">
+
+
+<div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="body" role="main">
+
+                <h1>Source code for tools.async_tools</h1>
+                <div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">This package contains generic multiprocessing methods.  The goal of each is the same: to provide a generic outline</span>
+<span class="sd"> for invoking some kind of multiprocessing technique, operating some multi_function over a list of input values and</span>
+<span class="sd"> possibly providing output values (if desired).</span>
+
+<span class="sd">The basic outline is that the user defines some multi_function such that it takes some singular input value inputV,</span>
+<span class="sd"> performs an operation, and if desired returns a value.  If method requires more than one value to be passed, they should</span>
+<span class="sd"> all be collectively passed as a tuple of ( val1, val2, ... ), then unpacked within the multi_function.</span>
+
+<span class="sd">        def multi_function( inputV ) -&gt; float</span>
+<span class="sd">            val1, val2 = inputV</span>
+<span class="sd">            return val1 + val2</span>
+
+<span class="sd">The total list of values over which to operate should be passed in as input_values.  If it is necessary to form each </span>
+<span class="sd"> set of values as a tuple (as above), then they should be packed prior to being passed to the generic multiprocessor.</span>
+
+<span class="sd">If output values from the multifunction are desired, they will be appended to a passed output_values list.  NOTICE: If</span>
+<span class="sd"> an output_list is not provided, NO values will be returned directly from the operation as all of these methods do not</span>
+<span class="sd"> return anything.</span>
+
+<span class="sd">Should the order of operation, or the order of output values, matter - make used of the generic_unordered_multiprocessor.</span>
+<span class="sd"> The _unordered_ method operates the same pool.imap feature, but does not require ordered operations and so no order is</span>
+<span class="sd"> guaranteed.</span>
+
+<span class="sd">The pool.imap methods generally low impact in memory, as the results are pulled out of the pool as soon as they arrive.</span>
+<span class="sd"> However, often times the pool.map_async process is faster to use.  However, as the entire process runs until the pool</span>
+<span class="sd"> is completely done, memeory use is substantial for large operations.  If RAM is not a restriction (or the process is</span>
+<span class="sd"> small),then the _map_async_ method may be desirable.  Notice, this async method implies no guaranteed order and order</span>
+<span class="sd"> should not be expected.</span>
+<span class="sd"> </span>
+<span class="sd">All methods make use of the same passing structure (with the exception of the generic_async_wrapper, which is more useful</span>
+<span class="sd"> for writing/reading the disk and does not use Pool, so does not take a MAX_PROC value), so they can be used</span>
+<span class="sd"> interchangably simply without any need to change the values passed, their order, typing, etc.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="k">import</span> <span
+                        class="n">Callable</span><span class="p">,</span> <span class="n">Iterable</span>
+
+
+<div class="viewcode-block" id="generic_async_wrapper"><a class="viewcode-back"
+                                                          href="../../index.html#tools.async_tools.generic_async_wrapper">[docs]</a><span
+        class="k">async</span> <span class="k">def</span> <span class="nf">generic_async_wrapper</span><span
+        class="p">(</span> <span class="n">input_values</span><span class="p">:</span> <span
+        class="n">Iterable</span><span class="p">,</span> <span class="n">async_function</span><span class="p">:</span> <span
+        class="n">Callable</span><span class="p">,</span> <span class="n">output_values</span><span
+        class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span> <span
+        class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Basic asyncronous operations wrapper.  Be aware, no order will be maintained in this process.</span>
+<span class="sd">    i.e. the results of output_values will very likely NOT correspond to those of input_values.</span>
+
+<span class="sd">    input_values is a list of tuples. These values will be unpacked and passed to specified async_function</span>
+
+<span class="sd">    SEE NOTES AT THE TOP OF THE tools.async_tools PACKAGE FOR MORE INFORMATION ON HOW TO USE THE generic_ MULTIPROCESS</span>
+<span class="sd">    METHODS</span>
+<span class="sd">    </span>
+<span class="sd">    Note:  No results are returned directly by this method.  Returned results of async_function are appended to output_values.</span>
+<span class="sd">    If output_values is not given, no results will be returned from this method.</span>
+
+<span class="sd">    :param input_values: list of tuples [ (val1, val2...), ... ] to be passed to async_function by async_function( *(val1, val2...) )</span>
+<span class="sd">    :param async_function: asyncronous method which contains the actual operation to be performed.</span>
+<span class="sd">    :param output_values: If passed in, results returned by async_function will be appended to this list.</span>
+<span class="sd">    :type input_values: list</span>
+<span class="sd">    :type async_function: function</span>
+<span class="sd">    :type output_values: list</span>
+<span class="sd">    :return: None</span>
+<span class="sd">    :rtype: None</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">import</span> <span class="nn">asyncio</span>
+
+    <span class="n">coroutines</span> <span class="o">=</span> <span class="p">[</span> <span
+            class="n">async_function</span><span class="p">(</span> <span class="o">*</span><span
+            class="n">input_value</span> <span class="p">)</span> <span class="k">for</span> <span
+            class="n">input_value</span> <span class="ow">in</span> <span class="n">input_values</span> <span class="p">]</span>
+    <span class="n">completed</span><span class="p">,</span> <span class="n">pending</span> <span
+            class="o">=</span> <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span
+            class="n">wait</span><span class="p">(</span> <span class="n">coroutines</span> <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">output_values</span> <span class="ow">is</span> <span
+            class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">output_values</span><span class="o">.</span><span class="n">extend</span><span
+            class="p">(</span> <span class="p">[</span> <span class="n">result</span><span class="o">.</span><span
+            class="n">result</span><span class="p">()</span> <span class="k">for</span> <span
+            class="n">result</span> <span class="ow">in</span> <span class="n">completed</span> <span class="p">]</span> <span
+            class="p">)</span></div>
+
+
+<div class="viewcode-block" id="generic_unordered_multiprocesser"><a class="viewcode-back"
+                                                                     href="../../index.html#tools.async_tools.generic_unordered_multiprocesser">[docs]</a><span
+        class="k">def</span> <span class="nf">generic_unordered_multiprocesser</span><span class="p">(</span> <span
+        class="n">input_values</span><span class="p">:</span> <span class="n">Iterable</span><span
+        class="p">,</span> <span class="n">multi_function</span><span class="p">:</span> <span class="n">Callable</span><span
+        class="p">,</span> <span class="n">output_values</span><span class="p">:</span> <span
+        class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                                      <span class="n">MAX_PROC</span><span class="p">:</span> <span
+            class="nb">int</span> <span class="o">=</span> <span class="kc">None</span> <span class="p">)</span> <span
+            class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    SEE NOTES AT THE TOP OF THE tools.async_tools PACKAGE FOR MORE INFORMATION ON HOW TO USE THE generic_ MULTIPROCESS</span>
+<span class="sd">    METHODS</span>
+<span class="sd">    </span>
+<span class="sd">    :param input_values: Iterable of values to pass to multi_function </span>
+<span class="sd">    :param multi_function: Callable which accepts only one input value, which will be passed from input_values</span>
+<span class="sd">    :param output_values: If output values are desired, they will be gathered here.</span>
+<span class="sd">    :param MAX_PROC: Maxmium number of concurrent processed - will be passed to Pool().  Defaults to cpu_count()</span>
+<span class="sd">    :type input_values: list</span>
+<span class="sd">    :type multi_function: Callable</span>
+<span class="sd">    :type output_values: list</span>
+<span class="sd">    :type MAX_PROC: int</span>
+<span class="sd">    :return: None</span>
+<span class="sd">    :rtype: None</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">multiprocessing</span> <span class="k">import</span> <span class="n">Pool</span><span
+            class="p">,</span> <span class="n">cpu_count</span>
+    <span class="n">MAX_PROC</span> <span class="o">=</span> <span class="n">MAX_PROC</span> <span class="ow">or</span> <span
+            class="n">cpu_count</span><span class="p">()</span>
+    <span class="n">pool</span> <span class="o">=</span> <span class="n">Pool</span><span class="p">(</span> <span
+            class="n">processes</span> <span class="o">=</span> <span class="n">MAX_PROC</span> <span class="p">)</span>
+
+    <span class="n">results</span> <span class="o">=</span> <span class="n">pool</span><span class="o">.</span><span
+            class="n">imap_unordered</span><span class="p">(</span> <span class="n">multi_function</span><span
+            class="p">,</span> <span class="n">input_values</span> <span class="p">)</span>
+    <span class="n">pool</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="n">pool</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">output_values</span> <span class="ow">is</span> <span
+            class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span
+            class="n">results</span><span class="p">:</span>
+            <span class="n">output_values</span><span class="o">.</span><span class="n">append</span><span
+            class="p">(</span> <span class="n">r</span> <span class="p">)</span>
+
+    <span class="k">del</span> <span class="n">pool</span></div>
+
+
+<div class="viewcode-block" id="generic_ordered_multiprocesser"><a class="viewcode-back"
+                                                                   href="../../index.html#tools.async_tools.generic_ordered_multiprocesser">[docs]</a><span
+        class="k">def</span> <span class="nf">generic_ordered_multiprocesser</span><span class="p">(</span> <span
+        class="n">input_values</span><span class="p">:</span> <span class="n">Iterable</span><span
+        class="p">,</span> <span class="n">multi_function</span><span class="p">:</span> <span class="n">Callable</span><span
+        class="p">,</span> <span class="n">output_values</span><span class="p">:</span> <span
+        class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                                    <span class="n">MAX_PROC</span><span class="p">:</span> <span class="nb">int</span> <span
+            class="o">=</span> <span class="kc">None</span> <span class="p">)</span> <span class="o">-&gt;</span> <span
+            class="kc">None</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    SEE NOTES AT THE TOP OF THE tools.async_tools PACKAGE FOR MORE INFORMATION ON HOW TO USE THE generic_ MULTIPROCESS</span>
+<span class="sd">    METHODS</span>
+
+<span class="sd">    :param input_values: Iterable of values to pass to multi_function </span>
+<span class="sd">    :param multi_function: Callable which accepts only one input value, which will be passed from input_values</span>
+<span class="sd">    :param output_values: If output values are desired, they will be gathered here.</span>
+<span class="sd">    :param MAX_PROC: Maxmium number of concurrent processed - will be passed to Pool().  Defaults to cpu_count()</span>
+<span class="sd">    :type input_values: list</span>
+<span class="sd">    :type multi_function: Callable</span>
+<span class="sd">    :type output_values: list</span>
+<span class="sd">    :type MAX_PROC: int</span>
+<span class="sd">    :return: None</span>
+<span class="sd">    :rtype: None</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">multiprocessing</span> <span class="k">import</span> <span class="n">Pool</span><span
+            class="p">,</span> <span class="n">cpu_count</span>
+    <span class="n">MAX_PROC</span> <span class="o">=</span> <span class="n">MAX_PROC</span> <span class="ow">or</span> <span
+            class="n">cpu_count</span><span class="p">()</span>
+    <span class="n">pool</span> <span class="o">=</span> <span class="n">Pool</span><span class="p">(</span> <span
+            class="n">processes</span> <span class="o">=</span> <span class="n">MAX_PROC</span> <span class="p">)</span>
+
+    <span class="n">results</span> <span class="o">=</span> <span class="n">pool</span><span class="o">.</span><span
+            class="n">imap</span><span class="p">(</span> <span class="n">multi_function</span><span class="p">,</span> <span
+            class="n">input_values</span> <span class="p">)</span>
+    <span class="n">pool</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="n">pool</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">output_values</span> <span class="ow">is</span> <span
+            class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span
+            class="n">results</span><span class="p">:</span>
+            <span class="n">output_values</span><span class="o">.</span><span class="n">append</span><span
+            class="p">(</span> <span class="n">r</span> <span class="p">)</span>
+
+    <span class="k">del</span> <span class="n">pool</span></div>
+
+
+<div class="viewcode-block" id="generic_map_async_multiprocesser"><a class="viewcode-back"
+                                                                     href="../../index.html#tools.async_tools.generic_map_async_multiprocesser">[docs]</a><span
+        class="k">def</span> <span class="nf">generic_map_async_multiprocesser</span><span class="p">(</span> <span
+        class="n">input_values</span><span class="p">:</span> <span class="n">Iterable</span><span
+        class="p">,</span> <span class="n">multi_function</span><span class="p">:</span> <span class="n">Callable</span><span
+        class="p">,</span> <span class="n">output_values</span><span class="p">:</span> <span
+        class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                                      <span class="n">MAX_PROC</span><span class="p">:</span> <span
+            class="nb">int</span> <span class="o">=</span> <span class="kc">None</span> <span class="p">)</span> <span
+            class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    SEE NOTES AT THE TOP OF THE tools.async_tools PACKAGE FOR MORE INFORMATION ON HOW TO USE THE generic_ MULTIPROCESS</span>
+<span class="sd">    METHODS</span>
+
+<span class="sd">    :param input_values: Iterable of values to pass to multi_function </span>
+<span class="sd">    :param multi_function: Callable which accepts only one input value, which will be passed from input_values</span>
+<span class="sd">    :param output_values: If output values are desired, they will be gathered here.</span>
+<span class="sd">    :param MAX_PROC: Maxmium number of concurrent processed - will be passed to Pool().  Defaults to cpu_count()</span>
+<span class="sd">    :type input_values: list</span>
+<span class="sd">    :type multi_function: Callable</span>
+<span class="sd">    :type output_values: list</span>
+<span class="sd">    :type MAX_PROC: int</span>
+<span class="sd">    :return: None</span>
+<span class="sd">    :rtype: None</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">multiprocessing</span> <span class="k">import</span> <span class="n">Pool</span>
+
+    <span class="n">pool</span> <span class="o">=</span> <span class="n">Pool</span><span class="p">(</span> <span
+            class="n">processes</span> <span class="o">=</span> <span class="n">MAX_PROC</span> <span class="p">)</span>
+
+    <span class="n">results</span> <span class="o">=</span> <span class="n">pool</span><span class="o">.</span><span
+            class="n">map_async</span><span class="p">(</span> <span class="n">multi_function</span><span
+            class="p">,</span> <span class="n">input_values</span> <span class="p">)</span>
+    <span class="n">pool</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="n">pool</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">output_values</span> <span class="ow">is</span> <span
+            class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">output_values</span><span class="o">.</span><span class="n">extend</span><span
+            class="p">(</span> <span class="n">results</span><span class="o">.</span><span class="n">get</span><span
+            class="p">()</span> <span class="p">)</span>
+
+    <span class="k">del</span> <span class="n">pool</span></div>
+
+</pre>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <div class="relations">
+                <h3>Related Topics</h3>
+                <ul>
+                    <li><a href="../../index.html">Documentation overview</a>
+                        <ul>
+                            <li><a href="../index.html">Module code</a>
+                                <ul>
+                                </ul>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+            <div id="searchbox" style="display: none" role="search">
+                <h3>Quick search</h3>
+                <form class="search" action="../../search.html" method="get">
+                    <div><input type="text" name="q"/></div>
+                    <div><input type="submit" value="Go"/></div>
+                    <input type="hidden" name="check_keywords" value="yes"/>
+                    <input type="hidden" name="area" value="default"/>
+                </form>
+            </div>
+            <script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+    </div>
+    <div class="clearer"></div>
+</div>
+<div class="footer">
+    &copy;2017, Christopher Wahl.
+
+    |
+    Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.4</a>
+    &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+
+</div>
+
+
+</body>
+</html>

@@ -1,0 +1,801 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+
+    <title>spectrum.Spectrum &#8212; 1D Spectrum QSO Library 2.0a documentation</title>
+
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css"/>
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css"/>
+
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '2.0a',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html"/>
+    <link rel="search" title="Search" href="../../search.html"/>
+
+    <link rel="stylesheet" href="../../_static/custom.css" type="text/css"/>
+
+
+    <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9"/>
+
+</head>
+<body role="document">
+
+
+<div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="body" role="main">
+
+                <h1>Source code for spectrum.Spectrum</h1>
+                <div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">typing</span> <span class="k">import</span> <span class="n">List</span><span
+                        class="p">,</span> <span class="n">Tuple</span>
+
+<span class="kn">from</span> <span class="nn">common.constants</span> <span class="k">import</span> <span class="n">DEFAULT_SCALE_RADIUS</span><span
+                        class="p">,</span> <span class="n">DEFAULT_SCALE_WL</span>
+
+
+<div class="viewcode-block" id="Spectrum"><a class="viewcode-back" href="../../index.html#spectrum.utils.Spectrum">[docs]</a><span
+        class="k">class</span> <span class="nc">Spectrum</span><span class="p">(</span> <span
+        class="nb">dict</span> <span class="p">):</span>
+    <span class="n">__z</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span> <span
+            class="p">)</span>
+    <span class="n">__gmag</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span> <span
+            class="p">)</span>
+    <span class="n">__namestring</span> <span class="o">=</span> <span class="nb">str</span><span
+            class="p">(</span> <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span> <span
+            class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span> <span
+            class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Spectrum constructor.  Possible kwargs:</span>
+<span class="sd">            z: redshift value</span>
+<span class="sd">        </span>
+<span class="sd">            gmag: Fiber magnitude in g</span>
+<span class="sd">        </span>
+<span class="sd">            namestring or ns: Spectrum ID namestring</span>
+<span class="sd">        </span>
+<span class="sd">            dict: A premade { wl: (flux, err) } dictionary</span>
+<span class="sd">        </span>
+<span class="sd">        All other values will raise a KeyError</span>
+<span class="sd">        </span>
+<span class="sd">        Contructor CAN be called with no values passed.  Values are assigned types, but not initialized.</span>
+<span class="sd">        Getters and setters are available for z, gmag and redshift.  Use the dictionary access form for the</span>
+<span class="sd">        spectrographic data.</span>
+<span class="sd">        </span>
+<span class="sd">        :param kwargs:</span>
+<span class="sd">        :type kwargs: dict</span>
+<span class="sd">        :raises: KeyError</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">(</span> <span class="n">Spectrum</span><span
+            class="p">,</span> <span class="bp">self</span> <span class="p">)</span><span class="o">.</span><span
+            class="fm">__init__</span><span class="p">(</span> <span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span> <span
+            class="n">kwargs</span> <span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span
+            class="p">:</span>
+            <span class="k">for</span> <span class="n">arg</span><span class="p">,</span> <span
+            class="n">val</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="o">.</span><span
+            class="n">items</span><span class="p">(</span> <span class="p">):</span>
+                <span class="k">if</span> <span class="n">arg</span> <span class="ow">in</span> <span class="s1">&#39;z&#39;</span><span
+            class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">__z</span> <span
+            class="o">=</span> <span class="n">val</span>
+                <span class="k">elif</span> <span class="n">arg</span> <span class="ow">in</span> <span class="s1">&#39;gmag&#39;</span><span
+            class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">__gmag</span> <span
+            class="o">=</span> <span class="n">val</span>
+                <span class="k">elif</span> <span class="n">arg</span> <span class="ow">in</span> <span class="s2">&quot;namestring&quot;</span> <span
+            class="ow">or</span> <span class="n">arg</span> <span class="ow">in</span> <span
+            class="s2">&quot;ns&quot;</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">__namestring</span> <span
+            class="o">=</span> <span class="n">val</span>
+                <span class="k">elif</span> <span class="n">arg</span> <span class="ow">in</span> <span class="s2">&quot;dict&quot;</span><span
+            class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">update</span><span
+            class="p">(</span> <span class="n">val</span> <span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span>
+                        <span class="s2">&quot;Unknown key value in Spectrum constructor( **kwargs )</span><span
+            class="se">\n</span><span class="s2">Key: </span><span class="si">%s</span><span class="se">\n</span><span
+            class="s2">Value: </span><span class="si">%s</span><span class="s2">&quot;</span> <span
+            class="o">%</span> <span class="p">(</span><span class="n">arg</span><span class="p">,</span> <span
+            class="n">val</span><span class="p">)</span> <span class="p">)</span>
+        <span class="k">return</span>
+
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span> <span
+            class="bp">self</span> <span class="p">):</span>
+        <span class="k">return</span> <span class="s1">&#39;</span><span class="si">%s</span><span
+            class="s1">  z: </span><span class="si">%s</span><span class="s1">   gmag: </span><span class="si">%s</span><span
+            class="se">\n</span><span class="si">%s</span><span class="s1">    </span><span class="si">%s</span><span
+            class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">getNS</span><span
+            class="p">(</span> <span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">getRS</span><span class="p">(</span> <span class="p">),</span> <span class="bp">self</span><span
+            class="o">.</span><span class="n">getGmag</span><span class="p">(</span> <span class="p">),</span> <span
+            class="bp">self</span><span class="o">.</span><span class="n">getWavelengths</span><span class="p">(</span> <span
+            class="p">)[</span> <span class="mi">0</span> <span class="p">],</span> <span class="bp">self</span><span
+            class="o">.</span><span class="n">getWavelengths</span><span class="p">(</span> <span
+            class="p">)[</span> <span class="o">-</span><span class="mi">1</span> <span class="p">])</span>
+
+<div class="viewcode-block" id="Spectrum.abErr"><a class="viewcode-back"
+                                                   href="../../index.html#spectrum.utils.Spectrum.abErr">[docs]</a>    <span
+        class="k">def</span> <span class="nf">abErr</span><span class="p">(</span> <span class="bp">self</span><span
+        class="p">,</span> <span class="n">wl_range</span><span class="p">:</span> <span class="n">Tuple</span><span
+        class="p">[</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span> <span
+        class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span
+        class="kc">None</span><span class="p">)</span> <span class="p">)</span> <span class="o">-&gt;</span> <span
+        class="nb">float</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Determines the AB magnitude at every point within the wl_range individually.</span>
+<span class="sd">        Returns the standard deviation of that value.</span>
+
+<span class="sd">        :param wl_range: ( low, high ), defaults to DEFAULT_SCALE_WL +/- DEFAULT_SCALE_RADIUS</span>
+<span class="sd">        :type wl_range: tuple</span>
+<span class="sd">        :return: AB Magnitude error</span>
+<span class="sd">        :rtype: float</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span
+            class="n">log10</span><span class="p">,</span> <span class="n">nanstd</span>
+        <span class="n">minwl</span> <span class="o">=</span> <span class="n">wl_range</span><span
+            class="p">[</span> <span class="mi">0</span> <span class="p">]</span> <span class="ow">or</span> <span
+            class="n">DEFAULT_SCALE_WL</span> <span class="o">-</span> <span class="n">DEFAULT_SCALE_RADIUS</span>
+        <span class="n">maxwl</span> <span class="o">=</span> <span class="n">wl_range</span><span
+            class="p">[</span> <span class="mi">1</span> <span class="p">]</span> <span class="ow">or</span> <span
+            class="n">DEFAULT_SCALE_WL</span> <span class="o">+</span> <span class="n">DEFAULT_SCALE_RADIUS</span>
+        <span class="n">err_v</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span> <span
+            class="p">)</span>
+        <span class="k">for</span> <span class="n">wl</span> <span class="ow">in</span> <span
+            class="bp">self</span><span class="o">.</span><span class="n">getWavelengths</span><span class="p">(</span> <span
+            class="p">):</span>
+            <span class="k">if</span> <span class="n">minwl</span> <span class="o">&lt;=</span> <span
+            class="n">wl</span> <span class="o">&lt;=</span> <span class="n">maxwl</span><span class="p">:</span>
+                <span class="n">f_v</span> <span class="o">=</span> <span class="mf">3.34E4</span> <span
+            class="o">*</span> <span class="nb">pow</span><span class="p">(</span> <span class="n">wl</span><span
+            class="p">,</span> <span class="mi">2</span> <span class="p">)</span> <span class="o">*</span> <span
+            class="mf">1E-17</span> <span class="o">*</span> <span class="bp">self</span><span class="p">[</span> <span
+            class="n">wl</span> <span class="p">][</span> <span class="mi">0</span> <span class="p">]</span>
+                <span class="k">if</span> <span class="n">f_v</span> <span class="o">&lt;</span> <span
+            class="mi">0</span><span class="p">:</span>
+                    <span class="k">continue</span>
+                <span class="n">err_v</span><span class="o">.</span><span class="n">append</span><span
+            class="p">(</span> <span class="o">-</span><span class="mf">2.5</span> <span class="o">*</span> <span
+            class="n">log10</span><span class="p">(</span> <span class="n">f_v</span> <span class="p">)</span> <span
+            class="o">+</span> <span class="mf">8.9</span> <span class="p">)</span>
+        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span> <span
+            class="n">nanstd</span><span class="p">(</span> <span class="n">err_v</span> <span class="p">)</span> <span
+            class="p">)</span></div>
+
+    <span class="nd">@DeprecationWarning</span>
+    <span class="k">def</span> <span class="nf">align</span><span class="p">(</span> <span class="bp">self</span><span
+            class="p">,</span> <span class="n">wlList</span><span class="p">:</span> <span class="n">List</span> <span
+            class="p">):</span>
+        <span class="n">wls</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">getWavelengths</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">wl</span> <span class="ow">in</span> <span class="n">wls</span><span
+            class="p">:</span>
+            <span class="k">if</span> <span class="n">wl</span> <span class="ow">not</span> <span
+            class="ow">in</span> <span class="n">wlList</span><span class="p">:</span>
+                <span class="k">del</span> <span class="bp">self</span><span class="p">[</span> <span
+            class="n">wl</span> <span class="p">]</span>
+
+    <span class="nd">@DeprecationWarning</span>
+    <span class="k">def</span> <span class="nf">alignToSpec</span><span class="p">(</span><span
+            class="bp">self</span><span class="p">,</span> <span class="n">spec</span> <span class="p">):</span>
+        <span class="n">self_wls</span> <span class="o">=</span> <span class="nb">set</span><span
+            class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">getWavelengths</span><span
+            class="p">()</span> <span class="p">)</span>
+        <span class="n">spec_wls</span> <span class="o">=</span> <span class="nb">set</span><span
+            class="p">(</span> <span class="n">spec</span><span class="o">.</span><span
+            class="n">getWavelengths</span><span class="p">()</span> <span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">wl</span> <span class="ow">in</span> <span class="p">(</span> <span
+            class="n">self_wls</span> <span class="o">-</span> <span class="n">spec_wls</span> <span class="p">):</span>
+            <span class="k">del</span> <span class="bp">self</span><span class="p">[</span> <span
+            class="n">wl</span> <span class="p">]</span>
+        <span class="k">for</span> <span class="n">wl</span> <span class="ow">in</span> <span class="p">(</span> <span
+            class="n">spec_wls</span> <span class="o">-</span> <span class="n">self_wls</span> <span class="p">):</span>
+            <span class="k">del</span> <span class="n">spec</span><span class="p">[</span> <span
+            class="n">wl</span> <span class="p">]</span>
+
+<div class="viewcode-block" id="Spectrum.aveFlux"><a class="viewcode-back"
+                                                     href="../../index.html#spectrum.utils.Spectrum.aveFlux">[docs]</a>    <span
+        class="k">def</span> <span class="nf">aveFlux</span><span class="p">(</span> <span class="bp">self</span><span
+        class="p">,</span> <span class="n">central_wl</span><span class="o">=</span><span
+        class="n">DEFAULT_SCALE_WL</span><span class="p">,</span> <span class="n">radius</span><span
+        class="o">=</span><span class="n">DEFAULT_SCALE_RADIUS</span> <span class="p">)</span> <span
+        class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Determines the average flux density within a radius of a central wavelength.</span>
+<span class="sd">        </span>
+<span class="sd">        :param central_wl:</span>
+<span class="sd">        :type central_wl: float</span>
+<span class="sd">        :param radius: </span>
+<span class="sd">        :type radius: float</span>
+<span class="sd">        :return: </span>
+<span class="sd">        :rtype: float</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">central_wl</span> <span class="o">=</span> <span class="n">central_wl</span> <span
+            class="ow">or</span> <span class="n">DEFAULT_SCALE_WL</span>
+        <span class="n">radius</span> <span class="o">=</span> <span class="n">radius</span> <span class="ow">or</span> <span
+            class="n">DEFAULT_SCALE_RADIUS</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">n</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">wl</span> <span class="ow">in</span> <span
+            class="bp">self</span><span class="o">.</span><span class="n">getWavelengths</span><span
+            class="p">():</span>
+            <span class="k">if</span><span class="p">(</span><span class="n">central_wl</span> <span class="o">-</span> <span
+            class="n">radius</span> <span class="o">&lt;=</span> <span class="n">wl</span> <span class="o">&lt;=</span> <span
+            class="n">central_wl</span> <span class="o">+</span> <span class="n">radius</span><span class="p">):</span>
+                <span class="n">s</span> <span class="o">+=</span> <span class="bp">self</span><span
+            class="o">.</span><span class="n">getFlux</span><span class="p">(</span> <span class="n">wl</span> <span
+            class="p">)</span>
+                <span class="n">n</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">s</span> <span class="o">/</span> <span class="n">n</span>
+        <span class="k">except</span> <span class="ne">ZeroDivisionError</span> <span class="k">as</span> <span
+            class="n">e</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span>
+                <span class="n">f</span><span class="s2">&quot;Spectrum.aveFlux: ZeroDivisionError - unable to determine average flux for spectrum {self.getNS() }.  Is the region of interest loaded?&quot;</span> <span
+            class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span> <span class="n">f</span><span class="s2">&quot;central_wl</span><span
+            class="si">{central_wl}</span><span class="s2">     radius: </span><span class="si">{radius}</span><span
+            class="s2">&quot;</span> <span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span> <span class="bp">self</span><span
+            class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span> <span
+            class="p">)</span>
+            <span class="kn">from</span> <span class="nn">sys</span> <span class="k">import</span> <span
+            class="n">exit</span>
+            <span class="n">exit</span><span class="p">(</span> <span class="mi">1</span> <span class="p">)</span></div>
+
+<div class="viewcode-block" id="Spectrum.cpy"><a class="viewcode-back"
+                                                 href="../../index.html#spectrum.utils.Spectrum.cpy">[docs]</a>    <span
+        class="k">def</span> <span class="nf">cpy</span><span class="p">(</span> <span class="bp">self</span> <span
+        class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns a deep copy of this spectrum</span>
+
+<span class="sd">        :rtype: Spectrum</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">from</span> <span class="nn">copy</span> <span class="k">import</span> <span
+            class="n">deepcopy</span>
+        <span class="k">return</span> <span class="n">deepcopy</span><span class="p">(</span> <span
+            class="bp">self</span> <span class="p">)</span></div>
+
+<div class="viewcode-block" id="Spectrum.cpy_info"><a class="viewcode-back"
+                                                      href="../../index.html#spectrum.utils.Spectrum.cpy_info">[docs]</a>    <span
+        class="k">def</span> <span class="nf">cpy_info</span><span class="p">(</span> <span class="bp">self</span> <span
+        class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Resturns a spectrum devoid of wl/flux data, but with the same namestring, redshift and gmag as this one.</span>
+
+<span class="sd">        :rtype: Spectrum</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">spec</span> <span class="o">=</span> <span class="n">Spectrum</span><span
+            class="p">(</span> <span class="n">ns</span><span class="o">=</span><span class="bp">self</span><span
+            class="o">.</span><span class="n">getNS</span><span class="p">(</span> <span class="p">),</span> <span
+            class="n">z</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span
+            class="n">getRS</span><span class="p">(</span> <span class="p">),</span> <span class="n">gmag</span><span
+            class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">getGmag</span><span
+            class="p">(</span> <span class="p">)</span> <span class="p">)</span>
+        <span class="k">return</span> <span class="n">spec</span></div>
+
+<div class="viewcode-block" id="Spectrum.dim_to_ab"><a class="viewcode-back"
+                                                       href="../../index.html#spectrum.utils.Spectrum.dim_to_ab">[docs]</a>    <span
+        class="k">def</span> <span class="nf">dim_to_ab</span><span class="p">(</span> <span class="bp">self</span><span
+        class="p">,</span> <span class="n">to_mag_ab</span><span class="p">:</span> <span class="nb">float</span><span
+        class="p">,</span> <span class="n">scale_wl</span><span class="p">:</span> <span class="nb">float</span> <span
+        class="o">=</span> <span class="n">DEFAULT_SCALE_WL</span> <span class="p">)</span> <span class="o">-&gt;</span> <span
+        class="kc">None</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Determines the desired flux that would be exhibited at a given AB Magnitude and wavelength,</span>
+<span class="sd">        then passes that value to the Spectrum.scale() method, scaling the spectrum to that flux density</span>
+<span class="sd">        </span>
+<span class="sd">        :param to_mag_ab: AB Magnitude desired to be dimmed to</span>
+<span class="sd">        :type to_mag_ab: float</span>
+<span class="sd">        :param scale_wl: Wavelength to scale around.  Defaults to common.constants.DEFAULT_SCALE_WL</span>
+<span class="sd">        :type scale_wl: float</span>
+<span class="sd">        :return: None</span>
+<span class="sd">        :rtype: None</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">exponent</span> <span class="o">=</span> <span class="p">(</span><span
+            class="mf">8.9</span> <span class="o">-</span> <span class="n">to_mag_ab</span><span
+            class="p">)</span> <span class="o">/</span> <span class="mf">2.5</span>
+        <span class="n">f_v</span> <span class="o">=</span> <span class="nb">pow</span><span class="p">(</span> <span
+            class="mi">10</span><span class="p">,</span> <span class="n">exponent</span> <span class="p">)</span>
+        <span class="n">f_lambda</span> <span class="o">=</span> <span class="n">f_v</span> <span
+            class="o">/</span> <span class="p">(</span><span class="mf">3.34E4</span> <span class="o">*</span> <span
+            class="mf">1E-17</span> <span class="o">*</span> <span class="nb">pow</span><span class="p">(</span> <span
+            class="n">scale_wl</span><span class="p">,</span> <span class="mi">2</span> <span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scale</span><span class="p">(</span> <span
+            class="n">scaleflx</span><span class="o">=</span><span class="n">f_lambda</span> <span
+            class="p">)</span></div>
+
+<div class="viewcode-block" id="Spectrum.getFlux"><a class="viewcode-back"
+                                                     href="../../index.html#spectrum.utils.Spectrum.getFlux">[docs]</a>    <span
+        class="k">def</span> <span class="nf">getFlux</span><span class="p">(</span> <span class="bp">self</span><span
+        class="p">,</span> <span class="n">wavelength</span><span class="p">:</span> <span class="nb">float</span> <span
+        class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param wavelength:</span>
+<span class="sd">        :type wavelength: float</span>
+<span class="sd">        :return: The flux density at wavelength.  Equivalent to Spectrum[ wavelength ][ 0 ]</span>
+<span class="sd">        :rtype: float</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="p">[</span> <span
+            class="n">wavelength</span> <span class="p">][</span> <span class="mi">0</span> <span
+            class="p">]</span></div>
+
+<div class="viewcode-block" id="Spectrum.getErr"><a class="viewcode-back"
+                                                    href="../../index.html#spectrum.utils.Spectrum.getErr">[docs]</a>    <span
+        class="k">def</span> <span class="nf">getErr</span><span class="p">(</span> <span class="bp">self</span><span
+        class="p">,</span> <span class="n">wavelength</span><span class="p">:</span> <span class="nb">float</span> <span
+        class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param wavelength:</span>
+<span class="sd">        :type wavelength: float</span>
+<span class="sd">        :return: The flux density error at wavelength.  Equivalent to Spectrum[ wavelength ][ 1 ]</span>
+<span class="sd">        :rtype: float</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="p">[</span> <span
+            class="n">wavelength</span> <span class="p">][</span> <span class="mi">1</span> <span
+            class="p">]</span></div>
+
+<div class="viewcode-block" id="Spectrum.getFluxlist"><a class="viewcode-back"
+                                                         href="../../index.html#spectrum.utils.Spectrum.getFluxlist">[docs]</a>    <span
+        class="k">def</span> <span class="nf">getFluxlist</span><span class="p">(</span> <span
+        class="bp">self</span> <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span
+        class="p">[</span> <span class="nb">float</span> <span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns the flux densities in a list, ordered by wavelength</span>
+<span class="sd">        </span>
+<span class="sd">        :rtype: list </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">[</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">getFlux</span><span class="p">(</span> <span class="n">wl</span> <span class="p">)</span> <span
+            class="k">for</span> <span class="n">wl</span> <span class="ow">in</span> <span class="bp">self</span><span
+            class="o">.</span><span class="n">getWavelengths</span><span class="p">(</span> <span
+            class="p">)</span> <span class="p">]</span></div>
+
+<div class="viewcode-block" id="Spectrum.getErrList"><a class="viewcode-back"
+                                                        href="../../index.html#spectrum.utils.Spectrum.getErrList">[docs]</a>    <span
+        class="k">def</span> <span class="nf">getErrList</span><span class="p">(</span> <span
+        class="bp">self</span> <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span
+        class="p">[</span> <span class="nb">float</span> <span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns the flux densities in a list, ordered by wavelength</span>
+
+<span class="sd">        :rtype: list </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">[</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">getErr</span><span class="p">(</span> <span class="n">wl</span> <span class="p">)</span> <span
+            class="k">for</span> <span class="n">wl</span> <span class="ow">in</span> <span class="bp">self</span><span
+            class="o">.</span><span class="n">getWavelengths</span><span class="p">(</span> <span
+            class="p">)</span> <span class="p">]</span></div>
+
+<div class="viewcode-block" id="Spectrum.getGmag"><a class="viewcode-back"
+                                                     href="../../index.html#spectrum.utils.Spectrum.getGmag">[docs]</a>    <span
+        class="k">def</span> <span class="nf">getGmag</span><span class="p">(</span> <span class="bp">self</span> <span
+        class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns the magnitude in G filter of the spectrum</span>
+
+<span class="sd">        :rtype: float</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__gmag</span></div>
+
+<div class="viewcode-block" id="Spectrum.getNS"><a class="viewcode-back"
+                                                   href="../../index.html#spectrum.utils.Spectrum.getNS">[docs]</a>    <span
+        class="k">def</span> <span class="nf">getNS</span><span class="p">(</span> <span class="bp">self</span> <span
+        class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns the namestring of the spectrum object</span>
+<span class="sd">        :rtype: str</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">__namestring</span></div>
+
+<div class="viewcode-block" id="Spectrum.getRS"><a class="viewcode-back"
+                                                   href="../../index.html#spectrum.utils.Spectrum.getRS">[docs]</a>    <span
+        class="k">def</span> <span class="nf">getRS</span><span class="p">(</span> <span class="bp">self</span> <span
+        class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns the stored redshift of the spectrum</span>
+
+<span class="sd">        :rtype: float</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">__z</span></div>
+
+<div class="viewcode-block" id="Spectrum.getWavelengths"><a class="viewcode-back"
+                                                            href="../../index.html#spectrum.utils.Spectrum.getWavelengths">[docs]</a>    <span
+        class="k">def</span> <span class="nf">getWavelengths</span><span class="p">(</span> <span class="bp">self</span> <span
+        class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span> <span
+        class="nb">float</span> <span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :return: A list of the wavelengths in this Spectrum, sorted by increasing value</span>
+<span class="sd">        :rtype: list</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">sorted</span><span class="p">(</span> <span
+            class="bp">self</span><span class="o">.</span><span class="n">keys</span><span class="p">(</span> <span
+            class="p">)</span> <span class="p">)</span></div>
+
+<div class="viewcode-block" id="Spectrum.lineDict"><a class="viewcode-back"
+                                                      href="../../index.html#spectrum.utils.Spectrum.lineDict">[docs]</a>    <span
+        class="k">def</span> <span class="nf">lineDict</span><span class="p">(</span> <span class="bp">self</span><span
+        class="p">,</span> <span class="n">wavelength</span><span class="p">:</span> <span class="nb">float</span> <span
+        class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns a simple dictionary of { wavelength : float, flux density : float, error : float }</span>
+<span class="sd">        to allow writing with a CSV dict writer</span>
+<span class="sd">        </span>
+<span class="sd">        :param wavelength:</span>
+<span class="sd">        :type wavelength: float</span>
+<span class="sd">        :rtype: dict </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">{</span> <span class="s1">&#39;wavelength&#39;</span><span
+            class="p">:</span> <span class="n">wavelength</span><span class="p">,</span> <span class="s1">&#39;flux density&#39;</span><span
+            class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">getFlux</span><span
+            class="p">(</span> <span class="n">wavelength</span> <span class="p">),</span>
+                 <span class="s1">&#39;error&#39;</span><span class="p">:</span> <span class="bp">self</span><span
+            class="o">.</span><span class="n">getErr</span><span class="p">(</span> <span
+            class="n">wavelength</span> <span class="p">)</span> <span class="p">}</span></div>
+
+<div class="viewcode-block" id="Spectrum.lineDictList"><a class="viewcode-back"
+                                                          href="../../index.html#spectrum.utils.Spectrum.lineDictList">[docs]</a>    <span
+        class="k">def</span> <span class="nf">lineDictList</span><span class="p">(</span> <span
+        class="bp">self</span> <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span
+        class="p">[</span> <span class="nb">dict</span> <span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns a list of Spectrum.lineDict values</span>
+<span class="sd">        </span>
+<span class="sd">        :rtype: list</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">[</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">lineDict</span><span class="p">(</span> <span class="n">wl</span> <span class="p">)</span> <span
+            class="k">for</span> <span class="n">wl</span> <span class="ow">in</span> <span class="bp">self</span><span
+            class="o">.</span><span class="n">getWavelengths</span><span class="p">(</span> <span
+            class="p">)</span> <span class="p">]</span></div>
+
+<div class="viewcode-block" id="Spectrum.magAB"><a class="viewcode-back"
+                                                   href="../../index.html#spectrum.utils.Spectrum.magAB">[docs]</a>    <span
+        class="k">def</span> <span class="nf">magAB</span><span class="p">(</span> <span class="bp">self</span><span
+        class="p">,</span> <span class="n">wl_range</span><span class="p">:</span> <span class="n">Tuple</span><span
+        class="p">[</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span> <span
+        class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span
+        class="kc">None</span><span class="p">)</span> <span class="p">)</span> <span class="o">-&gt;</span> <span
+        class="nb">float</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Determines the average AB Magnitude over the given band of interest.</span>
+
+<span class="sd">        If wl_range is not specified, defaults to common.constants DEFAULT_SCALE_WL +/- DEFAULT_SCALE_RADIUS</span>
+
+<span class="sd">        :param wl_range: Band range over which to determine AB magntiude</span>
+<span class="sd">        :type wl_range: tuple</span>
+<span class="sd">        :return: AB Magnitude</span>
+<span class="sd">        :rtype: float</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span
+            class="n">mean</span><span class="p">,</span> <span class="n">log10</span>
+
+        <span class="n">minwl</span> <span class="o">=</span> <span class="n">wl_range</span><span
+            class="p">[</span> <span class="mi">0</span> <span class="p">]</span> <span class="ow">or</span> <span
+            class="n">DEFAULT_SCALE_WL</span> <span class="o">-</span> <span class="n">DEFAULT_SCALE_RADIUS</span>
+        <span class="n">maxwl</span> <span class="o">=</span> <span class="n">wl_range</span><span
+            class="p">[</span> <span class="mi">1</span> <span class="p">]</span> <span class="ow">or</span> <span
+            class="n">DEFAULT_SCALE_WL</span> <span class="o">+</span> <span class="n">DEFAULT_SCALE_RADIUS</span>
+
+        <span class="n">f_vlist</span> <span class="o">=</span> <span class="nb">list</span><span
+            class="p">(</span> <span class="p">)</span>
+        <span class="n">f_v</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">for</span> <span class="n">wl</span> <span class="ow">in</span> <span
+            class="bp">self</span><span class="o">.</span><span class="n">getWavelengths</span><span class="p">(</span> <span
+            class="p">):</span>
+            <span class="k">if</span> <span class="n">minwl</span> <span class="o">&lt;=</span> <span
+            class="n">wl</span> <span class="o">&lt;=</span> <span class="n">maxwl</span><span class="p">:</span>
+                <span class="n">f_v</span> <span class="o">=</span> <span class="mf">3.34E4</span> <span
+            class="o">*</span> <span class="nb">pow</span><span class="p">(</span> <span class="n">wl</span><span
+            class="p">,</span> <span class="mi">2</span> <span class="p">)</span> <span class="o">*</span> <span
+            class="mf">1E-17</span> <span class="o">*</span> <span class="bp">self</span><span class="p">[</span> <span
+            class="n">wl</span> <span class="p">][</span> <span class="mi">0</span> <span class="p">]</span>
+                <span class="n">f_vlist</span><span class="o">.</span><span class="n">append</span><span
+            class="p">(</span> <span class="n">f_v</span> <span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">f_v</span> <span class="o">=</span> <span class="n">mean</span><span
+            class="p">(</span> <span class="n">f_vlist</span> <span class="p">)</span>
+        <span class="k">except</span> <span class="ne">RuntimeWarning</span> <span class="k">as</span> <span
+            class="n">e</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span>
+                <span class="n">f</span><span class="s2">&quot;Spectrum.magAB(): {self.getNS()} got a RuntimeWarning when trying to form flux mean: </span><span
+            class="si">{f_v}</span><span class="s2"> </span><span class="se">\n</span><span
+            class="s2"> fluxlist: </span><span class="si">{f_vlist}</span><span class="s2">&quot;</span> <span
+            class="p">)</span>
+            <span class="k">raise</span> <span class="n">e</span>
+        <span class="k">return</span> <span class="o">-</span><span class="mf">2.5</span> <span class="o">*</span> <span
+            class="n">log10</span><span class="p">(</span> <span class="n">f_v</span> <span class="p">)</span> <span
+            class="o">+</span> <span class="mf">8.9</span></div>
+
+<div class="viewcode-block" id="Spectrum.nearest"><a class="viewcode-back"
+                                                     href="../../index.html#spectrum.utils.Spectrum.nearest">[docs]</a>    <span
+        class="k">def</span> <span class="nf">nearest</span><span class="p">(</span> <span class="bp">self</span><span
+        class="p">,</span> <span class="n">wavelength</span><span class="p">:</span> <span class="nb">float</span> <span
+        class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Simple wrapper for tools.find_nearest_wavelength.  Passes this Spectrum&#39;s sorted wavelength list (via</span>
+<span class="sd">        Spectrum.getWavelengths()) and wavelength to find_nearest_wavelength, and returns that value.</span>
+
+<span class="sd">        :param wavelength: Wavelength of interest</span>
+<span class="sd">        :type wavelength: float</span>
+<span class="sd">        :return: Value of the nearest wavelength</span>
+<span class="sd">        :rtype: float</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">from</span> <span class="nn">spectrum.utils</span> <span class="k">import</span> <span
+            class="n">find_nearest_wavelength</span>
+        <span class="k">return</span> <span class="n">find_nearest_wavelength</span><span class="p">(</span> <span
+            class="bp">self</span><span class="o">.</span><span class="n">getWavelengths</span><span class="p">(</span> <span
+            class="p">),</span> <span class="n">wavelength</span> <span class="p">)</span></div>
+
+<div class="viewcode-block" id="Spectrum.setDict"><a class="viewcode-back"
+                                                     href="../../index.html#spectrum.utils.Spectrum.setDict">[docs]</a>    <span
+        class="k">def</span> <span class="nf">setDict</span><span class="p">(</span> <span class="bp">self</span><span
+        class="p">,</span> <span class="n">wavelengthList</span><span class="p">,</span> <span class="n">fluxList</span><span
+        class="p">,</span> <span class="n">errList</span> <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Replace the current wavelength dictionary with the data passed to method.</span>
+
+<span class="sd">        :param wavelengthList: wavelength values</span>
+<span class="sd">        :param fluxList: flux density values</span>
+<span class="sd">        :param errList: flux density error values</span>
+<span class="sd">        :type wavelengthList: list</span>
+<span class="sd">        :type fluxList: list</span>
+<span class="sd">        :type errList: list</span>
+<span class="sd">        :return: None</span>
+<span class="sd">        :rtype: None</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">clear</span><span class="p">(</span> <span
+            class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span
+            class="nb">range</span><span class="p">(</span> <span class="nb">len</span><span class="p">(</span> <span
+            class="n">wavelengthList</span> <span class="p">)</span> <span class="p">):</span>
+            <span class="bp">self</span><span class="p">[</span> <span class="n">wavelengthList</span><span
+            class="p">[</span> <span class="n">i</span> <span class="p">]</span> <span class="p">]</span> <span
+            class="o">=</span> <span class="p">(</span><span class="n">fluxList</span><span class="p">[</span> <span
+            class="n">i</span> <span class="p">],</span> <span class="n">errList</span><span class="p">[</span> <span
+            class="n">i</span> <span class="p">])</span></div>
+
+<div class="viewcode-block" id="Spectrum.setRS"><a class="viewcode-back"
+                                                   href="../../index.html#spectrum.utils.Spectrum.setRS">[docs]</a>    <span
+        class="k">def</span> <span class="nf">setRS</span><span class="p">(</span><span class="bp">self</span><span
+        class="p">,</span> <span class="n">redshift</span> <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Manually set the redshift of the spectrum</span>
+
+<span class="sd">        :type redshift: float</span>
+<span class="sd">        :return: None</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span> <span
+            class="n">redshift</span> <span class="p">)</span> <span class="o">==</span> <span class="nb">float</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__z</span> <span class="o">=</span> <span
+            class="n">redshift</span></div>
+
+    <span class="k">def</span> <span class="nf">setNS</span><span class="p">(</span><span class="bp">self</span><span
+            class="p">,</span> <span class="n">namestring</span> <span class="p">:</span> <span
+            class="nb">str</span> <span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__namestring</span> <span class="o">=</span> <span
+            class="n">namestring</span>
+
+    <span class="nd">@DeprecationWarning</span>
+    <span class="k">def</span> <span class="nf">shiftToRest</span><span class="p">(</span> <span
+            class="bp">self</span><span class="p">,</span> <span class="n">z</span><span class="p">:</span> <span
+            class="nb">float</span> <span class="o">=</span> <span class="kc">None</span> <span class="p">)</span> <span
+            class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Depreciated.  Use the methods in source_bin_ops.</span>
+<span class="sd">        </span>
+<span class="sd">        Shifts this spectrum to rest frame using z.  If z is None, uses the stored value of z.</span>
+<span class="sd">        </span>
+<span class="sd">        :param z: Redshift to use to shift to rest frame</span>
+<span class="sd">        :type z: float</span>
+<span class="sd">        :rtype: None</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">z</span> <span class="ow">is</span> <span class="kc">None</span><span
+            class="p">:</span>
+            <span class="n">z</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">__z</span>
+
+        <span class="n">wls</span> <span class="o">=</span> <span class="p">[</span> <span class="n">wl</span> <span
+            class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span
+            class="n">z</span><span class="p">)</span> <span class="k">for</span> <span class="n">wl</span> <span
+            class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">getWavelengths</span><span class="p">(</span> <span class="p">)</span> <span class="p">]</span>
+        <span class="n">fluxlist</span> <span class="o">=</span> <span class="bp">self</span><span
+            class="o">.</span><span class="n">getFluxlist</span><span class="p">(</span> <span class="p">)</span>
+        <span class="n">errlist</span> <span class="o">=</span> <span class="bp">self</span><span
+            class="o">.</span><span class="n">getErrList</span><span class="p">(</span> <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">clear</span><span class="p">(</span> <span
+            class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span
+            class="nb">range</span><span class="p">(</span> <span class="nb">len</span><span class="p">(</span> <span
+            class="n">wls</span> <span class="p">)</span> <span class="p">):</span>
+            <span class="bp">self</span><span class="p">[</span> <span class="n">wls</span><span
+            class="p">[</span> <span class="n">i</span> <span class="p">]</span> <span class="p">]</span> <span
+            class="o">=</span> <span class="p">(</span><span class="n">fluxlist</span><span class="p">[</span> <span
+            class="n">i</span> <span class="p">],</span> <span class="n">errlist</span><span class="p">[</span> <span
+            class="n">i</span> <span class="p">])</span>
+
+<div class="viewcode-block" id="Spectrum.scale"><a class="viewcode-back"
+                                                   href="../../index.html#spectrum.utils.Spectrum.scale">[docs]</a>    <span
+        class="k">def</span> <span class="nf">scale</span><span class="p">(</span> <span class="bp">self</span><span
+        class="p">,</span> <span class="n">scale_spec</span><span class="o">=</span><span class="kc">None</span><span
+        class="p">,</span> <span class="n">scaleflux</span><span class="p">:</span> <span class="nb">float</span> <span
+        class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">scaleWL</span><span
+        class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span
+        class="n">DEFAULT_SCALE_WL</span><span class="p">,</span>
+               <span class="n">radius</span><span class="p">:</span> <span class="nb">float</span> <span
+            class="o">=</span> <span class="n">DEFAULT_SCALE_RADIUS</span> <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Simple scaling process.  At minimum, pass either scale_spec or scaleflux.  If scale_spec is passed, the</span>
+<span class="sd">        scaling flux density will be determined from it via scale_spec.aveFlux().</span>
+<span class="sd">        </span>
+<span class="sd">        :param scale_spec: Spectrum to scale to.  If not used, pass scaleflux.</span>
+<span class="sd">        :type scale_spec: Spectrum</span>
+<span class="sd">        :param scaleflux: Flux density to scale to.  If not used, pass scale_spec</span>
+<span class="sd">        :type scaleflux: float</span>
+<span class="sd">        :param scaleWL: Central wavelength to scale around.  Defaults to common.constants.DEFAULT_SCALE_WL</span>
+<span class="sd">        :type scaleWL: float</span>
+<span class="sd">        :param radius: Radius around central wavelength.  Defaults to common.constants.DEFAULT_SCALE_RADIUS</span>
+<span class="sd">        :type radius: float</span>
+<span class="sd">        :rtype: Spectrum</span>
+<span class="sd">        :raises: AssertionError</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">assert</span> <span class="n">scale_spec</span> <span class="ow">is</span> <span
+            class="ow">not</span> <span class="kc">None</span> <span class="ow">or</span> <span
+            class="n">scaleflux</span> <span class="ow">is</span> <span class="ow">not</span> <span
+            class="kc">None</span>
+
+        <span class="k">if</span> <span class="n">scale_spec</span> <span class="ow">is</span> <span
+            class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">scaleflux</span> <span class="o">=</span> <span class="n">scale_spec</span><span
+            class="o">.</span><span class="n">aveFlux</span><span class="p">(</span> <span class="n">scaleWL</span><span
+            class="p">,</span> <span class="n">radius</span> <span class="p">)</span>
+
+        <span class="n">scalar</span> <span class="o">=</span> <span class="n">scaleflux</span> <span class="o">/</span> <span
+            class="bp">self</span><span class="o">.</span><span class="n">aveFlux</span><span class="p">(</span> <span
+            class="n">scaleWL</span><span class="p">,</span> <span class="n">radius</span> <span class="p">)</span>
+        <span class="k">if</span> <span class="n">scalar</span> <span class="o">==</span> <span
+            class="mf">1.0</span><span class="p">:</span> <span class="k">return</span> <span class="bp">self</span>
+        <span class="k">for</span> <span class="n">wl</span> <span class="ow">in</span> <span
+            class="bp">self</span><span class="p">:</span>
+            <span class="n">flux</span><span class="p">,</span> <span class="n">err</span> <span
+            class="o">=</span> <span class="bp">self</span><span class="p">[</span> <span class="n">wl</span> <span
+            class="p">]</span>
+            <span class="bp">self</span><span class="p">[</span> <span class="n">wl</span> <span
+            class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">flux</span> <span
+            class="o">*</span> <span class="n">scalar</span><span class="p">,</span> <span class="n">err</span> <span
+            class="o">*</span> <span class="n">scalar</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+<div class="viewcode-block" id="Spectrum.trim"><a class="viewcode-back"
+                                                  href="../../index.html#spectrum.utils.Spectrum.trim">[docs]</a>    <span
+        class="k">def</span> <span class="nf">trim</span><span class="p">(</span> <span class="bp">self</span><span
+        class="p">,</span> <span class="n">wlLow</span><span class="p">:</span> <span class="nb">float</span> <span
+        class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">wlHigh</span><span
+        class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="kc">None</span> <span
+        class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Deletes any values exclusive of the wlLow or wlHigh range.</span>
+<span class="sd">        </span>
+<span class="sd">        :param wlLow: Minimum wavelength to keep</span>
+<span class="sd">        :type wlLow: float</span>
+<span class="sd">        :param wlHigh: Maximum wavelength to keep</span>
+<span class="sd">        :type wlHigh: float</span>
+<span class="sd">        :return: None</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">wl</span> <span class="ow">in</span> <span
+            class="bp">self</span><span class="o">.</span><span class="n">getWavelengths</span><span
+            class="p">():</span>
+            <span class="k">if</span> <span class="n">wlLow</span> <span class="ow">is</span> <span
+            class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span
+            class="n">wl</span> <span class="o">&lt;</span> <span class="n">wlLow</span><span class="p">:</span>
+                <span class="k">del</span> <span class="bp">self</span><span class="p">[</span> <span
+            class="n">wl</span> <span class="p">]</span>
+            <span class="k">elif</span> <span class="n">wlHigh</span> <span class="ow">is</span> <span
+            class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">wlHigh</span> <span
+            class="o">&lt;</span> <span class="n">wl</span><span class="p">:</span>
+                <span class="k">del</span> <span class="bp">self</span><span class="p">[</span> <span
+            class="n">wl</span> <span class="p">]</span></div>
+
+<div class="viewcode-block" id="Spectrum.plot"><a class="viewcode-back"
+                                                  href="../../index.html#spectrum.utils.Spectrum.plot">[docs]</a>    <span
+        class="k">def</span> <span class="nf">plot</span><span class="p">(</span> <span class="bp">self</span><span
+        class="p">,</span> <span class="n">path</span> <span class="p">:</span> <span class="nb">str</span><span
+        class="p">,</span> <span class="n">color</span> <span class="p">:</span> <span class="nb">str</span> <span
+        class="o">=</span> <span class="s2">&quot;royalblue&quot;</span><span class="p">,</span> <span
+        class="n">debug</span> <span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span
+        class="kc">False</span> <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span
+        class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Makes use of tools.plot.spectrum_plot to make a plot of this Spectrum.  The file name will be determined from</span>
+<span class="sd">        this Spectrum&#39;s namestring.</span>
+<span class="sd">        </span>
+<span class="sd">        :param path: /path/to/output file </span>
+<span class="sd">        :type path: str</span>
+<span class="sd">        :param color: Gnuplot compatible color to plot with.  Defaults to &quot;royalblue&quot;</span>
+<span class="sd">        :type color: str</span>
+<span class="sd">        :param debug: If passed as True, will engage the spectrum_plot debug process.</span>
+<span class="sd">        :type debug: bool</span>
+<span class="sd">        :rtype: None</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">from</span> <span class="nn">tools.plot</span> <span class="k">import</span> <span class="n">spectrum_plot</span>
+        <span class="kn">from</span> <span class="nn">fileio.utils</span> <span class="k">import</span> <span class="n">dirCheck</span>
+        <span class="n">dirCheck</span><span class="p">(</span> <span class="n">path</span> <span class="p">)</span>
+        <span class="n">spectrum_plot</span><span class="p">(</span> <span class="n">path</span><span class="o">=</span><span
+            class="n">path</span><span class="p">,</span> <span class="n">filename</span><span class="o">=</span><span
+            class="bp">self</span><span class="o">.</span><span class="n">getNS</span><span class="p">(),</span> <span
+            class="n">spec</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span> <span
+            class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">,</span> <span
+            class="n">debug</span><span class="o">=</span><span class="n">debug</span> <span
+            class="p">)</span></div></div>
+</pre>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <div class="relations">
+                <h3>Related Topics</h3>
+                <ul>
+                    <li><a href="../../index.html">Documentation overview</a>
+                        <ul>
+                            <li><a href="../index.html">Module code</a>
+                                <ul>
+                                </ul>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+            <div id="searchbox" style="display: none" role="search">
+                <h3>Quick search</h3>
+                <form class="search" action="../../search.html" method="get">
+                    <div><input type="text" name="q"/></div>
+                    <div><input type="submit" value="Go"/></div>
+                    <input type="hidden" name="check_keywords" value="yes"/>
+                    <input type="hidden" name="area" value="default"/>
+                </form>
+            </div>
+            <script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+    </div>
+    <div class="clearer"></div>
+</div>
+<div class="footer">
+    &copy;2017, Christopher Wahl.
+
+    |
+    Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.4</a>
+    &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+
+</div>
+
+
+</body>
+</html>

@@ -1,0 +1,311 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+
+    <title>catalog &#8212; 1D Spectrum QSO Library 2.0a documentation</title>
+
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css"/>
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css"/>
+
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '2.0a',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../genindex.html"/>
+    <link rel="search" title="Search" href="../search.html"/>
+
+    <link rel="stylesheet" href="../_static/custom.css" type="text/css"/>
+
+
+    <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9"/>
+
+</head>
+<body role="document">
+
+
+<div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="body" role="main">
+
+                <h1>Source code for catalog</h1>
+                <div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">typing</span> <span class="k">import</span> <span class="n">Dict</span><span
+                        class="p">,</span> <span class="n">Iterable</span><span class="p">,</span> <span
+                        class="n">List</span><span class="p">,</span> <span class="n">Union</span>
+
+<span class="kn">from</span> <span class="nn">common.constants</span> <span class="k">import</span> <span class="n">SHEN_FIT_FILE</span>
+<span class="kn">from</span> <span class="nn">common.messaging</span> <span class="k">import</span> <span class="n">linesep</span>
+<span class="kn">from</span> <span class="nn">spectrum</span> <span class="k">import</span> <span
+                        class="n">Spectrum</span>
+<span class="kn">from</span> <span class="nn">.catalog</span> <span class="k">import</span> <span
+                        class="n">catalog</span>
+
+<span class="n">shenCat</span> <span class="o">=</span> <span class="n">catalog</span><span class="p">(</span> <span
+                        class="n">catalog</span><span class="o">.</span><span class="n">SHEN_CATALOG</span> <span
+                        class="p">)</span>
+<span class="n">shenCat</span><span class="o">.</span><span class="n">load</span><span class="p">()</span>
+
+
+<div class="viewcode-block" id="get_shen_string"><a class="viewcode-back" href="../index.html#catalog.get_shen_string">[docs]</a><span
+        class="k">def</span> <span class="nf">get_shen_string</span><span class="p">(</span> <span
+        class="n">namestring</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span
+        class="o">*</span><span class="n">append_values</span><span class="p">,</span> <span class="n">CR</span><span
+        class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span> <span
+        class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Any values which are passed after namestring will be appended to the out_str in the</span>
+<span class="sd">    order in which they are passed.  Appending method adds each value as f&quot;,{value}&quot;</span>
+
+<span class="sd">    If CR = True is passed, a carraige return will be appended at the end of the string.</span>
+<span class="sd">    :param namestring:</span>
+<span class="sd">    :param append_values:</span>
+<span class="sd">    :return:</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">out_str</span> <span class="o">=</span> <span class="n">namestring</span>
+    <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span
+            class="n">get_shen_key_list</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">k</span> <span class="o">==</span> <span class="s2">&quot;namestring&quot;</span><span
+            class="p">:</span>
+            <span class="k">continue</span>
+        <span class="n">out_str</span> <span class="o">+=</span> <span class="n">f</span><span class="s2">&quot;,{shenCat.subkey( namestring, k )}&quot;</span>
+    <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span
+            class="n">append_values</span><span class="p">:</span>
+        <span class="n">out_str</span> <span class="o">+=</span> <span class="n">f</span><span class="s2">&quot;,</span><span
+            class="si">{append_values}</span><span class="s2">&quot;</span>
+    <span class="k">if</span> <span class="n">CR</span><span class="p">:</span>
+        <span class="n">out_str</span> <span class="o">+=</span> <span class="n">linesep</span>
+    <span class="k">return</span> <span class="n">out_str</span></div>
+
+
+<div class="viewcode-block" id="get_shen_key_list"><a class="viewcode-back"
+                                                      href="../index.html#catalog.get_shen_key_list">[docs]</a><span
+        class="k">def</span> <span class="nf">get_shen_key_list</span><span class="p">()</span> <span
+        class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span> <span class="nb">str</span> <span
+        class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns an alphabetic list of of the subkeys in the shenCat.  Also inserts the value &quot;namestring&quot; into the first</span>
+<span class="sd">    position of the list.  This is intended to feed the namestring dict writing processes </span>
+<span class="sd">    get_shen_string and get_shen_header</span>
+<span class="sd">    </span>
+<span class="sd">    :return: A list of [ &quot;namestring&quot;, ... shenCat subkeys ]</span>
+<span class="sd">    :rtype: str</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">first</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span> <span
+            class="nb">iter</span><span class="p">(</span> <span class="n">shenCat</span><span class="o">.</span><span
+            class="n">values</span><span class="p">()</span> <span class="p">)</span> <span class="p">)</span>
+    <span class="n">subkeys</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span> <span
+            class="n">first</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span
+            class="p">)</span>
+    <span class="n">subkeys</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span> <span
+            class="mi">0</span><span class="p">,</span> <span class="s2">&quot;namestring&quot;</span> <span
+            class="p">)</span>
+    <span class="k">return</span> <span class="n">subkeys</span></div>
+
+
+<div class="viewcode-block" id="get_shen_header"><a class="viewcode-back" href="../index.html#catalog.get_shen_header">[docs]</a><span
+        class="k">def</span> <span class="nf">get_shen_header</span><span class="p">(</span> <span
+        class="n">CR</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span
+        class="kc">False</span> <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span
+        class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns a CSV formatted header string of namestring,...shenCat subkeys,...</span>
+<span class="sd">    </span>
+<span class="sd">    :param CR: Defaults to False.  If True, appends a line return to the returned string </span>
+<span class="sd">    :return: Formatted header string</span>
+<span class="sd">    :rtype: str</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">out_str</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span><span
+            class="o">.</span><span class="n">join</span><span class="p">(</span> <span class="n">f</span><span
+            class="s2">&quot;</span><span class="si">{key}</span><span class="s2">,&quot;</span> <span
+            class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span
+            class="n">get_shen_key_list</span><span class="p">()</span> <span class="p">)[</span> <span
+            class="p">:</span><span class="o">-</span><span class="mi">1</span> <span class="p">]</span>
+    <span class="k">if</span> <span class="n">CR</span><span class="p">:</span>
+        <span class="n">out_str</span> <span class="o">+=</span> <span class="n">linesep</span>
+    <span class="k">return</span> <span class="n">out_str</span></div>
+
+
+<div class="viewcode-block" id="load_shen_source"><a class="viewcode-back"
+                                                     href="../index.html#catalog.load_shen_source">[docs]</a><span
+        class="k">def</span> <span class="nf">load_shen_source</span><span class="p">(</span> <span
+        class="n">path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span
+        class="n">SHEN_FIT_FILE</span> <span class="p">)</span> <span class="o">-&gt;</span> <span
+        class="nb">tuple</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns ( header, data ) where header is the 2nd layer:  getheader( FIT_FILE, 1 )</span>
+
+<span class="sd">    Print header[ key ] for key in header to access field names, noting that the</span>
+<span class="sd">    numbering given beings at 1.  Thus, to access that field, subtract 1 from it (Python</span>
+<span class="sd">    starts counting at 0).</span>
+
+<span class="sd">    data[ 6 ] = MJD</span>
+<span class="sd">    data[ 4 ] = PLATE</span>
+<span class="sd">    data[ 5 ] = FIBER</span>
+
+<span class="sd">    data[ 142 ] = Z_HW</span>
+<span class="sd">    data[ 143 ] = Z_HW_ERR</span>
+
+<span class="sd">    :param path:</span>
+<span class="sd">    :return: tuple</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">astropy.io.fits</span> <span class="k">import</span> <span class="n">getdata</span><span
+            class="p">,</span> <span class="n">getheader</span>
+    <span class="n">header</span> <span class="o">=</span> <span class="n">getheader</span><span
+            class="p">(</span> <span class="n">SHEN_FIT_FILE</span><span class="p">,</span> <span
+            class="mi">1</span> <span class="p">)</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">getdata</span><span class="p">(</span> <span
+            class="n">SHEN_FIT_FILE</span> <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">header</span><span class="p">,</span> <span
+            class="n">data</span></div>
+
+
+<span class="k">def</span> <span class="nf">get_source_ns</span><span class="p">(</span> <span
+                        class="n">fits_record</span> <span class="p">)</span> <span class="o">-&gt;</span> <span
+                        class="nb">str</span><span class="p">:</span>
+    <span class="k">return</span> <span class="s2">&quot;</span><span class="si">%05i</span><span
+                        class="s2">-</span><span class="si">%04i</span><span class="s2">-</span><span
+                        class="si">%03i</span><span class="s2">&quot;</span> <span class="o">%</span> <span
+                        class="p">(</span><span class="n">fits_record</span><span class="p">[</span> <span
+                        class="mi">6</span> <span class="p">],</span> <span class="n">fits_record</span><span class="p">[</span> <span
+                        class="mi">4</span> <span class="p">],</span> <span class="n">fits_record</span><span class="p">[</span> <span
+                        class="mi">5</span> <span class="p">])</span>
+
+
+<div class="viewcode-block" id="sort_iterable_by_shen_key"><a class="viewcode-back"
+                                                              href="../index.html#catalog.sort_iterable_by_shen_key">[docs]</a><span
+        class="k">def</span> <span class="nf">sort_iterable_by_shen_key</span><span class="p">(</span> <span class="n">in_list</span><span
+        class="p">:</span> <span class="n">Iterable</span><span class="p">[</span> <span class="n">Spectrum</span> <span
+        class="p">]</span> <span class="ow">or</span> <span class="n">Iterable</span><span class="p">[</span> <span
+        class="nb">str</span> <span class="p">],</span> <span class="n">sort_key</span><span class="o">=</span><span
+        class="s1">&#39;z&#39;</span> <span class="p">)</span> <span class="o">-&gt;</span> <span
+        class="n">List</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Takes in a list of either Spectrum or namestrings and sorts them by a key used in shenCat, ascending values.</span>
+<span class="sd">    If sort_key is not specified, defaults to redshift key &#39;z&#39;</span>
+
+<span class="sd">    :param in_list:</span>
+<span class="sd">    :param sort_key:</span>
+<span class="sd">    :type in_list: Iterable</span>
+<span class="sd">    :type sort_key: str</span>
+<span class="sd">    :return:</span>
+<span class="sd">    :rtype: list</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">catalog</span> <span class="k">import</span> <span
+            class="n">shenCat</span>
+    <span class="k">def</span> <span class="nf">_sort_key</span><span class="p">(</span> <span class="n">x</span><span
+            class="p">:</span> <span class="n">Union</span><span class="p">[</span> <span class="n">Spectrum</span><span
+            class="p">,</span> <span class="nb">str</span> <span class="p">]</span> <span class="p">)</span> <span
+            class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">shenCat</span><span class="o">.</span><span
+            class="n">subkey</span><span class="p">(</span> <span class="n">x</span><span class="o">.</span><span
+            class="n">getNS</span><span class="p">()</span> <span class="k">if</span> <span class="nb">isinstance</span><span
+            class="p">(</span> <span class="n">x</span><span class="p">,</span> <span class="n">Spectrum</span> <span
+            class="p">)</span> <span class="k">else</span> <span class="n">x</span><span class="p">,</span> <span
+            class="n">sort_key</span> <span class="p">)</span>
+
+    <span class="n">shenCat</span><span class="o">.</span><span class="n">load</span><span class="p">()</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span
+            class="p">(</span> <span class="n">in_list</span><span class="p">,</span> <span class="nb">list</span> <span
+            class="p">):</span>
+        <span class="n">in_list</span> <span class="o">=</span> <span class="nb">list</span><span
+            class="p">(</span> <span class="n">in_list</span> <span class="p">)</span>
+    <span class="n">in_list</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span> <span
+            class="n">key</span><span class="o">=</span><span class="n">_sort_key</span> <span class="p">)</span>
+    <span class="k">return</span> <span class="n">in_list</span></div>
+
+
+<div class="viewcode-block" id="join_with_shen_cat"><a class="viewcode-back"
+                                                       href="../index.html#catalog.join_with_shen_cat">[docs]</a><span
+        class="k">def</span> <span class="nf">join_with_shen_cat</span><span class="p">(</span> <span
+        class="n">indict</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span> <span
+        class="nb">str</span><span class="p">,</span> <span class="nb">object</span> <span class="p">],</span> <span
+        class="n">key_title</span><span class="p">:</span> <span class="nb">str</span> <span class="p">)</span> <span
+        class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Takes in a dictionary of the form { namestring : value }, returns a namestring dictionary with all the values</span>
+<span class="sd">    contained in shenCat for that namestring, along with the original value keyed by key_title.  Works well with a </span>
+<span class="sd">    pipeline results dictionary.</span>
+<span class="sd">    </span>
+<span class="sd">    { namestring : { &#39;ab&#39; : ..., key_title : value }, ... } </span>
+<span class="sd">    </span>
+<span class="sd">    :param indict: Input dictionary with { namestring : value } layout</span>
+<span class="sd">    :type indict: dict</span>
+<span class="sd">    :param key_title: Title to use for the indict value in the returned subdictionary</span>
+<span class="sd">    :type key_title: str</span>
+<span class="sd">    :return: Namestring dictionary appended with shenCat values</span>
+<span class="sd">    :rtype: dict</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">d</span> <span class="o">=</span> <span class="p">{</span> <span class="p">}</span>
+    <span class="k">for</span> <span class="n">ns</span> <span class="ow">in</span> <span class="n">indict</span><span
+            class="p">:</span>
+        <span class="n">d</span><span class="p">[</span> <span class="n">ns</span> <span class="p">]</span> <span
+            class="o">=</span> <span class="p">{</span> <span class="n">key_title</span><span class="p">:</span> <span
+            class="n">indict</span><span class="p">[</span> <span class="n">ns</span> <span class="p">]</span> <span
+            class="p">}</span>
+        <span class="n">d</span><span class="p">[</span> <span class="n">ns</span> <span class="p">]</span><span
+            class="o">.</span><span class="n">update</span><span class="p">(</span> <span class="n">shenCat</span><span
+            class="p">[</span> <span class="n">ns</span> <span class="p">]</span> <span class="p">)</span>
+    <span class="k">return</span> <span class="n">d</span></div>
+</pre>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <div class="relations">
+                <h3>Related Topics</h3>
+                <ul>
+                    <li><a href="../index.html">Documentation overview</a>
+                        <ul>
+                            <li><a href="index.html">Module code</a>
+                                <ul>
+                                </ul>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+            <div id="searchbox" style="display: none" role="search">
+                <h3>Quick search</h3>
+                <form class="search" action="../search.html" method="get">
+                    <div><input type="text" name="q"/></div>
+                    <div><input type="submit" value="Go"/></div>
+                    <input type="hidden" name="check_keywords" value="yes"/>
+                    <input type="hidden" name="area" value="default"/>
+                </form>
+            </div>
+            <script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+    </div>
+    <div class="clearer"></div>
+</div>
+<div class="footer">
+    &copy;2017, Christopher Wahl.
+
+    |
+    Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.4</a>
+    &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+
+</div>
+
+
+</body>
+</html>

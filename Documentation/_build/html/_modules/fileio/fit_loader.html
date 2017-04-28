@@ -1,0 +1,285 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+
+    <title>fileio.fit_loader &#8212; 1D Spectrum QSO Library 2.0a documentation</title>
+
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css"/>
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css"/>
+
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '2.0a',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html"/>
+    <link rel="search" title="Search" href="../../search.html"/>
+
+    <link rel="stylesheet" href="../../_static/custom.css" type="text/css"/>
+
+
+    <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9"/>
+
+</head>
+<body role="document">
+
+
+<div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="body" role="main">
+
+                <h1>Source code for fileio.fit_loader</h1>
+                <div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">spectrum</span> <span class="k">import</span> <span
+                        class="n">Spectrum</span>
+
+<span class="c1"># The standard mask values</span>
+<span class="n">DEF_MASK_DICT</span> <span class="o">=</span> <span class="p">{</span> <span
+                        class="mh">0x40000</span><span class="p">:</span> <span
+                        class="s1">&#39;SP_MASK_FULLREJECT&#39;</span><span class="p">,</span>  <span class="c1"># Pixel fully rejected in extraction                   18      2.621e5</span>
+                 <span class="mh">0x800000</span><span class="p">:</span> <span
+                        class="s1">&#39;SP_MASK_BRIGHTSKY&#39;</span><span class="p">,</span>  <span class="c1"># Sky level &gt; flux + 10*(flux error)                   23      8.389e6</span>
+                 <span class="mh">0x1000000</span><span class="p">:</span> <span
+                        class="s1">&#39;SP_MASK_NODATA&#39;</span> <span class="p">}</span>  <span class="c1"># No data available in combine B-spline                24      1.678e7</span>
+
+<span class="c1"># These codes are for reference</span>
+<span class="n">allMaskCodes</span> <span class="o">=</span> <span class="p">{</span> <span class="mh">0x000</span><span
+                        class="p">:</span> <span class="s1">&#39;SP_MASK_OK&#39;</span><span class="p">,</span>  <span
+                        class="c1"># No issues detected                                             -inf    x</span>
+                 <span class="mh">0x001</span><span class="p">:</span> <span
+                        class="s1">&#39;SP_MASK_NOPLUG&#39;</span><span class="p">,</span>  <span class="c1"># Fiber not listed in plugmap file                           0       1e0</span>
+                 <span class="mh">0x002</span><span class="p">:</span> <span
+                        class="s1">&#39;SP_MASK_BADTRACE&#39;</span><span class="p">,</span>  <span class="c1"># Bad trace from routine TRACE320CRUDE                     1       2e0</span>
+                 <span class="mh">0x004</span><span class="p">:</span> <span class="s1">&#39;SP_MASK_BADFLAT&#39;</span><span
+                        class="p">,</span>  <span class="c1"># Low counts in fiberflat                                   2       4e0</span>
+                 <span class="mh">0x008</span><span class="p">:</span> <span
+                        class="s1">&#39;SP_MASK_BADARC&#39;</span><span class="p">,</span>  <span class="c1"># Bad arc solution                                           3       8e0</span>
+                 <span class="mh">0x010</span><span class="p">:</span> <span
+                        class="s1">&#39;SP_MASK_MANYBADCOL&#39;</span><span class="p">,</span>  <span class="c1"># More than 10% pixels are bad columns                   4       1.6e1</span>
+                 <span class="mh">0x020</span><span class="p">:</span> <span
+                        class="s1">&#39;SP_MASK_MANYREJECT&#39;</span><span class="p">,</span>  <span class="c1"># More than 10% pixels are rejected in extraction        5       3.2e1</span>
+                 <span class="mh">0x040</span><span class="p">:</span> <span
+                        class="s1">&#39;SP_MASK_LARGESHIFT&#39;</span><span class="p">,</span>  <span class="c1"># Large spatial shift between flat &amp; object position     6       6.4e1</span>
+                 <span class="mh">0x10000</span><span class="p">:</span> <span
+                        class="s1">&#39;SP_MASK_NEARBADPIX&#39;</span><span class="p">,</span>  <span class="c1"># Bad pixel within 3 pixels of trace                   16      6.554e4</span>
+                 <span class="mh">0x20000</span><span class="p">:</span> <span
+                        class="s1">&#39;SP_MASK_LOWFLAT&#39;</span><span class="p">,</span>  <span class="c1"># Flat field less than 0.5                                17      1.331e5</span>
+                 <span class="mh">0x40000</span><span class="p">:</span> <span
+                        class="s1">&#39;SP_MASK_FULLREJECT&#39;</span><span class="p">,</span>  <span class="c1"># Pixel fully rejected in extraction                   18      2.621e5</span>
+                 <span class="mh">0x80000</span><span class="p">:</span> <span
+                        class="s1">&#39;SP_MASK_PARTIALREJ&#39;</span><span class="p">,</span>  <span class="c1"># Some pixels rejected in extraction                   19      5.243e5</span>
+                 <span class="mh">0x100000</span><span class="p">:</span> <span
+                        class="s1">&#39;SP_MASK_SCATLIGHT&#39;</span><span class="p">,</span>  <span class="c1"># Scattered light significant                          20      1.049e6</span>
+                 <span class="mh">0x200000</span><span class="p">:</span> <span
+                        class="s1">&#39;SP_MASK_CROSSTALK&#39;</span><span class="p">,</span>  <span class="c1"># Cross-talk significant                               21      2.097e6</span>
+                 <span class="mh">0x400000</span><span class="p">:</span> <span
+                        class="s1">&#39;SP_MASK_NOSKY&#39;</span><span class="p">,</span>  <span class="c1"># Sky level unknown at this wavelength                     22      4.194e6</span>
+                 <span class="mh">0x800000</span><span class="p">:</span> <span
+                        class="s1">&#39;SP_MASK_BRIGHTSKY&#39;</span><span class="p">,</span>  <span class="c1"># Sky level &gt; flux + 10*(flux error)                   23      8.389e6</span>
+                 <span class="mh">0x1000000</span><span class="p">:</span> <span
+                        class="s1">&#39;SP_MASK_NODATA&#39;</span><span class="p">,</span>  <span class="c1"># No data available in combine B-spline                  24      1.678e7</span>
+                 <span class="mh">0x2000000</span><span class="p">:</span> <span
+                        class="s1">&#39;SP_MASK_COMBINEREJ&#39;</span><span class="p">,</span>  <span class="c1"># Rejected in combine B-spline                       25      3.355e7</span>
+                 <span class="mh">0x4000000</span><span class="p">:</span> <span class="s1">&#39;SP_MASK_BADFLUXFACTOR&#39;</span><span
+                        class="p">,</span>  <span class="c1"># Low flux-calibration or flux-correction factor  26      6.711e7</span>
+                 <span class="mh">0x8000000</span><span class="p">:</span> <span
+                        class="s1">&#39;SP_MASK_BADSKYCHI&#39;</span><span class="p">,</span>  <span class="c1"># Chi^2 &gt; 4 in sky residuals at this wavelength       27      1.342e8</span>
+                 <span class="mh">0x10000000</span><span class="p">:</span> <span class="s1">&#39;SP_MASK_REDMONSTER&#39;</span><span
+                        class="p">,</span>  <span class="c1"># Contiguous region of bad chi^2 in sky residuals   28      2.684e8</span>
+                 <span class="mh">0x40000000</span><span class="p">:</span> <span
+                        class="s1">&#39;SP_MASK_EMLINE&#39;</span> <span class="p">}</span>  <span class="c1"># Emission line detected here                          30      1.074e9</span>
+
+<div class="viewcode-block" id="fit_spec_loader"><a class="viewcode-back"
+                                                    href="../../index.html#fileio.fit_loader.fit_spec_loader">[docs]</a><span
+        class="k">def</span> <span class="nf">fit_spec_loader</span><span class="p">(</span> <span class="n">path</span><span
+        class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">filename</span><span
+        class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">mask_dict</span><span
+        class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span
+        class="n">DEF_MASK_DICT</span> <span class="p">)</span> <span class="o">-&gt;</span> <span
+        class="n">Spectrum</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Loads a FIT spectrum file from SDSS DR 7 or lower.  Converts it into Spectrum type.</span>
+
+<span class="sd">    Note: error_dict has the actual mask values as keys.  Loader will iterate through these keys</span>
+<span class="sd">    and delete any points where these keys are found.  The dict format is an artifact where the values attached</span>
+<span class="sd">    to each key are the SDSS error names in text.</span>
+
+<span class="sd">    :param path: /path/to/file</span>
+<span class="sd">    :param filename: filename.fits</span>
+<span class="sd">    :param mask_dict: Defaults to DEF_ERR_DICT defined in this file if not passed</span>
+<span class="sd">    :type path: str</span>
+<span class="sd">    :type filename: str</span>
+<span class="sd">    :type mask_dict: dict</span>
+<span class="sd">    :rtype: Spectrum</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">astropy.io.fits</span> <span class="k">import</span> <span class="n">getheader</span><span
+            class="p">,</span> <span class="n">getdata</span>
+    <span class="kn">from</span> <span class="nn">fileio.utils</span> <span class="k">import</span> <span class="n">fileCheck</span><span
+            class="p">,</span> <span class="n">join</span>
+    <span class="kn">from</span> <span class="nn">catalog</span> <span class="k">import</span> <span
+            class="n">shenCat</span>
+
+    <span class="n">fileCheck</span><span class="p">(</span> <span class="n">path</span><span class="p">,</span> <span
+            class="n">filename</span> <span class="p">)</span>
+
+    <span class="n">shenCat</span><span class="o">.</span><span class="n">load</span><span class="p">(</span> <span
+            class="p">)</span>
+    <span class="n">infile</span> <span class="o">=</span> <span class="n">join</span><span class="p">(</span> <span
+            class="n">path</span><span class="p">,</span> <span class="n">filename</span> <span class="p">)</span>
+
+    <span class="c1"># Assemble basic info from the header</span>
+    <span class="c1"># Check if the HW redshift is included in the shenCat.  If so, assign it,</span>
+    <span class="c1"># otherwise use the one in the file</span>
+    <span class="n">header</span> <span class="o">=</span> <span class="n">getheader</span><span
+            class="p">(</span> <span class="n">infile</span><span class="p">,</span> <span class="mi">0</span> <span
+            class="p">)</span>
+    <span class="n">namestring</span> <span class="o">=</span> <span class="s2">&quot;</span><span
+            class="si">%05i</span><span class="s2">-</span><span class="si">%04i</span><span class="s2">-</span><span
+            class="si">%03i</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span
+            class="n">header</span><span class="p">[</span> <span class="s1">&#39;MJD&#39;</span> <span
+            class="p">],</span> <span class="n">header</span><span class="p">[</span> <span
+            class="s1">&#39;PLATEID&#39;</span> <span class="p">],</span> <span class="n">header</span><span
+            class="p">[</span> <span class="s1">&#39;FIBERID&#39;</span> <span class="p">])</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="n">shenCat</span><span class="o">.</span><span
+            class="n">subkey</span><span class="p">(</span> <span class="n">namestring</span><span
+            class="p">,</span> <span class="s1">&#39;z&#39;</span> <span class="p">)</span> <span
+            class="k">if</span> <span class="n">namestring</span> <span class="ow">in</span> <span
+            class="n">shenCat</span> <span class="k">else</span> <span class="nb">float</span><span
+            class="p">(</span> <span class="n">header</span><span class="p">[</span> <span class="s1">&#39;z&#39;</span> <span
+            class="p">]</span> <span class="p">)</span>
+    <span class="n">gmag</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span> <span
+            class="n">header</span><span class="p">[</span> <span class="s1">&#39;MAG&#39;</span> <span
+            class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span> <span
+            class="p">)[</span> <span class="mi">1</span> <span class="p">]</span> <span class="p">)</span>  <span
+            class="c1"># Stored as UGRIZ</span>
+
+    <span class="n">data</span> <span class="o">=</span> <span class="n">getdata</span><span class="p">(</span> <span
+            class="n">infile</span><span class="p">,</span> <span class="mi">0</span> <span class="p">)</span>
+    <span class="n">flux_data</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span> <span
+            class="mi">0</span> <span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span
+            class="p">(</span> <span class="p">)</span>  <span class="c1"># first apertrure is the calibrated spectrum flux density</span>
+    <span class="c1"># data[ 1 ] is the continuum-subtracted spectrum.  Not of interest</span>
+    <span class="n">err_data</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span> <span
+            class="mi">2</span> <span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span
+            class="p">(</span> <span class="p">)</span>  <span class="c1"># third is the +/- of flux denisty</span>
+    <span class="n">mask_data</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span> <span
+            class="mi">3</span> <span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span
+            class="p">(</span> <span class="p">)</span>  <span class="c1"># error mask</span>
+
+    <span class="c1"># Wavelength values are not stored in FIT files.  Only three values are available, and these are used to</span>
+    <span class="c1"># generate the wavelengths which correspond to the pixels</span>
+    <span class="c1">#   i.e. wl[ pixel 0 ] -&gt; flux density[ 0 ], error[ 0 ], mask[ 0 ], etc</span>
+    <span class="c1">#</span>
+    <span class="c1"># Those 3 values are:</span>
+    <span class="c1">#   naxis1 : number of pixels stored</span>
+    <span class="c1">#   coeff0 : Log10 of the first wavelength</span>
+    <span class="c1">#   coeff1 : Log10 of the dispersion coefficient</span>
+    <span class="c1">#</span>
+    <span class="c1"># Log10( wavelengths ) are generated by the function:   log_wl_n( n ) = c0 + c1 * n</span>
+    <span class="c1"># where n is the nth pixel</span>
+    <span class="c1"># Then the wavelength, in angstroms is given 10^(log_wl_n)</span>
+    <span class="n">c0</span> <span class="o">=</span> <span class="n">header</span><span class="p">[</span> <span
+            class="s1">&#39;coeff0&#39;</span> <span class="p">]</span>
+    <span class="n">c1</span> <span class="o">=</span> <span class="n">header</span><span class="p">[</span> <span
+            class="s1">&#39;coeff1&#39;</span> <span class="p">]</span>
+    <span class="n">num_pixels</span> <span class="o">=</span> <span class="n">header</span><span
+            class="p">[</span> <span class="s1">&#39;naxis1&#39;</span> <span class="p">]</span>
+    <span class="c1"># The actual wavelength generation happens here</span>
+    <span class="n">wavelengths</span> <span class="o">=</span> <span class="p">[</span> <span
+            class="nb">pow</span><span class="p">(</span> <span class="mi">10</span><span class="p">,</span> <span
+            class="n">c0</span> <span class="o">+</span> <span class="n">c1</span> <span class="o">*</span> <span
+            class="n">n</span> <span class="p">)</span> <span class="k">for</span> <span class="n">n</span> <span
+            class="ow">in</span> <span class="n">num_pixels</span> <span class="p">]</span>
+
+    <span class="n">out_spec</span> <span class="o">=</span> <span class="n">Spectrum</span><span
+            class="p">(</span> <span class="n">namestring</span><span class="o">=</span><span
+            class="n">namestring</span><span class="p">,</span> <span class="n">z</span><span class="o">=</span><span
+            class="n">z</span><span class="p">,</span> <span class="n">gmag</span><span class="o">=</span><span
+            class="n">gmag</span> <span class="p">)</span>
+    <span class="n">out_spec</span><span class="o">.</span><span class="n">setDict</span><span class="p">(</span> <span
+            class="n">wavelengths</span><span class="p">,</span> <span class="n">flux_data</span><span
+            class="p">,</span> <span class="n">err_data</span> <span class="p">)</span>
+
+    <span class="c1"># Mask out the errors</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span
+            class="p">(</span> <span class="nb">len</span><span class="p">(</span> <span class="n">err_data</span> <span
+            class="p">)</span> <span class="p">):</span>
+        <span class="k">if</span> <span class="n">__bit_mask</span><span class="p">(</span> <span
+            class="n">mask_data</span><span class="p">[</span> <span class="n">i</span> <span class="p">],</span> <span
+            class="n">mask_dict</span> <span class="p">):</span>
+            <span class="k">del</span> <span class="n">out_spec</span><span class="p">[</span> <span class="n">wavelengths</span><span
+            class="p">[</span> <span class="n">i</span> <span class="p">]</span> <span class="p">]</span>
+    <span class="k">return</span> <span class="n">out_spec</span></div>
+
+
+<span class="k">def</span> <span class="nf">__bit_mask</span><span class="p">(</span> <span class="n">mask</span><span
+                        class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span
+                        class="n">mask_dict</span><span class="p">:</span> <span class="nb">dict</span> <span class="p">)</span> <span
+                        class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">mask_dict</span><span
+                        class="p">:</span>
+        <span class="k">if</span> <span class="nb">int</span><span class="p">(</span> <span class="n">mask</span> <span
+                        class="p">)</span> <span class="o">&amp;</span> <span class="n">m</span><span class="p">:</span> <span
+                        class="k">return</span> <span class="kc">True</span>
+    <span class="k">return</span> <span class="kc">False</span>
+</pre>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <div class="relations">
+                <h3>Related Topics</h3>
+                <ul>
+                    <li><a href="../../index.html">Documentation overview</a>
+                        <ul>
+                            <li><a href="../index.html">Module code</a>
+                                <ul>
+                                </ul>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+            <div id="searchbox" style="display: none" role="search">
+                <h3>Quick search</h3>
+                <form class="search" action="../../search.html" method="get">
+                    <div><input type="text" name="q"/></div>
+                    <div><input type="submit" value="Go"/></div>
+                    <input type="hidden" name="check_keywords" value="yes"/>
+                    <input type="hidden" name="area" value="default"/>
+                </form>
+            </div>
+            <script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+    </div>
+    <div class="clearer"></div>
+</div>
+<div class="footer">
+    &copy;2017, Christopher Wahl.
+
+    |
+    Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.4</a>
+    &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+
+</div>
+
+
+</body>
+</html>
